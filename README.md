@@ -1,10 +1,14 @@
 # PAMS - 实验室细菌基因组管理工具
 
-PAMS (Pathogen Analysis Management System) 是一个本地化的实验室细菌基因组管理工具，专为微生物实验室设计，用于管理和分析细菌基因组数据。
+PAMS (Pathogen Analysis Management System) 是一个CDC本地化的实验室细菌基因组管理工具，专为基层CDC微生物实验室设计，用于管理和分析细菌基因组数据。
 
 ## 项目简介
 
-日常实验室分离得到的细菌克隆完成基因组测序后获得组装子，这些数据需要进行系统化管理。PAMS将生物信息学分析流程得到的菌株特征结果（如ST型别、毒力基因、耐药基因等）与流行病学相关背景资料进行关联和管理，为实验室提供全面的细菌基因组数据管理解决方案。
+日常工作中，实验室分离得到的细菌克隆在完成基因组测序后获得了组装子序列，这些数据往往不能上传到如NCBI数据库中公开。对于实验室开展的越来越多的测序数据，需要进行系统化管理。PAMS将生物信息学分析流程得到的菌株特征结果（如ST型别、毒力基因、耐药基因等）与流行病学相关背景资料进行关联和管理，为实验室提供全面的细菌基因组数据管理解决方案。
+
+通过对菌株基因组序列的溯源分析，可以帮助实验人员快速发现基因组的遗传关系，潜在的暴发事件。并能很方便的帮助实验人员根据数据特征，筛选特定的基因组序列。
+
+软件使用electron实现跨平台支持，前端开发框架使用vue.js。软件支持多用户管理，并对用户权限进行管理和设置。
 
 ## 核心功能
 
@@ -35,7 +39,7 @@ PAMS (Pathogen Analysis Management System) 是一个本地化的实验室细菌�
 - 🏠 **本地化部署**: 确保敏感数据安全，无需依赖外部服务
 - ⚡ **高性能计算**: 优化的算法确保大规模数据的快速处理
 - 🔄 **自动化流程**: 减少人工干预，提高分析效率
-- 📱 **用户友好界面**: 直观的Web界面，便于非生信专业人员使用
+- 📱 **用户友好界面**: 直观的用户界面，便于非生信专业人员使用
 
 ## 安装说明
 
@@ -45,31 +49,6 @@ cd pams
 ```
 
 详细安装指南请参考 [安装文档](docs/installation.md)
-
-## 快速开始
-
-```bash
-# 配置数据库
-python setup.py init_db
-
-# 启动服务
-python app.py
-
-# 访问Web界面
-# http://localhost:5000
-```
-
-## 项目结构
-
-```
-pams/
-├── src/                    # 源代码
-├── data/                   # 数据存储
-├── docs/                   # 文档
-├── tests/                  # 测试文件
-├── config/                 # 配置文件
-└── scripts/               # 辅助脚本
-```
 
 ## 贡献指南
 
@@ -87,8 +66,8 @@ pams/
 
 ## 联系我们
 
-- 问题报告: [GitHub Issues](https://github.com/YOUR_USERNAME/pams/issues)
-- 功能建议: [GitHub Discussions](https://github.com/YOUR_USERNAME/pams/discussions)
+- 问题报告: [GitHub Issues](https://github.com/indexofire/pams/issues)
+- 功能建议: [GitHub Discussions](https://github.com/indexofire/pams/discussions)
 
 ## 致谢
 

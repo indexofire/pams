@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="icon" href="<%= BASE_URL %>favicon.ico">
+    <title>PAMS - 实验室细菌基因组管理工具</title>
+    <meta name="description" content="PAMS是一个本地化的实验室细菌基因组管理工具，专为微生物实验室设计">
+    <meta name="keywords" content="细菌基因组,生物信息学,MLST,耐药基因,毒力基因,系统发育">
+    <style>
+      /* 加载动画 */
+      #loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background: #f0f2f5;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e4e7ed;
+        border-top: 3px solid #409eff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .loading-text {
+        color: #606266;
+        font-size: 14px;
+      }
+      
+      /* 错误页面样式 */
+      .error-page {
+        text-align: center;
+        padding: 50px;
+      }
+      
+      .error-page h1 {
+        color: #f56c6c;
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+      
+      .error-page p {
+        color: #909399;
+        margin-bottom: 20px;
+      }
+      
+      .retry-button {
+        background: #409eff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      
+      .retry-button:hover {
+        background: #337ecc;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <div class="error-page">
+        <h1>JavaScript未启用</h1>
+        <p>PAMS需要JavaScript才能正常运行，请在浏览器中启用JavaScript。</p>
+      </div>
+    </noscript>
+    
+    <div id="app">
+      <div id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载PAMS...</div>
+      </div>
+    </div>
+    
+    <script>
+      // 错误处理
+      window.addEventListener('error', function(e) {
+        console.error('应用加载失败:', e.error);
+        document.getElementById('app').innerHTML = `
+          <div class="error-page">
+            <h1>应用加载失败</h1>
+            <p>PAMS应用无法正常加载，请检查网络连接或刷新页面重试。</p>
+            <button class="retry-button" onclick="location.reload()">重新加载</button>
+          </div>
+        `;
+      });
+      
+      // 应用加载超时处理
+      setTimeout(function() {
+        const loading = document.getElementById('loading');
+        if (loading && loading.style.display !== 'none') {
+          document.getElementById('app').innerHTML = `
+            <div class="error-page">
+              <h1>加载超时</h1>
+              <p>应用加载时间过长，请检查网络连接或刷新页面重试。</p>
+              <button class="retry-button" onclick="location.reload()">重新加载</button>
+            </div>
+          `;
+        }
+      }, 30000); // 30秒超时
+    </script>
+  </body>
+</html> 
