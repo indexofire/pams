@@ -1,0 +1,62 @@
+{
+  "name": "pams",
+  "version": "0.1.0",
+  "description": "实验室细菌基因组管理工具 - 基于Electron + Vue.js + Flask的桌面应用",
+  "main": "electron/main.js",
+  "homepage": "./",
+  "scripts": {
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm run serve\" \"wait-on http://localhost:8080 && electron .\"",
+    "electron-pack": "electron-builder",
+    "serve": "cd frontend && vue-cli-service serve",
+    "build": "cd frontend && vue-cli-service build",
+    "lint": "cd frontend && vue-cli-service lint",
+    "backend": "cd backend && python app.py",
+    "dev": "concurrently \"npm run backend\" \"npm run serve\" \"wait-on http://localhost:8080 && electron .\"",
+    "postinstall": "electron-builder install-app-deps",
+    "preelectron-pack": "npm run build",
+    "dist": "npm run build && electron-builder --publish=never"
+  },
+  "keywords": [
+    "bioinformatics",
+    "genomics",
+    "bacteria",
+    "pathogen",
+    "laboratory",
+    "electron",
+    "vue"
+  ],
+  "author": "PAMS Development Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "electron": "^25.9.0",
+    "electron-builder": "^24.6.4",
+    "wait-on": "^7.0.1"
+  },
+  "dependencies": {
+    "axios": "^1.5.0",
+    "electron-store": "^8.1.0"
+  },
+  "build": {
+    "appId": "com.pams.app",
+    "productName": "PAMS",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "frontend/dist/**/*",
+      "electron/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+} 

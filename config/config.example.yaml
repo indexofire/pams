@@ -1,0 +1,87 @@
+# PAMS 配置文件示例
+# 复制此文件为 config.yaml 并根据您的环境进行修改
+
+# 应用基本配置
+app:
+  name: "PAMS"
+  version: "0.1.0"
+  debug: false
+  host: "0.0.0.0"
+  port: 5000
+  secret_key: "your-secret-key-here"
+
+# 数据库配置
+database:
+  # PostgreSQL (生产环境推荐)
+  url: "postgresql://pams_user:password@localhost/pams"
+  
+  # SQLite (开发环境)
+  # url: "sqlite:///data/pams.db"
+  
+  pool_size: 10
+  max_overflow: 20
+
+# 文件存储配置
+storage:
+  # 基因组文件存储路径
+  genome_path: "data/genomes"
+  
+  # 分析结果存储路径
+  results_path: "data/results"
+  
+  # 上传文件临时目录
+  upload_path: "data/uploads"
+  
+  # 最大文件大小 (MB)
+  max_file_size: 1024
+
+# 生物信息学工具配置
+tools:
+  # BLAST数据库路径
+  blast_db_path: "/opt/blast/db"
+  
+  # 注释数据库路径
+  annotation_db: "/opt/databases"
+  
+  # 临时工作目录
+  temp_dir: "/tmp/pams"
+
+# 分析参数
+analysis:
+  # 基因组质量阈值
+  min_contig_length: 500
+  max_contigs: 1000
+  min_n50: 10000
+  
+  # 并行处理线程数
+  threads: 4
+  
+  # 分析超时时间 (秒)
+  timeout: 3600
+
+# 日志配置
+logging:
+  level: "INFO"
+  file: "logs/pams.log"
+  max_size: "10MB"
+  backup_count: 5
+
+# 安全配置
+security:
+  # 会话超时时间 (分钟)
+  session_timeout: 60
+  
+  # 密码复杂度要求
+  password_min_length: 8
+  password_require_special: true
+  
+  # API限流
+  rate_limit: "100/hour"
+
+# 邮件配置 (可选)
+email:
+  smtp_server: "smtp.example.com"
+  smtp_port: 587
+  username: "your-email@example.com"
+  password: "your-email-password"
+  use_tls: true 
