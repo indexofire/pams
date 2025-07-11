@@ -1,8 +1,7 @@
 import { createStore } from 'vuex'
-import axios from 'axios'
 
-// 配置API基础URL
-const API_BASE_URL = 'http://localhost:5000/api'
+// 使用Electron API
+const electronAPI = window.electronAPI
 
 const store = createStore({
   state: {
@@ -96,12 +95,15 @@ const store = createStore({
   actions: {
     // 获取菌株列表
     async fetchStrains({ commit }) {
+      if (!electronAPI) return
+      
       commit('SET_LOADING', { type: 'strains', status: true })
       try {
-        const response = await axios.get(`${API_BASE_URL}/strains`)
-        commit('SET_STRAINS', response.data)
+        const strains = await electronAPI.strains.getAll()
+        commit('SET_STRAINS', strains)
       } catch (error) {
         console.error('获取菌株数据失败:', error)
+        throw error
       } finally {
         commit('SET_LOADING', { type: 'strains', status: false })
       }
@@ -109,10 +111,12 @@ const store = createStore({
 
     // 添加菌株
     async addStrain({ commit }, strainData) {
+      if (!electronAPI) return
+      
       try {
-        const response = await axios.post(`${API_BASE_URL}/strains`, strainData)
-        commit('ADD_STRAIN', response.data)
-        return response.data
+        const strain = await electronAPI.strains.create(strainData)
+        commit('ADD_STRAIN', strain)
+        return strain
       } catch (error) {
         console.error('添加菌株失败:', error)
         throw error
@@ -121,10 +125,12 @@ const store = createStore({
 
     // 更新菌株
     async updateStrain({ commit }, { id, strainData }) {
+      if (!electronAPI) return
+      
       try {
-        const response = await axios.put(`${API_BASE_URL}/strains/${id}`, strainData)
-        commit('UPDATE_STRAIN', { id, strain: response.data })
-        return response.data
+        const strain = await electronAPI.strains.update(id, strainData)
+        commit('UPDATE_STRAIN', { id, strain })
+        return strain
       } catch (error) {
         console.error('更新菌株失败:', error)
         throw error
@@ -133,8 +139,10 @@ const store = createStore({
 
     // 删除菌株
     async deleteStrain({ commit }, id) {
+      if (!electronAPI) return
+      
       try {
-        await axios.delete(`${API_BASE_URL}/strains/${id}`)
+        await electronAPI.strains.delete(id)
         commit('DELETE_STRAIN', id)
       } catch (error) {
         console.error('删除菌株失败:', error)
@@ -144,27 +152,28 @@ const store = createStore({
 
     // 获取基因组列表
     async fetchGenomes({ commit }) {
+      if (!electronAPI) return
+      
       commit('SET_LOADING', { type: 'genomes', status: true })
       try {
-        const response = await axios.get(`${API_BASE_URL}/genomes`)
-        commit('SET_GENOMES', response.data)
+        const genomes = await electronAPI.genomes.getAll()
+        commit('SET_GENOMES', genomes)
       } catch (error) {
         console.error('获取基因组数据失败:', error)
+        throw error
       } finally {
         commit('SET_LOADING', { type: 'genomes', status: false })
       }
     },
 
     // 上传基因组
-    async uploadGenome({ commit }, formData) {
+    async uploadGenome({ commit }, { filePath, metadata }) {
+      if (!electronAPI) return
+      
       try {
-        const response = await axios.post(`${API_BASE_URL}/genomes/upload`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        })
-        commit('ADD_GENOME', response.data)
-        return response.data
+        const genome = await electronAPI.genomes.upload(filePath, metadata)
+        commit('ADD_GENOME', genome)
+        return genome
       } catch (error) {
         console.error('上传基因组失败:', error)
         throw error
@@ -173,13 +182,12 @@ const store = createStore({
 
     // 启动分析任务
     async startAnalysis({ commit }, { type, genomeIds, params }) {
+      if (!electronAPI) return
+      
       try {
-        const response = await axios.post(`${API_BASE_URL}/analysis/${type}`, {
-          genome_ids: genomeIds,
-          parameters: params
-        })
-        commit('ADD_ANALYSIS_TASK', response.data)
-        return response.data
+        const task = await electronAPI.analysis.start(type, genomeIds, params)
+        commit('ADD_ANALYSIS_TASK', task)
+        return task
       } catch (error) {
         console.error('启动分析失败:', error)
         throw error
@@ -188,21 +196,27 @@ const store = createStore({
 
     // 获取分析任务
     async fetchAnalysisTasks({ commit }) {
+      if (!electronAPI) return
+      
       try {
-        const response = await axios.get(`${API_BASE_URL}/analysis/tasks`)
-        commit('SET_ANALYSIS_TASKS', response.data)
+        const tasks = await electronAPI.analysis.getTasks()
+        commit('SET_ANALYSIS_TASKS', tasks)
       } catch (error) {
         console.error('获取分析任务失败:', error)
+        throw error
       }
     },
 
     // 获取统计数据
     async fetchStatistics({ commit }) {
+      if (!electronAPI) return
+      
       try {
-        const response = await axios.get(`${API_BASE_URL}/statistics`)
-        commit('SET_STATISTICS', response.data)
+        const statistics = await electronAPI.statistics.get()
+        commit('SET_STATISTICS', statistics)
       } catch (error) {
         console.error('获取统计数据失败:', error)
+        throw error
       }
     }
   },
@@ -214,7 +228,7 @@ const store = createStore({
     },
     // 获取特定菌株的基因组
     getGenomesByStrain: (state) => (strainId) => {
-      return state.genomes.filter(genome => genome.strain_id === strainId)
+      return state.genomes.filter(genome => genome.strainId === strainId)
     }
   }
 })
