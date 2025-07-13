@@ -63,4 +63,4 @@ app.use(router)
 app.use(ElementPlus)
 
 // 挂载应用
-app.mount('#app') 
+app.mount('#app')

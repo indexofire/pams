@@ -34,69 +34,69 @@ const store = createStore({
 
   mutations: {
     // 设置用户信息
-    SET_USER(state, user) {
+    SET_USER (state, user) {
       state.user = user
     },
     // 设置菌株数据
-    SET_STRAINS(state, strains) {
+    SET_STRAINS (state, strains) {
       state.strains = strains
     },
     // 添加菌株
-    ADD_STRAIN(state, strain) {
+    ADD_STRAIN (state, strain) {
       state.strains.push(strain)
     },
     // 更新菌株
-    UPDATE_STRAIN(state, { id, strain }) {
+    UPDATE_STRAIN (state, { id, strain }) {
       const index = state.strains.findIndex(s => s.id === id)
       if (index !== -1) {
         state.strains.splice(index, 1, strain)
       }
     },
     // 删除菌株
-    DELETE_STRAIN(state, id) {
+    DELETE_STRAIN (state, id) {
       const index = state.strains.findIndex(s => s.id === id)
       if (index !== -1) {
         state.strains.splice(index, 1)
       }
     },
     // 设置基因组数据
-    SET_GENOMES(state, genomes) {
+    SET_GENOMES (state, genomes) {
       state.genomes = genomes
     },
     // 添加基因组
-    ADD_GENOME(state, genome) {
+    ADD_GENOME (state, genome) {
       state.genomes.push(genome)
     },
     // 设置分析任务
-    SET_ANALYSIS_TASKS(state, tasks) {
+    SET_ANALYSIS_TASKS (state, tasks) {
       state.analysisTasks = tasks
     },
     // 添加分析任务
-    ADD_ANALYSIS_TASK(state, task) {
+    ADD_ANALYSIS_TASK (state, task) {
       state.analysisTasks.push(task)
     },
     // 更新任务状态
-    UPDATE_TASK_STATUS(state, { id, status }) {
+    UPDATE_TASK_STATUS (state, { id, status }) {
       const task = state.analysisTasks.find(t => t.id === id)
       if (task) {
         task.status = status
       }
     },
     // 设置加载状态
-    SET_LOADING(state, { type, status }) {
+    SET_LOADING (state, { type, status }) {
       state.loading[type] = status
     },
     // 设置统计数据
-    SET_STATISTICS(state, statistics) {
+    SET_STATISTICS (state, statistics) {
       state.statistics = statistics
     }
   },
 
   actions: {
     // 获取菌株列表
-    async fetchStrains({ commit }) {
+    async fetchStrains ({ commit }) {
       if (!electronAPI) return
-      
+
       commit('SET_LOADING', { type: 'strains', status: true })
       try {
         const strains = await electronAPI.strains.getAll()
@@ -110,9 +110,9 @@ const store = createStore({
     },
 
     // 添加菌株
-    async addStrain({ commit }, strainData) {
+    async addStrain ({ commit }, strainData) {
       if (!electronAPI) return
-      
+
       try {
         const strain = await electronAPI.strains.create(strainData)
         commit('ADD_STRAIN', strain)
@@ -124,9 +124,9 @@ const store = createStore({
     },
 
     // 更新菌株
-    async updateStrain({ commit }, { id, strainData }) {
+    async updateStrain ({ commit }, { id, strainData }) {
       if (!electronAPI) return
-      
+
       try {
         const strain = await electronAPI.strains.update(id, strainData)
         commit('UPDATE_STRAIN', { id, strain })
@@ -138,9 +138,9 @@ const store = createStore({
     },
 
     // 删除菌株
-    async deleteStrain({ commit }, id) {
+    async deleteStrain ({ commit }, id) {
       if (!electronAPI) return
-      
+
       try {
         await electronAPI.strains.delete(id)
         commit('DELETE_STRAIN', id)
@@ -151,9 +151,9 @@ const store = createStore({
     },
 
     // 获取基因组列表
-    async fetchGenomes({ commit }) {
+    async fetchGenomes ({ commit }) {
       if (!electronAPI) return
-      
+
       commit('SET_LOADING', { type: 'genomes', status: true })
       try {
         const genomes = await electronAPI.genomes.getAll()
@@ -167,9 +167,9 @@ const store = createStore({
     },
 
     // 上传基因组
-    async uploadGenome({ commit }, { filePath, metadata }) {
+    async uploadGenome ({ commit }, { filePath, metadata }) {
       if (!electronAPI) return
-      
+
       try {
         const genome = await electronAPI.genomes.upload(filePath, metadata)
         commit('ADD_GENOME', genome)
@@ -181,9 +181,9 @@ const store = createStore({
     },
 
     // 启动分析任务
-    async startAnalysis({ commit }, { type, genomeIds, params }) {
+    async startAnalysis ({ commit }, { type, genomeIds, params }) {
       if (!electronAPI) return
-      
+
       try {
         const task = await electronAPI.analysis.start(type, genomeIds, params)
         commit('ADD_ANALYSIS_TASK', task)
@@ -195,9 +195,9 @@ const store = createStore({
     },
 
     // 获取分析任务
-    async fetchAnalysisTasks({ commit }) {
+    async fetchAnalysisTasks ({ commit }) {
       if (!electronAPI) return
-      
+
       try {
         const tasks = await electronAPI.analysis.getTasks()
         commit('SET_ANALYSIS_TASKS', tasks)
@@ -208,9 +208,9 @@ const store = createStore({
     },
 
     // 获取统计数据
-    async fetchStatistics({ commit }) {
+    async fetchStatistics ({ commit }) {
       if (!electronAPI) return
-      
+
       try {
         const statistics = await electronAPI.statistics.get()
         commit('SET_STATISTICS', statistics)
@@ -233,4 +233,4 @@ const store = createStore({
   }
 })
 
-export default store 
+export default store

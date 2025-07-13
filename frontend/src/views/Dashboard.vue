@@ -118,10 +118,10 @@ import { useStore } from 'vuex'
 
 export default {
   name: 'Dashboard',
-  setup() {
+  setup () {
     const store = useStore()
     const loading = ref(true)
-    
+
     const recentActivities = reactive([
       {
         id: 1,
@@ -227,10 +227,10 @@ export default {
 
     const getTaskTagType = (status) => {
       const typeMap = {
-        '运行中': 'warning',
-        '已完成': 'success',
-        '等待中': 'info',
-        '失败': 'danger'
+        运行中: 'warning',
+        已完成: 'success',
+        等待中: 'info',
+        失败: 'danger'
       }
       return typeMap[status] || 'info'
     }
@@ -272,11 +272,11 @@ export default {
     .stat-item {
       display: flex;
       align-items: center;
-      
+
       .stat-icon {
         margin-right: 15px;
       }
-      
+
       .stat-content {
         .stat-number {
           font-size: 28px;
@@ -284,7 +284,7 @@ export default {
           color: #303133;
           line-height: 1;
         }
-        
+
         .stat-label {
           font-size: 14px;
           color: #909399;
@@ -301,17 +301,17 @@ export default {
       align-items: center;
       padding: 12px 0;
       border-bottom: 1px solid #f0f0f0;
-      
+
       &:last-child {
         border-bottom: none;
       }
-      
+
       .task-info {
         .task-name {
           font-weight: 500;
           margin-bottom: 4px;
         }
-        
+
         .task-meta {
           font-size: 12px;
           color: #909399;
@@ -320,4 +320,4 @@ export default {
     }
   }
 }
-</style> 
+</style>

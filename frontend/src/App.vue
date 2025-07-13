@@ -96,7 +96,7 @@ import { useRoute } from 'vue-router'
 
 export default {
   name: 'App',
-  setup() {
+  setup () {
     const route = useRoute()
 
     const breadcrumbItems = computed(() => {
@@ -115,6 +115,11 @@ export default {
 </script>
 
 <style lang="scss">
+body {
+  margin: 0;
+  padding: 0;
+}
+
 #app {
   font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
   height: 100vh;
@@ -187,4 +192,4 @@ export default {
   background-color: #f0f2f5;
   padding: 20px;
 }
-</style> 
+</style>
