@@ -1,4 +1,5 @@
 import { createStore } from 'vuex'
+import auth from './modules/auth'
 
 // 使用Electron API
 const electronAPI = window.electronAPI
@@ -230,7 +231,14 @@ const store = createStore({
     getGenomesByStrain: (state) => (strainId) => {
       return state.genomes.filter(genome => genome.strainId === strainId)
     }
+  },
+
+  modules: {
+    auth
   }
 })
+
+// 应用启动时检查认证状态
+store.dispatch('auth/checkAuth')
 
 export default store

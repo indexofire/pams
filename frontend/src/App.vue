@@ -1,6 +1,9 @@
 <template>
   <div id="app">
-    <el-container class="app-container">
+    <div v-if="!isAuthenticated">
+      <router-view />
+    </div>
+    <el-container v-else class="app-container">
       <!-- 侧边栏 -->
       <el-aside width="200px" class="sidebar">
         <div class="logo">
@@ -23,6 +26,10 @@
             <el-icon><Grid /></el-icon>
             <span>菌株管理</span>
           </el-menu-item>
+          <el-menu-item index="/strain-analysis">
+            <el-icon><TrendCharts /></el-icon>
+            <span>菌株筛选分析</span>
+          </el-menu-item>
           <el-menu-item index="/genomes">
             <el-icon><Document /></el-icon>
             <span>基因组数据</span>
@@ -42,7 +49,11 @@
             <el-icon><Document /></el-icon>
             <span>报告中心</span>
           </el-menu-item>
-          <el-menu-item index="/settings">
+          <el-menu-item index="/user-management" v-if="isAdmin">
+            <el-icon><UserFilled /></el-icon>
+            <span>用户管理</span>
+          </el-menu-item>
+          <el-menu-item index="/system-settings" v-if="isAdmin">
             <el-icon><Setting /></el-icon>
             <span>系统设置</span>
           </el-menu-item>
@@ -68,12 +79,15 @@
               <el-dropdown>
                 <span class="user-info">
                   <el-icon><User /></el-icon>
-                  管理员
+                  {{ user.username }}
+                  <el-tag v-if="user.role === 'admin'" type="danger" size="small">管理员</el-tag>
+                  <el-tag v-else-if="user.role === 'advanced'" type="warning" size="small">高级用户</el-tag>
+                  <el-tag v-else type="info" size="small">普通用户</el-tag>
                 </span>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item>个人设置</el-dropdown-item>
-                    <el-dropdown-item divided>退出登录</el-dropdown-item>
+                    <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -92,12 +106,16 @@
 
 <script>
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useStore } from 'vuex'
+import { ElMessage } from 'element-plus'
 
 export default {
   name: 'App',
   setup () {
     const route = useRoute()
+    const router = useRouter()
+    const store = useStore()
 
     const breadcrumbItems = computed(() => {
       const matched = route.matched.filter(item => item.meta && item.meta.title)
@@ -107,8 +125,26 @@ export default {
       }))
     })
 
+    const isAuthenticated = computed(() => store.getters['auth/isAuthenticated'])
+    const user = computed(() => store.getters['auth/user'] || {})
+    const isAdmin = computed(() => store.getters['auth/isAdmin'])
+
+    const handleLogout = async () => {
+      try {
+        await store.dispatch('auth/logout')
+        ElMessage.success('退出登录成功')
+        router.push('/login')
+      } catch (error) {
+        ElMessage.error('退出登录失败')
+      }
+    }
+
     return {
-      breadcrumbItems
+      breadcrumbItems,
+      isAuthenticated,
+      user,
+      isAdmin,
+      handleLogout
     }
   }
 }
@@ -191,5 +227,10 @@ body {
 .main-content {
   background-color: #f0f2f5;
   padding: 20px;
+}
+
+// 覆盖Element Plus的默认按钮间距
+.el-button + .el-button {
+  margin-left: 8px !important;
 }
 </style>
