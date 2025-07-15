@@ -38,19 +38,33 @@ class StrainService {
       // 验证必要字段
       this.validateStrainData(strainData)
       
-      // 检查菌株名称是否重复
+      // 检查菌株编号是否重复
       const existingStrains = this.db.getAllStrains()
-      const nameExists = existingStrains.some(strain => 
-        strain.name.toLowerCase() === strainData.name.toLowerCase()
+      const strainIdExists = existingStrains.some(strain => 
+        strain.strain_id === strainData.strain_id
       )
       
-      if (nameExists) {
-        throw new Error('菌株名称已存在')
+      if (strainIdExists) {
+        throw new Error('菌株编号已存在')
+      }
+
+      // 处理日期字段，确保所有日期都是字符串格式
+      const processedData = { ...strainData }
+      
+      // 转换日期对象为字符串格式
+      if (processedData.onset_date instanceof Date) {
+        processedData.onset_date = processedData.onset_date.toISOString().split('T')[0]
+      }
+      if (processedData.sampling_date instanceof Date) {
+        processedData.sampling_date = processedData.sampling_date.toISOString().split('T')[0]
+      }
+      if (processedData.isolation_date instanceof Date) {
+        processedData.isolation_date = processedData.isolation_date.toISOString().split('T')[0]
       }
 
       // 添加创建时间
       const strainWithTimestamp = {
-        ...strainData,
+        ...processedData,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
@@ -89,9 +103,23 @@ class StrainService {
         }
       }
 
+      // 处理日期字段，确保所有日期都是字符串格式
+      const processedData = { ...strainData }
+      
+      // 转换日期对象为字符串格式
+      if (processedData.onset_date instanceof Date) {
+        processedData.onset_date = processedData.onset_date.toISOString().split('T')[0]
+      }
+      if (processedData.sampling_date instanceof Date) {
+        processedData.sampling_date = processedData.sampling_date.toISOString().split('T')[0]
+      }
+      if (processedData.isolation_date instanceof Date) {
+        processedData.isolation_date = processedData.isolation_date.toISOString().split('T')[0]
+      }
+
       // 添加更新时间
       const strainWithTimestamp = {
-        ...strainData,
+        ...processedData,
         updated_at: new Date().toISOString()
       }
 
@@ -180,6 +208,18 @@ class StrainService {
   }
 
   /**
+   * 获取菌株总数
+   */
+  async getStrainCount() {
+    try {
+      return this.db.getStrainCount()
+    } catch (error) {
+      console.error('获取菌株数量失败:', error)
+      throw new Error('获取菌株数量失败')
+    }
+  }
+
+  /**
    * 获取菌株统计信息
    */
   async getStrainStats() {
@@ -256,24 +296,40 @@ class StrainService {
    * 验证菌株数据
    */
   validateStrainData(strainData, isCreate = true) {
-    if (isCreate && !strainData.name) {
-      throw new Error('菌株名称不能为空')
+    if (isCreate && !strainData.strain_id) {
+      throw new Error('菌株编号不能为空')
     }
 
-    if (strainData.name && typeof strainData.name !== 'string') {
-      throw new Error('菌株名称必须是字符串')
+    if (strainData.strain_id && typeof strainData.strain_id !== 'string') {
+      throw new Error('菌株编号必须是字符串')
     }
 
-    if (strainData.name && strainData.name.trim().length === 0) {
-      throw new Error('菌株名称不能为空')
+    if (strainData.strain_id && strainData.strain_id.trim().length === 0) {
+      throw new Error('菌株编号不能为空')
     }
 
-    if (strainData.type && !['bacteria', 'fungi', 'virus'].includes(strainData.type)) {
-      throw new Error('菌株类型无效')
+    if (isCreate && !strainData.species) {
+      throw new Error('菌种不能为空')
+    }
+
+    if (strainData.species && typeof strainData.species !== 'string') {
+      throw new Error('菌种必须是字符串')
+    }
+
+    if (strainData.species && strainData.species.trim().length === 0) {
+      throw new Error('菌种不能为空')
     }
 
     if (strainData.isolation_date && !this.isValidDate(strainData.isolation_date)) {
       throw new Error('分离日期格式无效')
+    }
+
+    if (strainData.sampling_date && !this.isValidDate(strainData.sampling_date)) {
+      throw new Error('采样日期格式无效')
+    }
+
+    if (strainData.onset_date && !this.isValidDate(strainData.onset_date)) {
+      throw new Error('发病日期格式无效')
     }
   }
 

@@ -52,9 +52,12 @@
               clearable
             >
               <el-option label="全部" value="" />
-              <el-option label="大肠杆菌" value="E.coli" />
-              <el-option label="沙门氏菌" value="Salmonella" />
-              <el-option label="志贺氏菌" value="Shigella" />
+              <el-option
+                v-for="option in speciesOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="地区">
@@ -64,9 +67,12 @@
               clearable
             >
               <el-option label="全部" value="" />
-              <el-option label="北京市" value="beijing" />
-              <el-option label="上海市" value="shanghai" />
-              <el-option label="广东省" value="guangdong" />
+              <el-option
+                v-for="option in regionOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="样本来源">
@@ -76,9 +82,12 @@
               clearable
             >
               <el-option label="全部" value="" />
-              <el-option label="血液" value="blood" />
-              <el-option label="粪便" value="feces" />
-              <el-option label="食品" value="food" />
+              <el-option
+                v-for="option in sourceOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
           </el-form-item>
           <el-form-item>
@@ -248,7 +257,7 @@
               <span class="value error">{{ errorRecords.length }}</span>
             </div>
           </div>
-          
+
           <div v-if="errorRecords.length > 0" class="error-list">
             <h5>错误记录详情：</h5>
             <el-table :data="errorRecords" border max-height="300">
@@ -276,17 +285,17 @@
         <div class="import-dialog-footer">
           <el-button @click="importDialogVisible = false">取消</el-button>
           <el-button v-if="importStep > 0" @click="prevStep">上一步</el-button>
-          <el-button 
-            v-if="importStep < 3" 
-            type="primary" 
+          <el-button
+            v-if="importStep < 3"
+            type="primary"
             @click="nextStep"
             :disabled="!canNextStep"
           >
             {{ importStep === 2 ? '开始导入' : '下一步' }}
           </el-button>
-          <el-button 
-            v-if="importStep === 3" 
-            type="primary" 
+          <el-button
+            v-if="importStep === 3"
+            type="primary"
             @click="finishImport"
           >
             完成
@@ -323,15 +332,13 @@
               </el-col>
               <el-col :span="12">
                 <el-form-item label="菌种（属）" prop="species">
-                  <el-select
+                  <DropdownInput
                     v-model="strainForm.basic.species"
-                    placeholder="请选择菌种"
+                    :options="speciesOptions"
+                    placeholder="请选择或输入菌种"
                     :disabled="!isEditMode"
-                  >
-                    <el-option label="大肠杆菌" value="E.coli" />
-                    <el-option label="沙门氏菌" value="Salmonella" />
-                    <el-option label="志贺氏菌" value="Shigella" />
-                  </el-select>
+                    @change="handleSpeciesChange"
+                  />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -347,30 +354,26 @@
               </el-col>
               <el-col :span="12">
                 <el-form-item label="样本来源" prop="sample_source">
-                  <el-select
+                  <DropdownInput
                     v-model="strainForm.basic.sample_source"
-                    placeholder="请选择样本来源"
+                    :options="sourceOptions"
+                    placeholder="请选择或输入样本来源"
                     :disabled="!isEditMode"
-                  >
-                    <el-option label="血液" value="blood" />
-                    <el-option label="粪便" value="feces" />
-                    <el-option label="食品" value="food" />
-                  </el-select>
+                    @change="handleSourceChange"
+                  />
                 </el-form-item>
               </el-col>
             </el-row>
             <el-row :gutter="20">
               <el-col :span="12">
                 <el-form-item label="地区" prop="region">
-                  <el-select
+                  <DropdownInput
                     v-model="strainForm.basic.region"
-                    placeholder="请选择地区"
+                    :options="regionOptions"
+                    placeholder="请选择或输入地区"
                     :disabled="!isEditMode"
-                  >
-                    <el-option label="北京市" value="beijing" />
-                    <el-option label="上海市" value="shanghai" />
-                    <el-option label="广东省" value="guangdong" />
-                  </el-select>
+                    @change="handleRegionChange"
+                  />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
@@ -506,6 +509,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useStore } from 'vuex'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Upload, Download, Delete, Document, Close, CircleCheck } from '@element-plus/icons-vue'
+import DropdownInput from '@/components/DropdownInput.vue'
 
 export default {
   name: 'Strains',
@@ -516,7 +520,8 @@ export default {
     Delete,
     Document,
     Close,
-    CircleCheck
+    CircleCheck,
+    DropdownInput
   },
   setup () {
     const store = useStore()
@@ -538,17 +543,17 @@ export default {
     // 字段映射配置
     const fieldMappingData = ref([
       { systemField: 'strain_id', systemFieldLabel: '菌株编号', fileField: '', required: true, description: '唯一标识菌株的编号' },
-      { systemField: 'species', systemFieldLabel: '菌种（属）', fileField: '', required: true, description: '菌种类型' },
+      { systemField: 'species', systemFieldLabel: '菌种类型', fileField: '', required: true, description: '菌种类型' },
       { systemField: 'sample_id', systemFieldLabel: '样本编号', fileField: '', required: true, description: '样本的唯一编号' },
       { systemField: 'sample_source', systemFieldLabel: '样本来源', fileField: '', required: true, description: '样本的来源类型' },
-      { systemField: 'region', systemFieldLabel: '地区', fileField: '', required: true, description: '地理位置' },
-      { systemField: 'onset_date', systemFieldLabel: '发病日期', fileField: '', required: false, description: '发病的日期' },
-      { systemField: 'sampling_date', systemFieldLabel: '采样日期', fileField: '', required: false, description: '采样的日期' },
-      { systemField: 'isolation_date', systemFieldLabel: '分离日期', fileField: '', required: true, description: '分离的日期' },
-      { systemField: 'virulence_genes', systemFieldLabel: '毒力基因', fileField: '', required: false, description: '毒力基因信息' },
-      { systemField: 'antibiotic_resistance', systemFieldLabel: '耐药谱', fileField: '', required: false, description: '抗生素耐药性' },
+      { systemField: 'region', systemFieldLabel: '采集地区', fileField: '', required: true, description: '地理位置' },
+      { systemField: 'onset_date', systemFieldLabel: '发病时间', fileField: '', required: false, description: '发病的时间' },
+      { systemField: 'sampling_date', systemFieldLabel: '采样时间', fileField: '', required: false, description: '采样的时间' },
+      { systemField: 'isolation_date', systemFieldLabel: '分离时间', fileField: '', required: true, description: '分离的时间' },
       { systemField: 'st_type', systemFieldLabel: 'ST型', fileField: '', required: false, description: '序列分型' },
       { systemField: 'serotype', systemFieldLabel: '血清型', fileField: '', required: false, description: '血清分型' },
+      { systemField: 'virulence_genes', systemFieldLabel: '毒力基因', fileField: '', required: false, description: '毒力基因信息' },
+      { systemField: 'antibiotic_resistance', systemFieldLabel: '耐药谱', fileField: '', required: false, description: '抗生素耐药性' },
       { systemField: 'molecular_serotype', systemFieldLabel: '分子血清型', fileField: '', required: false, description: '分子血清分型' }
     ])
 
@@ -627,41 +632,44 @@ export default {
     const loadStrains = async () => {
       loading.value = true
       try {
-        // TODO: 实现从后端加载菌株数据的逻辑
-        // const response = await api.getStrains(pagination, filterForm)
-        // strains.value = response.data
-        // pagination.total = response.total
-
-        // 临时模拟数据
-        strains.value = [
-          {
-            id: 1,
-            strain_id: 'E.coli-001',
-            species: 'E.coli',
-            sample_id: 'S001',
-            sample_source: 'blood',
-            region: 'beijing',
-            onset_date: '2023-01-10',
-            sampling_date: '2023-01-12',
-            isolation_date: '2023-01-15',
-            uploaded_by: 'admin'
-          },
-          {
-            id: 2,
-            strain_id: 'Salmonella-002',
-            species: 'Salmonella',
-            sample_id: 'S002',
-            sample_source: 'feces',
-            region: 'shanghai',
-            onset_date: '2023-01-08',
-            sampling_date: '2023-01-10',
-            isolation_date: '2023-01-12',
-            uploaded_by: 'advanced'
-          }
-        ]
-        pagination.total = 2
+        if (window.electronAPI && window.electronAPI.strains) {
+          // 使用Electron API加载菌株数据
+          const allStrains = await window.electronAPI.strains.getAll()
+          strains.value = allStrains || []
+          pagination.total = strains.value.length
+        } else {
+          // 开发环境或Web环境的模拟数据
+          strains.value = [
+            {
+              id: 1,
+              strain_id: 'E.coli-001',
+              species: 'E.coli',
+              sample_id: 'S001',
+              sample_source: 'blood',
+              region: 'beijing',
+              onset_date: '2023-01-10',
+              sampling_date: '2023-01-12',
+              isolation_date: '2023-01-15',
+              uploaded_by: 'admin'
+            },
+            {
+              id: 2,
+              strain_id: 'Salmonella-002',
+              species: 'Salmonella',
+              sample_id: 'S002',
+              sample_source: 'feces',
+              region: 'shanghai',
+              onset_date: '2023-01-08',
+              sampling_date: '2023-01-10',
+              isolation_date: '2023-01-12',
+              uploaded_by: 'advanced'
+            }
+          ]
+          pagination.total = 2
+        }
       } catch (error) {
         console.error('加载菌株数据失败:', error)
+        ElMessage.error('加载菌株数据失败：' + error.message)
       } finally {
         loading.value = false
       }
@@ -697,12 +705,12 @@ export default {
       validRecords.value = []
       errorRecords.value = []
       importedCount.value = 0
-      
+
       // 重置字段映射
       fieldMappingData.value.forEach(field => {
         field.fileField = ''
       })
-      
+
       importDialogVisible.value = true
     }
 
@@ -733,18 +741,26 @@ export default {
           type: 'warning'
         })
 
-        // 删除菌株
-        const index = strains.value.findIndex(s => s.id === strain.id)
-        if (index !== -1) {
-          strains.value.splice(index, 1)
-          pagination.total = strains.value.length
+        if (window.electronAPI && window.electronAPI.strains) {
+          // 使用Electron API删除
+          await window.electronAPI.strains.delete(strain.id)
           ElMessage.success('删除成功')
+          await loadStrains()
         } else {
-          ElMessage.error('菌株不存在')
+          // 开发环境的内存删除
+          const index = strains.value.findIndex(s => s.id === strain.id)
+          if (index !== -1) {
+            strains.value.splice(index, 1)
+            pagination.total = strains.value.length
+            ElMessage.success('删除成功')
+          } else {
+            ElMessage.error('菌株不存在')
+          }
         }
       } catch (error) {
         if (error !== 'cancel') {
-          ElMessage.error('删除失败')
+          console.error('删除菌株失败:', error)
+          ElMessage.error('删除失败：' + error.message)
         }
       }
     }
@@ -771,13 +787,23 @@ export default {
           }
         )
 
-        // 批量删除菌株
-        const idsToDelete = selectedStrains.value.map(strain => strain.id)
-        strains.value = strains.value.filter(strain => !idsToDelete.includes(strain.id))
-        pagination.total = strains.value.length
-        
-        ElMessage.success(`成功删除 ${selectedStrains.value.length} 个菌株`)
-        selectedStrains.value = []
+        if (window.electronAPI && window.electronAPI.strains) {
+          // 使用Electron API批量删除
+          const deletePromises = selectedStrains.value.map(strain =>
+            window.electronAPI.strains.delete(strain.id)
+          )
+          await Promise.all(deletePromises)
+          ElMessage.success(`成功删除 ${selectedStrains.value.length} 个菌株`)
+          selectedStrains.value = []
+          await loadStrains()
+        } else {
+          // 开发环境的内存批量删除
+          const idsToDelete = selectedStrains.value.map(strain => strain.id)
+          strains.value = strains.value.filter(strain => !idsToDelete.includes(strain.id))
+          pagination.total = strains.value.length
+          ElMessage.success(`成功删除 ${selectedStrains.value.length} 个菌株`)
+          selectedStrains.value = []
+        }
       } catch (error) {
         if (error !== 'cancel') {
           ElMessage.error('批量删除失败')
@@ -799,25 +825,80 @@ export default {
       }
     }
 
+    // 自动映射字段函数
+    const autoMapFields = (headers) => {
+      // 定义字段映射规则
+      const fieldMappingRules = {
+        strain_id: ['菌株编号', 'strain_id', 'strainid', '编号'],
+        species: ['菌种类型', '菌种', 'species', '种类'],
+        sample_id: ['样本编号', 'sample_id', 'sampleid', '样本号'],
+        sample_source: ['样本来源', 'sample_source', '来源', '源'],
+        region: ['采集地区', '地区', 'region', '地点', '位置'],
+        onset_date: ['发病时间', '发病日期', 'onset_date', '发病'],
+        sampling_date: ['采样时间', '采样日期', 'sampling_date', '采样'],
+        isolation_date: ['分离时间', '分离日期', 'isolation_date', '分离'],
+        st_type: ['ST型', 'st_type', 'st', 'ST'],
+        serotype: ['血清型', 'serotype', '血清'],
+        virulence_genes: ['毒力基因', 'virulence_genes', '毒力'],
+        antibiotic_resistance: ['耐药谱', 'antibiotic_resistance', '耐药', '抗药性'],
+        molecular_serotype: ['分子血清型', 'molecular_serotype', '分子血清']
+      }
+
+      fieldMappingData.value.forEach(field => {
+        // 重置字段映射
+        field.fileField = ''
+
+        // 获取该字段的映射规则
+        const rules = fieldMappingRules[field.systemField] || []
+
+        // 尝试找到完全匹配的表头
+        for (const rule of rules) {
+          const exactMatch = headers.find(header => header === rule)
+          if (exactMatch) {
+            field.fileField = exactMatch
+            return
+          }
+        }
+
+        // 如果没有完全匹配，尝试模糊匹配
+        const normalizeString = (str) => str.replace(/[\s()（）]/g, '').toLowerCase()
+
+        for (const rule of rules) {
+          const normalizedRule = normalizeString(rule)
+          const fuzzyMatch = headers.find(header => {
+            const normalizedHeader = normalizeString(header)
+            return normalizedHeader === normalizedRule ||
+                   normalizedHeader.includes(normalizedRule) ||
+                   normalizedRule.includes(normalizedHeader)
+          })
+
+          if (fuzzyMatch) {
+            field.fileField = fuzzyMatch
+            return
+          }
+        }
+      })
+    }
+
     const parseFile = (file) => {
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const data = e.target.result
         const extension = file.name.split('.').pop().toLowerCase()
-        
+
         try {
           if (extension === 'csv') {
             parseCSV(data)
           } else if (extension === 'tsv') {
             parseTSV(data)
           } else if (extension === 'xlsx') {
-            parseExcel(data)
+            await parseExcel(data)
           }
         } catch (error) {
           ElMessage.error('文件解析失败：' + error.message)
         }
       }
-      
+
       if (file.name.endsWith('.xlsx')) {
         reader.readAsArrayBuffer(file.raw)
       } else {
@@ -826,26 +907,59 @@ export default {
     }
 
     const parseCSV = (data) => {
-      const lines = data.split('\n').filter(line => line.trim())
-      if (lines.length < 2) {
-        ElMessage.error('文件内容不足，至少需要标题行和数据行')
-        return
-      }
-      
-      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
-      fileFields.value = headers
-      
-      const rows = lines.slice(1).map(line => {
-        const values = line.split(',').map(v => v.trim().replace(/"/g, ''))
-        const row = {}
-        headers.forEach((header, index) => {
-          row[header] = values[index] || ''
+      try {
+        const lines = data.split('\n').filter(line => line.trim())
+        if (lines.length < 2) {
+          ElMessage.error('文件内容不足，至少需要标题行和数据行')
+          return
+        }
+
+        // 改进的CSV解析，支持引号包围的字段
+        const parseCSVLine = (line) => {
+          const result = []
+          let current = ''
+          let inQuotes = false
+
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i]
+
+            if (char === '"') {
+              inQuotes = !inQuotes
+            } else if (char === ',' && !inQuotes) {
+              result.push(current.trim())
+              current = ''
+            } else {
+              current += char
+            }
+          }
+
+          result.push(current.trim())
+          return result
+        }
+
+        // 解析表头
+        const headers = parseCSVLine(lines[0]).map(h => h.replace(/"/g, ''))
+        fileFields.value = headers
+
+        // 自动映射字段
+        autoMapFields(headers)
+
+        // 解析数据行
+        const rows = lines.slice(1).map(line => {
+          const values = parseCSVLine(line).map(v => v.replace(/"/g, ''))
+          const row = {}
+          headers.forEach((header, index) => {
+            row[header] = values[index] || ''
+          })
+          return row
         })
-        return row
-      })
-      
-      importData.value = rows
-      ElMessage.success(`解析成功，共 ${rows.length} 条记录`)
+
+        importData.value = rows
+        ElMessage.success(`解析成功，共 ${rows.length} 条记录`)
+      } catch (error) {
+        console.error('CSV解析失败:', error)
+        ElMessage.error('CSV解析失败：' + error.message)
+      }
     }
 
     const parseTSV = (data) => {
@@ -854,10 +968,13 @@ export default {
         ElMessage.error('文件内容不足，至少需要标题行和数据行')
         return
       }
-      
+
       const headers = lines[0].split('\t').map(h => h.trim())
       fileFields.value = headers
-      
+
+      // 自动映射字段
+      autoMapFields(headers)
+
       const rows = lines.slice(1).map(line => {
         const values = line.split('\t').map(v => v.trim())
         const row = {}
@@ -866,51 +983,116 @@ export default {
         })
         return row
       })
-      
+
       importData.value = rows
       ElMessage.success(`解析成功，共 ${rows.length} 条记录`)
     }
 
-    const parseExcel = (data) => {
-      // 这里需要使用xlsx库来解析Excel文件
-      // 暂时使用模拟数据
-      ElMessage.info('Excel解析功能需要额外的库支持，当前使用模拟数据')
-      
-      fileFields.value = ['菌株编号', '菌种', '样本编号', '样本来源', '地区', '分离日期']
-      importData.value = [
-        { '菌株编号': 'E.coli-003', '菌种': 'E.coli', '样本编号': 'S003', '样本来源': '血液', '地区': '北京市', '分离日期': '2023-01-20' },
-        { '菌株编号': 'Salmonella-004', '菌种': 'Salmonella', '样本编号': 'S004', '样本来源': '粪便', '地区': '上海市', '分离日期': '2023-01-22' }
-      ]
-      ElMessage.success(`解析成功，共 ${importData.value.length} 条记录`)
+    const parseExcel = async (data) => {
+      try {
+        let XLSX
+
+        // 尝试不同的方式导入xlsx库
+        try {
+          // 方法1: 动态导入
+          XLSX = await import('xlsx')
+        } catch (dynamicImportError) {
+          console.warn('动态导入失败，尝试使用require:', dynamicImportError)
+          try {
+            // 方法2: 如果是Electron环境，尝试使用require
+            if (window.require && typeof window.require === 'function') {
+              XLSX = window.require('xlsx')
+            } else {
+              throw new Error('无法加载XLSX库')
+            }
+          } catch (requireError) {
+            console.warn('require方式也失败:', requireError)
+            throw new Error('XLSX库加载失败，请检查依赖安装')
+          }
+        }
+
+        const workbook = XLSX.read(data, { type: 'array' })
+        const sheetName = workbook.SheetNames[0]
+        const sheet = workbook.Sheets[sheetName]
+
+        // 转换为JSON格式
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+
+        if (jsonData.length < 2) {
+          ElMessage.error('文件内容不足，至少需要标题行和数据行')
+          return
+        }
+
+        // 获取表头（第一行）
+        const headers = jsonData[0].filter(header => header && header.toString().trim())
+        if (headers.length === 0) {
+          ElMessage.error('未找到有效的表头信息')
+          return
+        }
+
+        fileFields.value = headers
+
+        // 自动映射字段
+        autoMapFields(headers)
+
+        // 处理数据行
+        const rows = jsonData.slice(1).filter(row => row.some(cell => cell && cell.toString().trim())).map(row => {
+          const rowData = {}
+          headers.forEach((header, index) => {
+            rowData[header] = row[index] ? row[index].toString().trim() : ''
+          })
+          return rowData
+        })
+
+        importData.value = rows
+        ElMessage.success(`解析成功，共 ${rows.length} 条记录`)
+      } catch (error) {
+        console.error('Excel解析失败:', error)
+
+        // 提供更详细的错误信息
+        if (error.message.includes('Cannot resolve module') || error.message.includes('XLSX库加载失败')) {
+          ElMessage.error('Excel解析库未能正确加载，请尝试使用CSV格式文件')
+        } else if (error.message.includes('not defined') || error.message.includes('could not be created')) {
+          ElMessage.error('文件解析失败，建议将Excel文件转换为CSV格式后导入')
+        } else {
+          ElMessage.error('Excel解析失败：' + error.message)
+        }
+      }
     }
 
     const canNextStep = computed(() => {
       switch (importStep.value) {
-        case 0:
-          return selectedFile.value && fileFields.value.length > 0
-        case 1:
-          // 检查必填字段是否已映射
-          const requiredFields = fieldMappingData.value.filter(field => field.required)
-          return requiredFields.every(field => field.fileField)
-        case 2:
-          return validRecords.value.length > 0
-        default:
-          return false
+      case 0:
+        return selectedFile.value && fileFields.value.length > 0
+      case 1: {
+        // 检查必填字段是否已映射
+        const requiredFields = fieldMappingData.value.filter(field => field.required)
+        return requiredFields.every(field => field.fileField)
+      }
+      case 2:
+        return validRecords.value.length > 0
+      default:
+        return false
       }
     })
 
-    const nextStep = () => {
-      if (importStep.value === 0) {
-        // 进入字段映射步骤
-        importStep.value = 1
-      } else if (importStep.value === 1) {
-        // 进入数据验证步骤
-        validateData()
-        importStep.value = 2
-      } else if (importStep.value === 2) {
-        // 开始导入
-        performImport()
-        importStep.value = 3
+    const nextStep = async () => {
+      try {
+        if (importStep.value === 0) {
+          // 进入字段映射步骤
+          importStep.value = 1
+        } else if (importStep.value === 1) {
+          // 进入数据验证步骤
+          validateData()
+          importStep.value = 2
+        } else if (importStep.value === 2) {
+          // 开始导入
+          await performImport()
+          importStep.value = 3
+        }
+      } catch (error) {
+        console.error('导入步骤失败:', error)
+        // 保持在当前步骤，不前进
       }
     }
 
@@ -923,17 +1105,17 @@ export default {
     const validateData = () => {
       validRecords.value = []
       errorRecords.value = []
-      
+
       importData.value.forEach((row, index) => {
         const errors = []
         const mappedData = {}
-        
+
         // 检查必填字段
         const requiredFields = fieldMappingData.value.filter(field => field.required)
         requiredFields.forEach(field => {
           const fileField = field.fileField
           const value = row[fileField]
-          
+
           if (!value || value.trim() === '') {
             errors.push({
               rowIndex: index + 2, // +2 因为有标题行，且从1开始计数
@@ -942,19 +1124,41 @@ export default {
               error: '必填字段不能为空'
             })
           } else {
-            mappedData[field.systemField] = value
+            let processedValue = value
+
+            // 特殊处理日期字段
+            if (field.systemField.includes('date') || field.systemField.includes('time')) {
+              // 尝试解析和标准化日期格式
+              const dateValue = new Date(processedValue)
+              if (!isNaN(dateValue.getTime())) {
+                processedValue = dateValue.toISOString().split('T')[0] // YYYY-MM-DD格式
+              }
+            }
+
+            mappedData[field.systemField] = processedValue
           }
         })
-        
+
         // 检查可选字段
         const optionalFields = fieldMappingData.value.filter(field => !field.required)
         optionalFields.forEach(field => {
           const fileField = field.fileField
           if (fileField && row[fileField]) {
-            mappedData[field.systemField] = row[fileField]
+            let value = row[fileField]
+
+            // 特殊处理日期字段
+            if (field.systemField.includes('date') || field.systemField.includes('time')) {
+              // 尝试解析和标准化日期格式
+              const dateValue = new Date(value)
+              if (!isNaN(dateValue.getTime())) {
+                value = dateValue.toISOString().split('T')[0] // YYYY-MM-DD格式
+              }
+            }
+
+            mappedData[field.systemField] = value
           }
         })
-        
+
         // 检查菌株编号是否重复
         if (mappedData.strain_id) {
           const existingStrain = strains.value.find(strain => strain.strain_id === mappedData.strain_id)
@@ -967,32 +1171,111 @@ export default {
             })
           }
         }
-        
+
         if (errors.length > 0) {
           errorRecords.value.push(...errors)
         } else {
-          validRecords.value.push({
-            ...mappedData,
-            uploaded_by: store.getters['auth/user'].username
+          // 处理日期格式转换，确保所有数据都是简单的字符串类型
+          const processedData = {}
+
+          // 1. 数据清理 - 确保所有值都是字符串
+          Object.keys(mappedData).forEach(key => {
+            const value = mappedData[key]
+            if (value !== null && value !== undefined) {
+              processedData[key] = String(value).trim()
+            }
           })
+
+          // 2. 安全的用户信息处理
+          const user = store.getters['auth/user']
+          processedData.uploaded_by = user && user.username ? String(user.username) : 'unknown'
+
+          // 3. 数据处理完成，准备添加到记录中
+
+          validRecords.value.push(processedData)
         }
       })
     }
 
-    const performImport = () => {
-      // 导入有效记录
-      validRecords.value.forEach(record => {
-        const strainData = {
-          ...record,
-          id: Date.now() + Math.random(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+    const performImport = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.strains) {
+          // 创建完全可序列化的数据副本
+          const serializableRecords = validRecords.value.map(record => {
+            const cleanRecord = {}
+
+            // 确保所有字段都是简单类型
+            Object.keys(record).forEach(key => {
+              const value = record[key]
+              if (value !== null && value !== undefined) {
+                let cleanValue = value
+
+                // 转换为基本类型
+                if (typeof value === 'string') {
+                  // 清理字符串值，移除可能导致问题的字符
+                  cleanValue = value.trim()
+                } else if (typeof value === 'number' || typeof value === 'boolean') {
+                  cleanValue = value
+                } else {
+                  // 对象或其他类型转换为字符串
+                  cleanValue = String(value).trim()
+                }
+
+                // 只有非空值才添加
+                if (cleanValue !== '') {
+                  cleanRecord[key] = cleanValue
+                }
+              }
+            })
+
+            return cleanRecord
+          })
+
+          // 使用Electron API批量创建菌株
+          const createPromises = serializableRecords.map(async (record, index) => {
+            try {
+              return await window.electronAPI.strains.create(record)
+            } catch (error) {
+              console.error(`创建菌株失败 (第${index + 1}条):`, error)
+              throw new Error(`第${index + 1}条记录导入失败: ${error.message}`)
+            }
+          })
+
+          const results = await Promise.allSettled(createPromises)
+
+          // 统计成功和失败的数量
+          const successful = results.filter(result => result.status === 'fulfilled')
+          const failed = results.filter(result => result.status === 'rejected')
+
+          importedCount.value = successful.length
+
+          if (failed.length > 0) {
+            console.warn('部分记录导入失败:', failed.map(f => f.reason.message))
+            ElMessage.warning(`成功导入 ${successful.length} 条记录，${failed.length} 条记录失败`)
+          } else {
+            ElMessage.success(`成功导入 ${successful.length} 条记录`)
+          }
+
+          await loadStrains()
+        } else {
+          // 开发环境的内存导入
+          validRecords.value.forEach(record => {
+            const strainData = {
+              ...record,
+              id: Date.now() + Math.random(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }
+            strains.value.push(strainData)
+          })
+          pagination.total = strains.value.length
+          importedCount.value = validRecords.value.length
         }
-        strains.value.push(strainData)
-      })
-      
-      pagination.total = strains.value.length
-      importedCount.value = validRecords.value.length
+      } catch (error) {
+        console.error('导入菌株失败:', error)
+        ElMessage.error('导入失败：' + error.message)
+        throw error
+      }
     }
 
     const finishImport = () => {
@@ -1068,42 +1351,76 @@ export default {
           await characteristicsFormRef.value.validate()
         }
 
-        // 检查菌株编号是否重复
-        const existingStrain = strains.value.find(strain => 
-          strain.strain_id === strainForm.basic.strain_id && 
-          strain.id !== strainForm.basic.id
-        )
-        if (existingStrain) {
-          ElMessage.error('菌株编号已存在，请使用其他编号')
-          return
-        }
-
-        // 保存菌株数据
+        // 准备菌株数据
         const strainData = {
           ...strainForm.basic,
-          ...strainForm.characteristics,
-          id: strainForm.basic.id || Date.now(),
-          created_at: strainForm.basic.created_at || new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          ...strainForm.characteristics
         }
 
-        if (strainForm.basic.id) {
-          // 更新现有菌株
-          const index = strains.value.findIndex(strain => strain.id === strainForm.basic.id)
-          if (index !== -1) {
-            strains.value[index] = strainData
+        // 移除id字段（后端会自动生成）
+        delete strainData.id
+        delete strainData.created_at
+
+        // 转换日期对象为字符串格式，避免数据库绑定错误
+        if (strainData.onset_date instanceof Date) {
+          strainData.onset_date = strainData.onset_date.toISOString().split('T')[0]
+        }
+        if (strainData.sampling_date instanceof Date) {
+          strainData.sampling_date = strainData.sampling_date.toISOString().split('T')[0]
+        }
+        if (strainData.isolation_date instanceof Date) {
+          strainData.isolation_date = strainData.isolation_date.toISOString().split('T')[0]
+        }
+
+        if (window.electronAPI && window.electronAPI.strains) {
+          // 使用Electron API保存
+          if (strainForm.basic.id) {
+            // 更新现有菌株
+            await window.electronAPI.strains.update(strainForm.basic.id, strainData)
+            ElMessage.success('菌株更新成功')
+          } else {
+            // 添加新菌株
+            await window.electronAPI.strains.create(strainData)
+            ElMessage.success('菌株添加成功')
           }
-          ElMessage.success('菌株更新成功')
         } else {
-          // 添加新菌株
-          strains.value.push(strainData)
-          pagination.total = strains.value.length
-          ElMessage.success('菌株添加成功')
+          // 开发环境的内存存储
+          // 检查菌株编号是否重复
+          const existingStrain = strains.value.find(strain =>
+            strain.strain_id === strainForm.basic.strain_id &&
+            strain.id !== strainForm.basic.id
+          )
+          if (existingStrain) {
+            ElMessage.error('菌株编号已存在，请使用其他编号')
+            return
+          }
+
+          const fullStrainData = {
+            ...strainData,
+            id: strainForm.basic.id || Date.now(),
+            created_at: strainForm.basic.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+
+          if (strainForm.basic.id) {
+            // 更新现有菌株
+            const index = strains.value.findIndex(strain => strain.id === strainForm.basic.id)
+            if (index !== -1) {
+              strains.value[index] = fullStrainData
+            }
+            ElMessage.success('菌株更新成功')
+          } else {
+            // 添加新菌株
+            strains.value.push(fullStrainData)
+            pagination.total = strains.value.length
+            ElMessage.success('菌株添加成功')
+          }
         }
 
         strainDialogVisible.value = false
-        loadStrains()
+        await loadStrains()
       } catch (error) {
+        console.error('保存菌株失败:', error)
         if (error.message) {
           ElMessage.error(error.message)
         } else {
@@ -1112,8 +1429,63 @@ export default {
       }
     }
 
-    onMounted(() => {
-      loadStrains()
+    // 系统配置选项
+    const speciesOptions = computed(() => store.getters.activeSpeciesOptions)
+    const regionOptions = computed(() => store.getters.activeRegionOptions)
+    const sourceOptions = computed(() => store.getters.activeSourceOptions)
+
+    // 处理选项变化，如果是新值则保存到系统配置
+    const handleSpeciesChange = async (value) => {
+      const existingOption = speciesOptions.value.find(option => option.value === value)
+      if (!existingOption && value && value.trim()) {
+        try {
+          await store.dispatch('saveSpeciesOption', {
+            value,
+            label: value,
+            description: '用户输入的菌种'
+          })
+        } catch (error) {
+          console.error('保存菌种选项失败:', error)
+        }
+      }
+    }
+
+    const handleRegionChange = async (value) => {
+      const existingOption = regionOptions.value.find(option => option.value === value)
+      if (!existingOption && value && value.trim()) {
+        try {
+          await store.dispatch('saveRegionOption', {
+            value,
+            label: value,
+            description: '用户输入的地区'
+          })
+        } catch (error) {
+          console.error('保存地区选项失败:', error)
+        }
+      }
+    }
+
+    const handleSourceChange = async (value) => {
+      const existingOption = sourceOptions.value.find(option => option.value === value)
+      if (!existingOption && value && value.trim()) {
+        try {
+          await store.dispatch('saveSourceOption', {
+            value,
+            label: value,
+            description: '用户输入的样本来源'
+          })
+        } catch (error) {
+          console.error('保存样本来源选项失败:', error)
+        }
+      }
+    }
+
+    onMounted(async () => {
+      // 并行加载菌株数据和系统配置
+      await Promise.all([
+        loadStrains(),
+        store.dispatch('fetchSystemConfig')
+      ])
     })
 
     // 权限控制
@@ -1140,6 +1512,13 @@ export default {
       handleCurrentChange,
       canUpload,
       isAdmin,
+      // 系统配置选项
+      speciesOptions,
+      regionOptions,
+      sourceOptions,
+      handleSpeciesChange,
+      handleRegionChange,
+      handleSourceChange,
       // 对话框相关
       strainDialogVisible,
       isEditMode,
@@ -1238,19 +1617,19 @@ export default {
     padding: 40px;
     text-align: center;
   }
-  
+
   .selected-file {
     margin-top: 20px;
     padding: 10px;
     border: 1px solid #e4e7ed;
     border-radius: 4px;
     background-color: #f5f7fa;
-    
+
     .file-info {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      
+
       span {
         flex: 1;
         margin-left: 10px;
@@ -1264,12 +1643,12 @@ export default {
     margin-bottom: 10px;
     color: #303133;
   }
-  
+
   p {
     margin-bottom: 20px;
     color: #606266;
   }
-  
+
   .required {
     color: #f56c6c;
     margin-left: 5px;
@@ -1281,7 +1660,7 @@ export default {
     margin-bottom: 20px;
     color: #303133;
   }
-  
+
   .validation-summary {
     display: flex;
     gap: 30px;
@@ -1289,32 +1668,32 @@ export default {
     padding: 20px;
     background-color: #f5f7fa;
     border-radius: 4px;
-    
+
     .summary-item {
       display: flex;
       align-items: center;
       gap: 10px;
-      
+
       .label {
         font-weight: 500;
         color: #606266;
       }
-      
+
       .value {
         font-weight: 600;
         font-size: 16px;
-        
+
         &.success {
           color: #67c23a;
         }
-        
+
         &.error {
           color: #f56c6c;
         }
       }
     }
   }
-  
+
   .error-list {
     h5 {
       margin-bottom: 10px;
@@ -1326,16 +1705,16 @@ export default {
 .import-result {
   text-align: center;
   padding: 40px;
-  
+
   .result-icon {
     margin-bottom: 20px;
   }
-  
+
   h4 {
     margin-bottom: 10px;
     color: #303133;
   }
-  
+
   p {
     color: #606266;
   }

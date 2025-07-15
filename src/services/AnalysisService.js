@@ -382,6 +382,18 @@ class AnalysisService extends EventEmitter {
   }
 
   /**
+   * 获取任务统计信息
+   */
+  async getTaskStats() {
+    try {
+      return this.db.getTaskStats()
+    } catch (error) {
+      console.error('获取任务统计失败:', error)
+      throw new Error('获取任务统计失败')
+    }
+  }
+
+  /**
    * 验证分析参数
    */
   validateAnalysisParams(analysisType, genomeIds, params) {

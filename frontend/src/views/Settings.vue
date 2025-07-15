@@ -1,122 +1,140 @@
 <template>
   <div class="settings-container">
     <div class="page-header">
-      <h1>系统设置</h1>
-      <p>系统配置和参数管理</p>
+      <h1>个人设置</h1>
+      <p>修改个人信息和账户设置</p>
     </div>
 
     <div class="content-area">
       <el-tabs v-model="activeTab" type="card">
-        <el-tab-pane label="基本设置" name="basic">
-          <el-form :model="basicForm" label-width="120px">
-            <el-form-item label="系统名称">
-              <el-input v-model="basicForm.systemName" placeholder="请输入系统名称" />
-            </el-form-item>
-            <el-form-item label="系统版本">
-              <el-input v-model="basicForm.systemVersion" placeholder="请输入系统版本" readonly />
-            </el-form-item>
-            <el-form-item label="管理员邮箱">
-              <el-input v-model="basicForm.adminEmail" placeholder="请输入管理员邮箱" />
-            </el-form-item>
-            <el-form-item label="系统描述">
-              <el-input
-                v-model="basicForm.systemDescription"
-                type="textarea"
-                :rows="3"
-                placeholder="请输入系统描述"
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="saveBasicSettings">保存设置</el-button>
-            </el-form-item>
-          </el-form>
+        <!-- 个人信息 -->
+        <el-tab-pane label="个人信息" name="profile">
+          <div class="profile-section">
+            <div class="user-avatar">
+              <el-avatar :size="80" :icon="UserFilled" />
+              <div class="avatar-info">
+                <h3>{{ user.username }}</h3>
+                <el-tag :type="getRoleTagType(user.role)" size="small">
+                  {{ getRoleText(user.role) }}
+                </el-tag>
+              </div>
+            </div>
+
+            <el-form :model="profileForm" :rules="profileRules" ref="profileFormRef" label-width="120px">
+              <el-form-item label="用户名">
+                <el-input v-model="profileForm.username" disabled />
+              </el-form-item>
+              <el-form-item label="用户名称" prop="displayName">
+                <el-input
+                  v-model="profileForm.displayName"
+                  placeholder="请输入用户名称（可选）"
+                  clearable
+                />
+              </el-form-item>
+              <el-form-item label="实验室名称" prop="laboratory">
+                <el-input
+                  v-model="profileForm.laboratory"
+                  placeholder="请输入实验室名称（可选）"
+                  clearable
+                />
+              </el-form-item>
+              <el-form-item label="邮箱" prop="email">
+                <el-input
+                  v-model="profileForm.email"
+                  placeholder="请输入邮箱地址（可选）"
+                  clearable
+                />
+              </el-form-item>
+              <el-form-item label="联系电话" prop="phone">
+                <el-input
+                  v-model="profileForm.phone"
+                  placeholder="请输入联系电话（可选）"
+                  clearable
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="saveProfile" :loading="saving">
+                  保存个人信息
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </div>
         </el-tab-pane>
 
-        <el-tab-pane label="数据库设置" name="database">
-          <el-form :model="databaseForm" label-width="120px">
-            <el-form-item label="数据库类型">
-              <el-select v-model="databaseForm.type" placeholder="请选择数据库类型">
-                <el-option label="SQLite" value="sqlite" />
-                <el-option label="MySQL" value="mysql" />
-                <el-option label="PostgreSQL" value="postgresql" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="数据库主机">
-              <el-input v-model="databaseForm.host" placeholder="请输入数据库主机" />
-            </el-form-item>
-            <el-form-item label="数据库端口">
-              <el-input v-model="databaseForm.port" placeholder="请输入数据库端口" />
-            </el-form-item>
-            <el-form-item label="数据库名称">
-              <el-input v-model="databaseForm.database" placeholder="请输入数据库名称" />
-            </el-form-item>
-            <el-form-item label="用户名">
-              <el-input v-model="databaseForm.username" placeholder="请输入用户名" />
-            </el-form-item>
-            <el-form-item label="密码">
-              <el-input
-                v-model="databaseForm.password"
-                type="password"
-                placeholder="请输入密码"
-                show-password
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="testDatabaseConnection">测试连接</el-button>
-              <el-button @click="saveDatabaseSettings">保存设置</el-button>
-            </el-form-item>
-          </el-form>
+        <!-- 修改密码 -->
+        <el-tab-pane label="修改密码" name="password">
+          <div class="password-section">
+            <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef" label-width="120px">
+              <el-form-item label="当前密码" prop="currentPassword">
+                <el-input
+                  v-model="passwordForm.currentPassword"
+                  type="password"
+                  placeholder="请输入当前密码"
+                  show-password
+                />
+              </el-form-item>
+              <el-form-item label="新密码" prop="newPassword">
+                <el-input
+                  v-model="passwordForm.newPassword"
+                  type="password"
+                  placeholder="请输入新密码"
+                  show-password
+                />
+              </el-form-item>
+              <el-form-item label="确认新密码" prop="confirmPassword">
+                <el-input
+                  v-model="passwordForm.confirmPassword"
+                  type="password"
+                  placeholder="请再次输入新密码"
+                  show-password
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="changePassword" :loading="changingPassword">
+                  修改密码
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </div>
         </el-tab-pane>
 
-        <el-tab-pane label="分析工具" name="tools">
-          <el-form :model="toolsForm" label-width="120px">
-            <el-form-item label="BLAST路径">
-              <el-input v-model="toolsForm.blastPath" placeholder="请输入BLAST工具路径" />
-            </el-form-item>
-            <el-form-item label="Prokka路径">
-              <el-input v-model="toolsForm.prokkaPath" placeholder="请输入Prokka工具路径" />
-            </el-form-item>
-            <el-form-item label="MLST路径">
-              <el-input v-model="toolsForm.mlstPath" placeholder="请输入MLST工具路径" />
-            </el-form-item>
-            <el-form-item label="ABRicate路径">
-              <el-input v-model="toolsForm.abricatePath" placeholder="请输入ABRicate工具路径" />
-            </el-form-item>
-            <el-form-item label="最大并发任务">
-              <el-input-number
-                v-model="toolsForm.maxConcurrentTasks"
-                :min="1"
-                :max="10"
-                placeholder="请输入最大并发任务数"
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="saveToolsSettings">保存设置</el-button>
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-
-        <el-tab-pane label="存储设置" name="storage">
-          <el-form :model="storageForm" label-width="120px">
-            <el-form-item label="数据存储路径">
-              <el-input v-model="storageForm.dataPath" placeholder="请输入数据存储路径" />
-            </el-form-item>
-            <el-form-item label="临时文件路径">
-              <el-input v-model="storageForm.tempPath" placeholder="请输入临时文件路径" />
-            </el-form-item>
-            <el-form-item label="日志文件路径">
-              <el-input v-model="storageForm.logPath" placeholder="请输入日志文件路径" />
-            </el-form-item>
-            <el-form-item label="最大存储空间">
-              <el-input v-model="storageForm.maxStorageSize" placeholder="请输入最大存储空间(GB)" />
-            </el-form-item>
-            <el-form-item label="自动清理">
-              <el-switch v-model="storageForm.autoCleanup" />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="saveStorageSettings">保存设置</el-button>
-            </el-form-item>
-          </el-form>
+        <!-- 账户设置 -->
+        <el-tab-pane label="账户设置" name="account">
+          <div class="account-section">
+            <el-form :model="accountForm" label-width="120px">
+              <el-form-item label="语言设置">
+                <el-select v-model="accountForm.language" placeholder="请选择语言">
+                  <el-option label="中文" value="zh-CN" />
+                  <el-option label="English" value="en-US" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="时区设置">
+                <el-select v-model="accountForm.timezone" placeholder="请选择时区">
+                  <el-option label="北京时间 (GMT+8)" value="Asia/Shanghai" />
+                  <el-option label="UTC" value="UTC" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="主题设置">
+                <el-radio-group v-model="accountForm.theme">
+                  <el-radio label="light">浅色主题</el-radio>
+                  <el-radio label="dark">深色主题</el-radio>
+                  <el-radio label="auto">跟随系统</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item label="数据显示">
+                <el-switch
+                  v-model="accountForm.showAdvancedData"
+                  active-text="显示高级数据"
+                  inactive-text="简化显示"
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="saveAccountSettings">
+                  保存账户设置
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </div>
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -124,157 +142,242 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useStore } from 'vuex'
+import { ElMessage } from 'element-plus'
+import { UserFilled } from '@element-plus/icons-vue'
 
 export default {
   name: 'Settings',
   setup () {
-    const activeTab = ref('basic')
+    const store = useStore()
+    const activeTab = ref('profile')
+    const saving = ref(false)
+    const changingPassword = ref(false)
+    const profileFormRef = ref(null)
+    const passwordFormRef = ref(null)
 
-    const basicForm = reactive({
-      systemName: 'PAMS - 病原菌基因组分析系统',
-      systemVersion: '1.0.0',
-      adminEmail: 'admin@pams.com',
-      systemDescription: '基于生物信息学的病原菌基因组分析管理系统'
+    const user = computed(() => store.getters['auth/user'] || {})
+
+    const profileForm = reactive({
+      username: '',
+      displayName: '',
+      laboratory: '',
+      email: '',
+      phone: ''
     })
 
-    const databaseForm = reactive({
-      type: 'sqlite',
-      host: 'localhost',
-      port: '3306',
-      database: 'pams',
-      username: 'root',
-      password: ''
+    const passwordForm = reactive({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
     })
 
-    const toolsForm = reactive({
-      blastPath: '/usr/local/bin/blast',
-      prokkaPath: '/usr/local/bin/prokka',
-      mlstPath: '/usr/local/bin/mlst',
-      abricatePath: '/usr/local/bin/abricate',
-      maxConcurrentTasks: 4
+    const accountForm = reactive({
+      language: 'zh-CN',
+      timezone: 'Asia/Shanghai',
+      theme: 'light',
+      showAdvancedData: true
     })
 
-    const storageForm = reactive({
-      dataPath: '/var/lib/pams/data',
-      tempPath: '/tmp/pams',
-      logPath: '/var/log/pams',
-      maxStorageSize: '100',
-      autoCleanup: true
-    })
+    const profileRules = {
+      email: [
+        { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+      ],
+      phone: [
+        { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
+      ]
+    }
 
-    const loadSettings = async () => {
+    const passwordRules = {
+      currentPassword: [
+        { required: true, message: '请输入当前密码', trigger: 'blur' }
+      ],
+      newPassword: [
+        { required: true, message: '请输入新密码', trigger: 'blur' },
+        { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
+      ],
+      confirmPassword: [
+        { required: true, message: '请确认新密码', trigger: 'blur' },
+        {
+          validator: (rule, value, callback) => {
+            if (value !== passwordForm.newPassword) {
+              callback(new Error('两次输入的密码不一致'))
+            } else {
+              callback()
+            }
+          },
+          trigger: 'blur'
+        }
+      ]
+    }
+
+    const getRoleTagType = (role) => {
+      const typeMap = {
+        admin: 'danger',
+        advanced: 'warning',
+        user: 'info'
+      }
+      return typeMap[role] || 'info'
+    }
+
+    const getRoleText = (role) => {
+      const textMap = {
+        admin: '管理员',
+        advanced: '高级用户',
+        user: '普通用户'
+      }
+      return textMap[role] || '未知'
+    }
+
+    const loadUserProfile = async () => {
       try {
-        // TODO: 实现从后端加载设置的逻辑
-        // const response = await api.getSettings()
-        // Object.assign(basicForm, response.basic)
-        // Object.assign(databaseForm, response.database)
-        // Object.assign(toolsForm, response.tools)
-        // Object.assign(storageForm, response.storage)
+        // 从用户信息加载数据
+        profileForm.username = user.value.username || ''
+        profileForm.displayName = user.value.displayName || ''
+        profileForm.laboratory = user.value.laboratory || ''
+        profileForm.email = user.value.email || ''
+        profileForm.phone = user.value.phone || ''
 
-        console.log('加载设置')
+        // 加载账户设置
+        accountForm.language = user.value.language || 'zh-CN'
+        accountForm.timezone = user.value.timezone || 'Asia/Shanghai'
+        accountForm.theme = user.value.theme || 'light'
+        accountForm.showAdvancedData = user.value.showAdvancedData !== false
       } catch (error) {
-        console.error('加载设置失败:', error)
+        console.error('加载用户信息失败:', error)
       }
     }
 
-    const saveBasicSettings = async () => {
-      try {
-        // TODO: 实现保存基本设置的逻辑
-        // await api.saveBasicSettings(basicForm)
-        console.log('保存基本设置:', basicForm)
-        ElMessage.success('基本设置保存成功')
-      } catch (error) {
-        console.error('保存基本设置失败:', error)
-        ElMessage.error('保存基本设置失败')
-      }
+    const saveProfile = async () => {
+      if (!profileFormRef.value) return
+
+      await profileFormRef.value.validate(async (valid) => {
+        if (!valid) return
+
+        saving.value = true
+        try {
+          // TODO: 实现保存用户信息的API调用
+          if (window.electronAPI && window.electronAPI.users) {
+            await window.electronAPI.users.updateProfile(user.value.id, {
+              displayName: profileForm.displayName,
+              laboratory: profileForm.laboratory,
+              email: profileForm.email,
+              phone: profileForm.phone
+            })
+          }
+
+          // 更新store中的用户信息
+          await store.dispatch('auth/updateUserProfile', {
+            displayName: profileForm.displayName,
+            laboratory: profileForm.laboratory,
+            email: profileForm.email,
+            phone: profileForm.phone
+          })
+
+          ElMessage.success('个人信息保存成功')
+        } catch (error) {
+          console.error('保存个人信息失败:', error)
+          ElMessage.error('保存失败：' + (error.message || '未知错误'))
+        } finally {
+          saving.value = false
+        }
+      })
     }
 
-    const testDatabaseConnection = async () => {
-      try {
-        // TODO: 实现测试数据库连接的逻辑
-        // await api.testDatabaseConnection(databaseForm)
-        console.log('测试数据库连接:', databaseForm)
-        ElMessage.success('数据库连接测试成功')
-      } catch (error) {
-        console.error('数据库连接测试失败:', error)
-        ElMessage.error('数据库连接测试失败')
-      }
+    const changePassword = async () => {
+      if (!passwordFormRef.value) return
+
+      await passwordFormRef.value.validate(async (valid) => {
+        if (!valid) return
+
+        changingPassword.value = true
+        try {
+          // TODO: 实现修改密码的API调用
+          if (window.electronAPI && window.electronAPI.auth) {
+            await window.electronAPI.auth.changePassword(
+              user.value.username,
+              passwordForm.currentPassword,
+              passwordForm.newPassword
+            )
+          }
+
+          // 清空表单
+          passwordForm.currentPassword = ''
+          passwordForm.newPassword = ''
+          passwordForm.confirmPassword = ''
+
+          ElMessage.success('密码修改成功')
+        } catch (error) {
+          console.error('修改密码失败:', error)
+          ElMessage.error('修改密码失败：' + (error.message || '当前密码不正确'))
+        } finally {
+          changingPassword.value = false
+        }
+      })
     }
 
-    const saveDatabaseSettings = async () => {
+    const saveAccountSettings = async () => {
       try {
-        // TODO: 实现保存数据库设置的逻辑
-        // await api.saveDatabaseSettings(databaseForm)
-        console.log('保存数据库设置:', databaseForm)
-        ElMessage.success('数据库设置保存成功')
-      } catch (error) {
-        console.error('保存数据库设置失败:', error)
-        ElMessage.error('保存数据库设置失败')
-      }
-    }
+        // TODO: 实现保存账户设置的API调用
+        if (window.electronAPI && window.electronAPI.users) {
+          await window.electronAPI.users.updateSettings(user.value.id, accountForm)
+        }
 
-    const saveToolsSettings = async () => {
-      try {
-        // TODO: 实现保存工具设置的逻辑
-        // await api.saveToolsSettings(toolsForm)
-        console.log('保存工具设置:', toolsForm)
-        ElMessage.success('工具设置保存成功')
-      } catch (error) {
-        console.error('保存工具设置失败:', error)
-        ElMessage.error('保存工具设置失败')
-      }
-    }
+        // 更新store中的用户设置
+        await store.dispatch('auth/updateUserSettings', accountForm)
 
-    const saveStorageSettings = async () => {
-      try {
-        // TODO: 实现保存存储设置的逻辑
-        // await api.saveStorageSettings(storageForm)
-        console.log('保存存储设置:', storageForm)
-        ElMessage.success('存储设置保存成功')
+        ElMessage.success('账户设置保存成功')
       } catch (error) {
-        console.error('保存存储设置失败:', error)
-        ElMessage.error('保存存储设置失败')
+        console.error('保存账户设置失败:', error)
+        ElMessage.error('保存失败：' + (error.message || '未知错误'))
       }
     }
 
     onMounted(() => {
-      loadSettings()
+      loadUserProfile()
     })
 
     return {
       activeTab,
-      basicForm,
-      databaseForm,
-      toolsForm,
-      storageForm,
-      saveBasicSettings,
-      testDatabaseConnection,
-      saveDatabaseSettings,
-      saveToolsSettings,
-      saveStorageSettings
+      saving,
+      changingPassword,
+      profileFormRef,
+      passwordFormRef,
+      user,
+      profileForm,
+      passwordForm,
+      accountForm,
+      profileRules,
+      passwordRules,
+      getRoleTagType,
+      getRoleText,
+      saveProfile,
+      changePassword,
+      saveAccountSettings,
+      UserFilled
     }
   }
 }
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .settings-container {
   padding: 20px;
 }
 
 .page-header {
   margin-bottom: 20px;
-}
 
-.page-header h1 {
-  margin: 0 0 8px 0;
-  color: #303133;
-}
+  h1 {
+    margin: 0 0 8px 0;
+    color: #303133;
+  }
 
-.page-header p {
-  margin: 0;
-  color: #606266;
+  p {
+    margin: 0;
+    color: #606266;
+  }
 }
 
 .content-area {
@@ -284,8 +387,40 @@ export default {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.el-form {
-  max-width: 600px;
+.profile-section {
+  .user-avatar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f5f7fa;
+    border-radius: 8px;
+
+    .avatar-info {
+      margin-left: 20px;
+
+      h3 {
+        margin: 0 0 8px 0;
+        color: #303133;
+      }
+    }
+  }
+
+  .el-form {
+    max-width: 600px;
+  }
+}
+
+.password-section {
+  .el-form {
+    max-width: 600px;
+  }
+}
+
+.account-section {
+  .el-form {
+    max-width: 600px;
+  }
 }
 
 .el-form-item {

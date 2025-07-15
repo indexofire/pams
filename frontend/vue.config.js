@@ -22,7 +22,7 @@ module.exports = defineConfig({
   chainWebpack: config => {
     // 为electron环境设置环境变量
     config.plugin('define').tap(definitions => {
-      definitions[0]['process.env']['IS_ELECTRON'] = JSON.stringify(!!process.env.IS_ELECTRON)
+      definitions[0]['process.env'].IS_ELECTRON = JSON.stringify(!!process.env.IS_ELECTRON)
       return definitions
     })
   }

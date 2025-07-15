@@ -9,6 +9,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
   showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
 
+  // 用户管理
+  users: {
+    getAll: () => ipcRenderer.invoke('users:getAll'),
+    create: (userData) => ipcRenderer.invoke('users:create', userData),
+    update: (id, userData) => ipcRenderer.invoke('users:update', id, userData),
+    delete: (id) => ipcRenderer.invoke('users:delete', id)
+  },
+
+  // 认证管理
+  auth: {
+    login: (username, password) => ipcRenderer.invoke('auth:login', username, password),
+    register: (userData) => ipcRenderer.invoke('auth:register', userData)
+  },
+
   // 菌株管理
   strains: {
     getAll: () => ipcRenderer.invoke('strains:getAll'),
@@ -43,4 +57,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // 移除监听器
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
-}) 
+})
+
+// 为渲染进程提供有限的require访问能力（仅用于特定模块）
+if (process.env.NODE_ENV === 'development') {
+  contextBridge.exposeInMainWorld('require', (moduleName) => {
+    // 只允许加载特定的模块
+    const allowedModules = ['xlsx']
+    if (allowedModules.includes(moduleName)) {
+      try {
+        return require(moduleName)
+      } catch (error) {
+        console.error(`Failed to require ${moduleName}:`, error)
+        return null
+      }
+    }
+    throw new Error(`Module ${moduleName} is not allowed`)
+  })
+}

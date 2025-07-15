@@ -70,25 +70,22 @@ class DatabaseService {
     this.db.run(`
       CREATE TABLE IF NOT EXISTS strains (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        strainId TEXT UNIQUE NOT NULL,
+        strain_id TEXT UNIQUE NOT NULL,
         species TEXT NOT NULL,
-        source TEXT,
-        isolationDate TEXT,
-        isolationSite TEXT,
-        sampleType TEXT,
-        patientId TEXT,
-        patientAge INTEGER,
-        patientGender TEXT,
-        hospital TEXT,
-        department TEXT,
+        sample_id TEXT,
+        sample_source TEXT,
         region TEXT,
-        diagnosis TEXT,
-        antibioticTreatment TEXT,
-        outcome TEXT,
-        createdBy INTEGER NOT NULL,
-        createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (createdBy) REFERENCES users(id)
+        onset_date TEXT,
+        sampling_date TEXT,
+        isolation_date TEXT,
+        uploaded_by TEXT,
+        virulence_genes TEXT,
+        antibiotic_resistance TEXT,
+        st_type TEXT,
+        serotype TEXT,
+        molecular_serotype TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     `)
 
@@ -221,67 +218,173 @@ class DatabaseService {
     return { id: result.id, ...userData }
   }
 
+  async updateUser(id, userData) {
+    const fields = []
+    const values = []
+    
+    if (userData.username) {
+      fields.push('username = ?')
+      values.push(userData.username)
+    }
+    if (userData.email) {
+      fields.push('email = ?')
+      values.push(userData.email)
+    }
+    if (userData.password) {
+      fields.push('password = ?')
+      values.push(userData.password)
+    }
+    if (userData.role) {
+      fields.push('role = ?')
+      values.push(userData.role)
+    }
+    if (userData.hasOwnProperty('isActive')) {
+      fields.push('isActive = ?')
+      values.push(userData.isActive ? 1 : 0)
+    }
+    if (userData.lastLogin) {
+      fields.push('lastLogin = ?')
+      values.push(userData.lastLogin)
+    }
+    
+    fields.push('updatedAt = CURRENT_TIMESTAMP')
+    values.push(id)
+
+    const stmt = this.db.prepare(`
+      UPDATE users SET ${fields.join(', ')}
+      WHERE id = ?
+    `)
+    stmt.run(values)
+    
+    await this.saveDatabase()
+    return this.getUserById(id)
+  }
+
+  async deleteUser(id) {
+    const stmt = this.db.prepare('DELETE FROM users WHERE id = ?')
+    stmt.run([id])
+    
+    await this.saveDatabase()
+    return { success: true }
+  }
+
   // 菌株相关方法
   getAllStrains() {
-    const stmt = this.db.prepare(`
-      SELECT s.*, u.username as creatorName,
-             COUNT(g.id) as genomeCount
-      FROM strains s
-      LEFT JOIN users u ON s.createdBy = u.id
-      LEFT JOIN genomes g ON s.id = g.strainId
-      GROUP BY s.id
-      ORDER BY s.createdAt DESC
-    `)
-    return stmt.all()
+    try {
+      const stmt = this.db.prepare(`
+        SELECT * FROM strains
+        ORDER BY created_at DESC
+      `)
+      const results = []
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
+    } catch (error) {
+      console.error('获取菌株列表失败:', error)
+      return []
+    }
   }
 
   getStrainById(id) {
-    const stmt = this.db.prepare('SELECT * FROM strains WHERE id = ?')
-    return stmt.get([id])
+    try {
+      const stmt = this.db.prepare('SELECT * FROM strains WHERE id = ?')
+      stmt.bind([id])
+      if (stmt.step()) {
+        const result = stmt.getAsObject()
+        stmt.free()
+        return result
+      }
+      stmt.free()
+      return null
+    } catch (error) {
+      console.error('获取菌株详情失败:', error)
+      return null
+    }
   }
 
   async createStrain(strainData) {
-    const stmt = this.db.prepare(`
-      INSERT INTO strains (
-        strainId, species, source, isolationDate, isolationSite, sampleType,
-        patientId, patientAge, patientGender, hospital, department, region,
-        diagnosis, antibioticTreatment, outcome, createdBy
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    
-    stmt.run([
-      strainData.strainId, strainData.species, strainData.source,
-      strainData.isolationDate, strainData.isolationSite, strainData.sampleType,
-      strainData.patientId, strainData.patientAge, strainData.patientGender,
-      strainData.hospital, strainData.department, strainData.region,
-      strainData.diagnosis, strainData.antibioticTreatment, strainData.outcome,
-      strainData.createdBy
-    ])
-    
-    // 获取插入的ID
-    const idStmt = this.db.prepare('SELECT last_insert_rowid() as id')
-    const result = idStmt.get()
-    
-    await this.saveDatabase()
-    return { id: result.id, ...strainData }
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO strains (
+          strain_id, species, sample_id, sample_source, region,
+          onset_date, sampling_date, isolation_date, uploaded_by,
+          virulence_genes, antibiotic_resistance, st_type, serotype, molecular_serotype
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      
+      stmt.bind([
+        strainData.strain_id || null, 
+        strainData.species || null, 
+        strainData.sample_id || null,
+        strainData.sample_source || null, 
+        strainData.region || null, 
+        strainData.onset_date || null,
+        strainData.sampling_date || null, 
+        strainData.isolation_date || null, 
+        strainData.uploaded_by || null,
+        strainData.virulence_genes || null, 
+        strainData.antibiotic_resistance || null,
+        strainData.st_type || null, 
+        strainData.serotype || null, 
+        strainData.molecular_serotype || null
+      ])
+      
+      // 检查执行结果
+      const success = stmt.step()
+      stmt.free()
+      
+      if (!success) {
+        throw new Error('数据库插入失败，可能是数据重复或格式错误')
+      }
+      
+      // 获取插入的ID
+      const idStmt = this.db.prepare('SELECT last_insert_rowid() as id')
+      const idSuccess = idStmt.step()
+      if (!idSuccess) {
+        idStmt.free()
+        throw new Error('无法获取插入记录的ID')
+      }
+      
+      const result = idStmt.getAsObject()
+      idStmt.free()
+      
+      if (!result.id || result.id <= 0) {
+        throw new Error('插入记录失败，未获得有效ID')
+      }
+      
+      await this.saveDatabase()
+      return { id: result.id, ...strainData }
+    } catch (error) {
+      console.error('创建菌株失败:', error)
+      // 提供更详细的错误信息
+      if (error.message.includes('UNIQUE constraint failed')) {
+        throw new Error('菌株编号已存在，请使用不同的编号')
+      } else if (error.message.includes('NOT NULL constraint failed')) {
+        throw new Error('必填字段不能为空')
+      } else {
+        throw error
+      }
+    }
   }
 
   async updateStrain(id, strainData) {
     const stmt = this.db.prepare(`
       UPDATE strains SET
-        species = ?, source = ?, isolationDate = ?, isolationSite = ?,
-        sampleType = ?, patientId = ?, patientAge = ?, patientGender = ?,
-        hospital = ?, department = ?, region = ?, diagnosis = ?,
-        antibioticTreatment = ?, outcome = ?, updatedAt = CURRENT_TIMESTAMP
+        strain_id = ?, species = ?, sample_id = ?, sample_source = ?, region = ?,
+        onset_date = ?, sampling_date = ?, isolation_date = ?, uploaded_by = ?,
+        virulence_genes = ?, antibiotic_resistance = ?, st_type = ?, serotype = ?,
+        molecular_serotype = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `)
     
     stmt.run([
-      strainData.species, strainData.source, strainData.isolationDate,
-      strainData.isolationSite, strainData.sampleType, strainData.patientId,
-      strainData.patientAge, strainData.patientGender, strainData.hospital,
-      strainData.department, strainData.region, strainData.diagnosis,
-      strainData.antibioticTreatment, strainData.outcome, id
+      strainData.strain_id, strainData.species, strainData.sample_id,
+      strainData.sample_source, strainData.region, strainData.onset_date,
+      strainData.sampling_date, strainData.isolation_date, strainData.uploaded_by,
+      strainData.virulence_genes, strainData.antibiotic_resistance,
+      strainData.st_type, strainData.serotype, strainData.molecular_serotype, id
     ])
     
     await this.saveDatabase()

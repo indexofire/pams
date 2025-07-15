@@ -86,7 +86,7 @@
                 </span>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item>个人设置</el-dropdown-item>
+                    <el-dropdown-item @click="goToSettings">个人设置</el-dropdown-item>
                     <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -129,6 +129,10 @@ export default {
     const user = computed(() => store.getters['auth/user'] || {})
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
 
+    const goToSettings = () => {
+      router.push('/settings')
+    }
+
     const handleLogout = async () => {
       try {
         await store.dispatch('auth/logout')
@@ -144,6 +148,7 @@ export default {
       isAuthenticated,
       user,
       isAdmin,
+      goToSettings,
       handleLogout
     }
   }

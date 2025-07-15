@@ -212,6 +212,18 @@ class GenomeService {
   }
 
   /**
+   * 获取基因组总数
+   */
+  async getGenomeCount() {
+    try {
+      return this.db.getGenomeCount()
+    } catch (error) {
+      console.error('获取基因组数量失败:', error)
+      throw new Error('获取基因组数量失败')
+    }
+  }
+
+  /**
    * 获取基因组统计信息
    */
   async getGenomeStats() {

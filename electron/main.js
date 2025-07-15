@@ -2,12 +2,15 @@ const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
 const fs = require('fs-extra')
 const isDev = process.env.NODE_ENV === 'development'
+const electronReload =require('electron-reload')
+electronReload(__dirname, {electron:require('electron')})
 
 // 导入后端服务
 const DatabaseService = require('../src/services/DatabaseService')
 const StrainService = require('../src/services/StrainService')
 const GenomeService = require('../src/services/GenomeService')
 const AnalysisService = require('../src/services/AnalysisService')
+const UserService = require('../src/services/UserService')
 
 let mainWindow
 let dbService
@@ -205,6 +208,38 @@ function registerIpcHandlers() {
     return result
   })
 
+  // 用户相关
+  ipcMain.handle('users:getAll', async () => {
+    const userService = new UserService(dbService)
+    return await userService.getAllUsers()
+  })
+
+  ipcMain.handle('users:create', async (event, userData) => {
+    const userService = new UserService(dbService)
+    return await userService.createUser(userData)
+  })
+
+  ipcMain.handle('users:update', async (event, id, userData) => {
+    const userService = new UserService(dbService)
+    return await userService.updateUser(id, userData)
+  })
+
+  ipcMain.handle('users:delete', async (event, id) => {
+    const userService = new UserService(dbService)
+    return await userService.deleteUser(id)
+  })
+
+  // 认证相关
+  ipcMain.handle('auth:login', async (event, username, password) => {
+    const userService = new UserService(dbService)
+    return await userService.login(username, password)
+  })
+
+  ipcMain.handle('auth:register', async (event, userData) => {
+    const userService = new UserService(dbService)
+    return await userService.register(userData)
+  })
+
   // 菌株相关
   ipcMain.handle('strains:getAll', async () => {
     const strainService = new StrainService(dbService)
@@ -212,13 +247,55 @@ function registerIpcHandlers() {
   })
 
   ipcMain.handle('strains:create', async (event, strainData) => {
+    // 确保日期字段为正确的字符串格式
+    const processedData = { ...strainData }
+    
+    // 处理可能的日期字段
+    const dateFields = ['onset_date', 'sampling_date', 'isolation_date']
+    dateFields.forEach(field => {
+      if (processedData[field]) {
+        // 如果是 Date 对象，转换为 YYYY-MM-DD 格式
+        if (processedData[field] instanceof Date) {
+          processedData[field] = processedData[field].toISOString().split('T')[0]
+        } 
+        // 如果是日期字符串，尝试解析并标准化格式
+        else if (typeof processedData[field] === 'string') {
+          const date = new Date(processedData[field])
+          if (!isNaN(date.getTime())) {
+            processedData[field] = date.toISOString().split('T')[0]
+          }
+        }
+      }
+    })
+    
     const strainService = new StrainService(dbService)
-    return await strainService.createStrain(strainData)
+    return await strainService.createStrain(processedData)
   })
 
   ipcMain.handle('strains:update', async (event, id, strainData) => {
+    // 确保日期字段为正确的字符串格式
+    const processedData = { ...strainData }
+    
+    // 处理可能的日期字段
+    const dateFields = ['onset_date', 'sampling_date', 'isolation_date']
+    dateFields.forEach(field => {
+      if (processedData[field]) {
+        // 如果是 Date 对象，转换为 YYYY-MM-DD 格式
+        if (processedData[field] instanceof Date) {
+          processedData[field] = processedData[field].toISOString().split('T')[0]
+        } 
+        // 如果是日期字符串，尝试解析并标准化格式
+        else if (typeof processedData[field] === 'string') {
+          const date = new Date(processedData[field])
+          if (!isNaN(date.getTime())) {
+            processedData[field] = date.toISOString().split('T')[0]
+          }
+        }
+      }
+    })
+    
     const strainService = new StrainService(dbService)
-    return await strainService.updateStrain(id, strainData)
+    return await strainService.updateStrain(id, processedData)
   })
 
   ipcMain.handle('strains:delete', async (event, id) => {

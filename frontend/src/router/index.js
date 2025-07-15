@@ -87,6 +87,12 @@ const routes = [
     meta: { title: '报告中心', requiresAuth: true }
   },
   {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/Settings.vue'),
+    meta: { title: '个人设置', requiresAuth: true }
+  },
+  {
     path: '/user-management',
     name: 'UserManagement',
     component: () => import('../views/UserManagement.vue'),

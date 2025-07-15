@@ -34,7 +34,7 @@
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="created_at" label="创建时间" width="180" />
+              <el-table-column prop="createdAt" label="创建时间" width="180" />
               <el-table-column label="操作" width="200">
                 <template #default="scope">
                   <el-button size="small" @click="editUser(scope.row)">编辑</el-button>
@@ -300,14 +300,10 @@ export default {
   },
   setup () {
     const activeTab = ref('users')
-    
+
     // 用户管理相关
-    const users = ref([
-      { id: 1, username: 'admin', role: 'admin', created_at: '2023-01-01 10:00:00' },
-      { id: 2, username: 'advanced', role: 'advanced', created_at: '2023-01-02 10:00:00' },
-      { id: 3, username: 'user', role: 'user', created_at: '2023-01-03 10:00:00' }
-    ])
-    
+    const users = ref([])
+
     const userDialogVisible = ref(false)
     const userForm = reactive({
       id: null,
@@ -322,7 +318,7 @@ export default {
       { id: 2, name: '金黄色葡萄球菌', scientific_name: 'Staphylococcus aureus', description: '常见的致病菌', status: 'active' },
       { id: 3, name: '肺炎链球菌', scientific_name: 'Streptococcus pneumoniae', description: '引起肺炎的细菌', status: 'active' }
     ])
-    
+
     const speciesDialogVisible = ref(false)
     const speciesForm = reactive({
       id: null,
@@ -338,7 +334,7 @@ export default {
       { id: 2, name: '耐药基因检测', description: '检测细菌的耐药基因', protocol: '使用PCR或NGS技术检测...', status: 'active' },
       { id: 3, name: '毒力基因检测', description: '检测细菌的毒力基因', protocol: '使用特定引物进行PCR检测...', status: 'active' }
     ])
-    
+
     const experimentDialogVisible = ref(false)
     const experimentForm = reactive({
       id: null,
@@ -386,43 +382,98 @@ export default {
       userDialogVisible.value = true
     }
 
-    const saveUser = () => {
-      if (userForm.id) {
-        // 更新用户
-        const index = users.value.findIndex(u => u.id === userForm.id)
-        if (index !== -1) {
-          users.value[index] = { ...userForm, created_at: users.value[index].created_at }
+    const saveUser = async () => {
+      try {
+        if (userForm.id) {
+          // 更新用户
+          if (window.electronAPI && window.electronAPI.users) {
+            await window.electronAPI.users.update(userForm.id, {
+              username: userForm.username,
+              role: userForm.role,
+              password: userForm.password || undefined
+            })
+          } else {
+            // 开发环境模拟
+            const index = users.value.findIndex(u => u.id === userForm.id)
+            if (index !== -1) {
+              users.value[index] = { ...userForm, created_at: users.value[index].created_at }
+            }
+          }
+          ElMessage.success('用户更新成功')
+        } else {
+          // 添加用户
+          if (window.electronAPI && window.electronAPI.users) {
+            await window.electronAPI.users.create({
+              username: userForm.username,
+              password: userForm.password,
+              role: userForm.role
+            })
+          } else {
+            // 开发环境模拟
+            const newUser = {
+              id: Date.now(),
+              username: userForm.username,
+              role: userForm.role,
+              created_at: new Date().toLocaleString()
+            }
+            users.value.push(newUser)
+          }
+          ElMessage.success('用户添加成功')
         }
-        ElMessage.success('用户更新成功')
-      } else {
-        // 添加用户
-        const newUser = {
-          id: Date.now(),
-          username: userForm.username,
-          role: userForm.role,
-          created_at: new Date().toLocaleString()
-        }
-        users.value.push(newUser)
-        ElMessage.success('用户添加成功')
+        userDialogVisible.value = false
+        await loadUsers()
+      } catch (error) {
+        ElMessage.error(error.message || '操作失败')
       }
-      userDialogVisible.value = false
     }
 
-    const deleteUser = (user) => {
-      ElMessageBox.confirm('确定要删除该用户吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        const index = users.value.findIndex(u => u.id === user.id)
-        if (index !== -1) {
-          users.value.splice(index, 1)
+    const deleteUser = async (user) => {
+      try {
+        await ElMessageBox.confirm('确定要删除该用户吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+
+        if (window.electronAPI && window.electronAPI.users) {
+          await window.electronAPI.users.delete(user.id)
+        } else {
+          // 开发环境模拟
+          const index = users.value.findIndex(u => u.id === user.id)
+          if (index !== -1) {
+            users.value.splice(index, 1)
+          }
         }
         ElMessage.success('用户删除成功')
-      }).catch(() => {})
+        await loadUsers()
+      } catch (error) {
+        if (error !== 'cancel') {
+          ElMessage.error(error.message || '删除失败')
+        }
+      }
     }
 
-    const refreshUsers = () => {
+    const loadUsers = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.users) {
+          const userList = await window.electronAPI.users.getAll()
+          users.value = userList || []
+        } else {
+          // 开发环境模拟数据
+          users.value = [
+            { id: 1, username: 'admin', role: 'admin', createdAt: '2023-01-01 10:00:00' },
+            { id: 2, username: 'advanced', role: 'advanced', createdAt: '2023-01-02 10:00:00' },
+            { id: 3, username: 'user', role: 'user', createdAt: '2023-01-03 10:00:00' }
+          ]
+        }
+      } catch (error) {
+        console.error('加载用户列表失败:', error)
+        ElMessage.error('加载用户列表失败')
+      }
+    }
+
+    const refreshUsers = async () => {
+      await loadUsers()
       ElMessage.success('用户列表刷新成功')
     }
 
@@ -545,6 +596,11 @@ export default {
       ElMessage.success('数据库设置保存成功')
     }
 
+    // 页面加载时获取用户列表
+    onMounted(() => {
+      loadUsers()
+    })
+
     return {
       activeTab,
       users,
@@ -564,6 +620,7 @@ export default {
       saveUser,
       deleteUser,
       refreshUsers,
+      loadUsers,
       addSpecies,
       editSpecies,
       saveSpecies,
@@ -589,13 +646,13 @@ export default {
 
 .page-header {
   margin-bottom: 30px;
-  
+
   h1 {
     margin: 0 0 10px 0;
     font-size: 28px;
     color: #303133;
   }
-  
+
   p {
     margin: 0;
     color: #909399;
@@ -639,4 +696,4 @@ em {
   font-style: italic;
   color: #606266;
 }
-</style> 
+</style>

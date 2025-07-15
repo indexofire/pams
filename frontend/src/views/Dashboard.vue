@@ -59,17 +59,30 @@
       <el-col :span="12">
         <el-card title="菌种分布">
           <template #header>
-            <span>菌种分布</span>
+            <div class="card-header">
+              <span>菌种分布</span>
+              <el-button size="small" @click="refreshData">
+                <el-icon><Refresh /></el-icon>
+                刷新
+              </el-button>
+            </div>
           </template>
-          <v-chart :option="speciesChartOption" style="height: 300px;" />
+          <v-chart :option="speciesChartOption" style="height: 300px;" v-loading="loading" />
         </el-card>
       </el-col>
       <el-col :span="12">
         <el-card title="月度趋势">
           <template #header>
-            <span>月度趋势</span>
+            <div class="card-header">
+              <span>月度趋势</span>
+              <el-select v-model="trendType" size="small" style="width: 100px;">
+                <el-option label="菌株" value="strains" />
+                <el-option label="基因组" value="genomes" />
+                <el-option label="分析" value="analysis" />
+              </el-select>
+            </div>
           </template>
-          <v-chart :option="trendChartOption" style="height: 300px;" />
+          <v-chart :option="trendChartOption" style="height: 300px;" v-loading="loading" />
         </el-card>
       </el-col>
     </el-row>
@@ -78,33 +91,68 @@
       <el-col :span="12">
         <el-card title="最近活动">
           <template #header>
-            <span>最近活动</span>
+            <div class="card-header">
+              <span>最近活动</span>
+              <el-link type="primary" @click="$router.push('/strains')">查看更多</el-link>
+            </div>
           </template>
-          <el-timeline>
-            <el-timeline-item
-              v-for="activity in recentActivities"
-              :key="activity.id"
-              :timestamp="activity.time"
-              :type="activity.type"
-            >
-              {{ activity.description }}
-            </el-timeline-item>
-          </el-timeline>
+          <div v-loading="loading">
+            <el-timeline v-if="recentActivities.length > 0">
+              <el-timeline-item
+                v-for="activity in recentActivities"
+                :key="activity.id"
+                :timestamp="activity.time"
+                :type="activity.type"
+              >
+                {{ activity.description }}
+              </el-timeline-item>
+            </el-timeline>
+            <el-empty v-else description="暂无活动记录" />
+          </div>
         </el-card>
       </el-col>
       <el-col :span="12">
-        <el-card title="任务状态">
+        <el-card title="快速操作">
           <template #header>
-            <span>任务状态</span>
+            <span>快速操作</span>
           </template>
-          <div class="task-list">
-            <div v-for="task in recentTasks" :key="task.id" class="task-item">
-              <div class="task-info">
-                <div class="task-name">{{ task.name }}</div>
-                <div class="task-meta">{{ task.genome_count }} 个基因组 • {{ task.created_at }}</div>
-              </div>
-              <el-tag :type="getTaskTagType(task.status)">{{ task.status }}</el-tag>
-            </div>
+          <div class="quick-actions">
+            <el-button
+              type="primary"
+              size="large"
+              @click="$router.push('/strains')"
+              class="action-button"
+            >
+              <el-icon><Plus /></el-icon>
+              添加菌株
+            </el-button>
+            <el-button
+              type="success"
+              size="large"
+              @click="$router.push('/genomes')"
+              class="action-button"
+            >
+              <el-icon><Upload /></el-icon>
+              上传基因组
+            </el-button>
+            <el-button
+              type="info"
+              size="large"
+              @click="$router.push('/analysis')"
+              class="action-button"
+            >
+              <el-icon><DataAnalysis /></el-icon>
+              生信分析
+            </el-button>
+            <el-button
+              type="warning"
+              size="large"
+              @click="$router.push('/reports')"
+              class="action-button"
+            >
+              <el-icon><Document /></el-icon>
+              生成报告
+            </el-button>
           </div>
         </el-card>
       </el-col>
@@ -113,146 +161,197 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useStore } from 'vuex'
+import { ElMessage } from 'element-plus'
+import {
+  Grid,
+  Document,
+  DataAnalysis,
+  Clock,
+  Refresh,
+  Plus,
+  Upload
+} from '@element-plus/icons-vue'
 
 export default {
   name: 'Dashboard',
+  components: {
+    Grid,
+    Document,
+    DataAnalysis,
+    Clock,
+    Refresh,
+    Plus,
+    Upload
+  },
   setup () {
     const store = useStore()
     const loading = ref(true)
-
-    const recentActivities = reactive([
-      {
-        id: 1,
-        description: '用户张三上传了基因组文件 strain_001.fasta',
-        time: '2024-01-15 14:30',
-        type: 'success'
-      },
-      {
-        id: 2,
-        description: '完成了沙门氏菌 MLST 分型分析',
-        time: '2024-01-15 13:45',
-        type: 'primary'
-      },
-      {
-        id: 3,
-        description: '新增菌株记录：E. coli O157:H7',
-        time: '2024-01-15 11:20',
-        type: 'info'
-      }
-    ])
-
-    const recentTasks = reactive([
-      {
-        id: 1,
-        name: '耐药基因检测',
-        genome_count: 5,
-        status: '运行中',
-        created_at: '2024-01-15'
-      },
-      {
-        id: 2,
-        name: '系统发育分析',
-        genome_count: 12,
-        status: '已完成',
-        created_at: '2024-01-14'
-      },
-      {
-        id: 3,
-        name: 'MLST分型',
-        genome_count: 8,
-        status: '等待中',
-        created_at: '2024-01-14'
-      }
-    ])
+    const trendType = ref('strains')
 
     const statistics = computed(() => store.state.statistics)
+    const recentActivities = computed(() => statistics.value.recentActivities || [])
 
-    const speciesChartOption = computed(() => ({
-      title: {
-        left: 'center'
-      },
-      tooltip: {
-        trigger: 'item'
-      },
-      series: [
-        {
-          type: 'pie',
-          radius: '70%',
-          data: [
-            { value: 35, name: '大肠杆菌' },
-            { value: 25, name: '沙门氏菌' },
-            { value: 20, name: '志贺氏菌' },
-            { value: 15, name: '弧菌' },
-            { value: 5, name: '其他' }
-          ],
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)'
+    const speciesChartOption = computed(() => {
+      const data = statistics.value.speciesDistribution || [
+        { name: '大肠杆菌', value: 35 },
+        { name: '沙门氏菌', value: 25 },
+        { name: '志贺氏菌', value: 20 },
+        { name: '弧菌', value: 15 },
+        { name: '其他', value: 5 }
+      ]
+
+      return {
+        title: {
+          left: 'center'
+        },
+        tooltip: {
+          trigger: 'item',
+          formatter: '{a} <br/>{b}: {c} ({d}%)'
+        },
+        series: [
+          {
+            name: '菌种分布',
+            type: 'pie',
+            radius: '70%',
+            data,
+            emphasis: {
+              itemStyle: {
+                shadowBlur: 10,
+                shadowOffsetX: 0,
+                shadowColor: 'rgba(0, 0, 0, 0.5)'
+              }
+            },
+            label: {
+              show: true,
+              formatter: '{b}: {c}'
             }
           }
-        }
-      ]
-    }))
-
-    const trendChartOption = computed(() => ({
-      tooltip: {
-        trigger: 'axis'
-      },
-      xAxis: {
-        type: 'category',
-        data: ['1月', '2月', '3月', '4月', '5月', '6月']
-      },
-      yAxis: {
-        type: 'value'
-      },
-      series: [
-        {
-          name: '新增菌株',
-          type: 'line',
-          data: [12, 18, 15, 25, 22, 30],
-          smooth: true
-        },
-        {
-          name: '基因组测序',
-          type: 'line',
-          data: [8, 15, 12, 20, 18, 25],
-          smooth: true
-        }
-      ]
-    }))
-
-    const getTaskTagType = (status) => {
-      const typeMap = {
-        运行中: 'warning',
-        已完成: 'success',
-        等待中: 'info',
-        失败: 'danger'
+        ]
       }
-      return typeMap[status] || 'info'
-    }
+    })
 
-    onMounted(async () => {
+    const trendChartOption = computed(() => {
+      const monthlyData = statistics.value.monthlyData || []
+      const months = monthlyData.map(item => item.month)
+
+      let data = []
+      let title = ''
+      let color = '#409EFF'
+
+      switch (trendType.value) {
+      case 'strains':
+        data = monthlyData.map(item => item.strains)
+        title = '新增菌株'
+        color = '#409EFF'
+        break
+      case 'genomes':
+        data = monthlyData.map(item => item.genomes)
+        title = '基因组测序'
+        color = '#67C23A'
+        break
+      case 'analysis':
+        data = monthlyData.map(item => item.analysis)
+        title = '完成分析'
+        color = '#E6A23C'
+        break
+      }
+
+      return {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'cross'
+          }
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          data: months,
+          axisTick: {
+            alignWithLabel: true
+          }
+        },
+        yAxis: {
+          type: 'value'
+        },
+        series: [
+          {
+            name: title,
+            type: 'line',
+            data,
+            smooth: true,
+            lineStyle: {
+              color
+            },
+            itemStyle: {
+              color
+            },
+            areaStyle: {
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [{
+                  offset: 0, color: color + '80'
+                }, {
+                  offset: 1, color: color + '10'
+                }]
+              }
+            }
+          }
+        ]
+      }
+    })
+
+    const loadDashboardData = async () => {
+      loading.value = true
       try {
-        await store.dispatch('fetchStatistics')
+        // 并行加载所有数据
+        await Promise.all([
+          store.dispatch('fetchStrains'),
+          store.dispatch('fetchGenomes'),
+          store.dispatch('fetchAnalysisTasks'),
+          store.dispatch('fetchStatistics')
+        ])
       } catch (error) {
         console.error('加载仪表板数据失败:', error)
+        ElMessage.error('加载数据失败：' + (error.message || '未知错误'))
       } finally {
         loading.value = false
       }
+    }
+
+    const refreshData = async () => {
+      await loadDashboardData()
+      ElMessage.success('数据刷新成功')
+    }
+
+    // 监听趋势类型变化
+    watch(trendType, () => {
+      // 图表会自动重新渲染
+    })
+
+    onMounted(async () => {
+      await loadDashboardData()
     })
 
     return {
       statistics,
       recentActivities,
-      recentTasks,
       speciesChartOption,
       trendChartOption,
-      getTaskTagType,
-      loading
+      loading,
+      trendType,
+      refreshData
     }
   }
 }
@@ -294,30 +393,30 @@ export default {
     }
   }
 
-  .task-list {
-    .task-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid #f0f0f0;
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
 
-      &:last-child {
-        border-bottom: none;
-      }
+  .quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
 
-      .task-info {
-        .task-name {
-          font-weight: 500;
-          margin-bottom: 4px;
-        }
+    .action-button {
+      width: 100%;
+      height: 60px;
+      font-size: 16px;
 
-        .task-meta {
-          font-size: 12px;
-          color: #909399;
-        }
+      .el-icon {
+        margin-right: 8px;
       }
     }
+  }
+
+  .el-timeline {
+    margin-top: 10px;
   }
 }
 </style>

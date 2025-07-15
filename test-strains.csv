@@ -1,0 +1,7 @@
+菌株编号,菌种类型,样本编号,样本来源,采集地区,发病时间,采样时间,分离时间,ST型,血清型,毒力基因,耐药谱,分子血清型
+E.coli-TEST-001,E.coli,SAMPLE-001,血液,北京市,2023-01-10,2023-01-12,2023-01-15,ST131,O157:H7,stx1;stx2;eae,AMP;CIP;SXT,O157:H7
+Salmonella-TEST-002,Salmonella,SAMPLE-002,粪便,上海市,2023-01-08,2023-01-10,2023-01-12,ST19,Typhimurium,invA;sipC;sopE,AMP;STR;TET,Typhimurium
+Shigella-TEST-003,Shigella,SAMPLE-003,食品,广东省,2023-01-15,2023-01-16,2023-01-18,ST242,Flexneri,ipaH;virF;ial,AMP;CHL;TMP,Flexneri 2a
+E.coli-TEST-004,E.coli,SAMPLE-004,血液,浙江省,2023-02-01,2023-02-02,2023-02-05,ST95,O25:H4,fyuA;iutA;iroN,AMP;CIP;CTX,O25:H4
+Salmonella-TEST-005,Salmonella,SAMPLE-005,粪便,四川省,2023-02-10,2023-02-12,2023-02-15,ST11,Enteritidis,invA;sipC;pipD,STR;TET;NAL,Enteritidis
+E.coli-TEST-006,E.coli,SAMPLE-006,食品,湖北省,2023-02-20,2023-02-21,2023-02-24,ST73,O6:H1,cnf1;hlyA;papC,AMP;SXT;GEN,O6:H1
