@@ -394,6 +394,24 @@ class AnalysisService extends EventEmitter {
   }
 
   /**
+   * 获取最近完成的分析任务
+   */
+  async getRecentCompletedTasks(limit = 10) {
+    try {
+      const allTasks = this.db.getAllTasks()
+
+      // 筛选已完成的任务，按完成时间排序
+      return allTasks
+        .filter(task => task.status === 'completed')
+        .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+        .slice(0, limit)
+    } catch (error) {
+      console.error('获取最近完成任务失败:', error)
+      throw new Error('获取最近完成任务失败')
+    }
+  }
+
+  /**
    * 验证分析参数
    */
   validateAnalysisParams(analysisType, genomeIds, params) {

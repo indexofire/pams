@@ -13,7 +13,7 @@
     "build:electron": "cd frontend && cross-env IS_ELECTRON=true npx vue-cli-service build",
     "lint": "cd frontend && vue-cli-service lint",
     "dev": "concurrently \"npm run serve\" \"wait-on http://localhost:8080 && cross-env IS_ELECTRON=true electron .\"",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "cd frontend && npm install && cd .. && electron-builder install-app-deps",
     "preelectron-pack": "npm run build:electron",
     "dist": "npm run build:electron && electron-builder --publish=never",
     "test": "jest",

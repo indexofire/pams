@@ -4,12 +4,12 @@ module.exports = defineConfig({
   transpileDependencies: true,
   publicPath: process.env.NODE_ENV === 'production' ? './' : '/',
   devServer: {
-    host: '0.0.0.0',
+    host: 'localhost',
     port: 8080,
     open: false,
     allowedHosts: 'all',
     client: {
-      webSocketURL: 'ws://127.0.0.1:8080/ws'
+      webSocketURL: 'ws://localhost:8080/ws'
     }
   },
   configureWebpack: {

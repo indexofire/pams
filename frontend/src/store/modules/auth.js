@@ -121,6 +121,78 @@ const actions = {
       console.error('检查认证状态失败:', error)
       return false
     }
+  },
+
+  // 更新用户资料
+  async updateUserProfile ({ commit, state }, profileData) {
+    try {
+      let updatedUser
+
+      if (electronAPI && electronAPI.users) {
+        // 使用Electron API更新用户资料
+        updatedUser = await electronAPI.users.updateProfile(state.user.id, profileData)
+      } else {
+        // 模拟更新用户资料（开发阶段）
+        updatedUser = await simulateUpdateProfile(state.user, profileData)
+      }
+
+      // 更新store中的用户信息
+      const newUser = { ...state.user, ...updatedUser }
+      commit('SET_USER', newUser)
+
+      // 更新localStorage
+      localStorage.setItem('user', JSON.stringify(newUser))
+
+      return updatedUser
+    } catch (error) {
+      console.error('更新用户资料失败:', error)
+      throw error
+    }
+  },
+
+  // 更改密码
+  async changePassword ({ state }, { currentPassword, newPassword }) {
+    try {
+      if (electronAPI && electronAPI.auth) {
+        // 使用Electron API更改密码
+        await electronAPI.auth.changePassword(state.user.username, currentPassword, newPassword)
+      } else {
+        // 模拟更改密码（开发阶段）
+        await simulateChangePassword(state.user, currentPassword, newPassword)
+      }
+
+      return true
+    } catch (error) {
+      console.error('更改密码失败:', error)
+      throw error
+    }
+  },
+
+  // 更新用户设置
+  async updateUserSettings ({ commit, state }, settingsData) {
+    try {
+      let updatedUser
+
+      if (electronAPI && electronAPI.users) {
+        // 使用Electron API更新用户设置
+        updatedUser = await electronAPI.users.updateSettings(state.user.id, settingsData)
+      } else {
+        // 模拟更新用户设置（开发阶段）
+        updatedUser = await simulateUpdateSettings(state.user, settingsData)
+      }
+
+      // 更新store中的用户信息
+      const newUser = { ...state.user, ...updatedUser }
+      commit('SET_USER', newUser)
+
+      // 更新localStorage
+      localStorage.setItem('user', JSON.stringify(newUser))
+
+      return updatedUser
+    } catch (error) {
+      console.error('更新用户设置失败:', error)
+      throw error
+    }
   }
 }
 
@@ -227,6 +299,102 @@ async function simulateRegister (username, password, role) {
     role: newUser.role,
     permissions: newUser.permissions
   }
+}
+
+// 模拟更新用户资料函数（开发阶段使用）
+async function simulateUpdateProfile (currentUser, profileData) {
+  // 模拟网络延迟
+  await new Promise(resolve => setTimeout(resolve, 500))
+
+  // 获取注册用户数据
+  const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]')
+
+  // 更新用户信息
+  const updatedProfile = {
+    displayName: profileData.displayName,
+    laboratory: profileData.laboratory,
+    email: profileData.email,
+    phone: profileData.phone
+  }
+
+  // 如果是注册用户，更新localStorage中的数据
+  if (currentUser.id > 3) {
+    const userIndex = registeredUsers.findIndex(u => u.id === currentUser.id)
+    if (userIndex !== -1) {
+      registeredUsers[userIndex] = { ...registeredUsers[userIndex], ...updatedProfile }
+      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers))
+    }
+  }
+
+  return updatedProfile
+}
+
+// 模拟更改密码函数（开发阶段使用）
+async function simulateChangePassword (currentUser, currentPassword, newPassword) {
+  // 模拟网络延迟
+  await new Promise(resolve => setTimeout(resolve, 500))
+
+  // 获取所有用户数据
+  const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]')
+  const defaultUsers = [
+    { id: 1, username: 'admin', password: 'admin123', role: 'admin' },
+    { id: 2, username: 'advanced', password: 'advanced123', role: 'advanced' },
+    { id: 3, username: 'user', password: 'user123', role: 'user' }
+  ]
+
+  // 验证当前密码
+  let userToUpdate = null
+  if (currentUser.id <= 3) {
+    userToUpdate = defaultUsers.find(u => u.id === currentUser.id)
+  } else {
+    userToUpdate = registeredUsers.find(u => u.id === currentUser.id)
+  }
+
+  if (!userToUpdate || userToUpdate.password !== currentPassword) {
+    throw new Error('当前密码不正确')
+  }
+
+  // 更新密码
+  if (currentUser.id > 3) {
+    const userIndex = registeredUsers.findIndex(u => u.id === currentUser.id)
+    if (userIndex !== -1) {
+      registeredUsers[userIndex].password = newPassword
+      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers))
+    }
+  } else {
+    // 对于默认用户，我们不能真正更新密码，只是模拟成功
+    console.warn('默认用户密码更改仅为模拟，实际未更新')
+  }
+
+  return true
+}
+
+// 模拟更新用户设置函数（开发阶段使用）
+async function simulateUpdateSettings (currentUser, settingsData) {
+  // 模拟网络延迟
+  await new Promise(resolve => setTimeout(resolve, 500))
+
+  // 获取注册用户数据
+  const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]')
+
+  // 更新用户设置
+  const updatedSettings = {
+    language: settingsData.language,
+    timezone: settingsData.timezone,
+    theme: settingsData.theme,
+    showAdvancedData: settingsData.showAdvancedData
+  }
+
+  // 如果是注册用户，更新localStorage中的数据
+  if (currentUser.id > 3) {
+    const userIndex = registeredUsers.findIndex(u => u.id === currentUser.id)
+    if (userIndex !== -1) {
+      registeredUsers[userIndex] = { ...registeredUsers[userIndex], ...updatedSettings }
+      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers))
+    }
+  }
+
+  return updatedSettings
 }
 
 export default {

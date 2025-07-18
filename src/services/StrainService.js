@@ -225,30 +225,37 @@ class StrainService {
   async getStrainStats() {
     try {
       const allStrains = this.db.getAllStrains()
-      
+
       const stats = {
         total: allStrains.length,
-        byType: {},
+        bySpecies: {},
         bySource: {},
+        byRegion: {},
         recentCount: 0
       }
 
-      // 按类型统计
+      // 按菌种统计
       allStrains.forEach(strain => {
-        const type = strain.type || 'Unknown'
-        stats.byType[type] = (stats.byType[type] || 0) + 1
+        const species = strain.species || 'Unknown'
+        stats.bySpecies[species] = (stats.bySpecies[species] || 0) + 1
       })
 
       // 按来源统计
       allStrains.forEach(strain => {
-        const source = strain.source || 'Unknown'
+        const source = strain.sample_source || 'Unknown'
         stats.bySource[source] = (stats.bySource[source] || 0) + 1
+      })
+
+      // 按地区统计
+      allStrains.forEach(strain => {
+        const region = strain.region || 'Unknown'
+        stats.byRegion[region] = (stats.byRegion[region] || 0) + 1
       })
 
       // 统计最近30天的菌株数量
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      
+
       stats.recentCount = allStrains.filter(strain => {
         const createdDate = new Date(strain.created_at)
         return createdDate >= thirtyDaysAgo
@@ -258,6 +265,87 @@ class StrainService {
     } catch (error) {
       console.error('获取菌株统计失败:', error)
       throw new Error('获取菌株统计失败')
+    }
+  }
+
+  /**
+   * 获取最近的菌株记录
+   */
+  async getRecentStrains(limit = 10) {
+    try {
+      const allStrains = this.db.getAllStrains()
+
+      // 按创建时间排序，返回最新的记录
+      return allStrains
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, limit)
+    } catch (error) {
+      console.error('获取最近菌株记录失败:', error)
+      throw new Error('获取最近菌株记录失败')
+    }
+  }
+
+  /**
+   * 批量创建菌株
+   */
+  async batchCreateStrains(strainsData) {
+    try {
+      const results = []
+      const errors = []
+
+      // 开始事务
+      this.db.db.run('BEGIN TRANSACTION')
+
+      try {
+        for (let i = 0; i < strainsData.length; i++) {
+          const strainData = strainsData[i]
+
+          try {
+            // 验证必填字段
+            if (!strainData.strain_id) {
+              throw new Error(`第${i + 1}行：菌株编号不能为空`)
+            }
+
+            // 检查菌株编号是否已存在
+            const existingStrain = this.db.getStrainByStrainId(strainData.strain_id)
+            if (existingStrain) {
+              throw new Error(`第${i + 1}行：菌株编号 ${strainData.strain_id} 已存在`)
+            }
+
+            // 创建菌株
+            const result = await this.createStrain(strainData)
+            results.push(result)
+          } catch (error) {
+            errors.push({
+              row: i + 1,
+              data: strainData,
+              error: error.message
+            })
+          }
+        }
+
+        // 如果有错误，回滚事务
+        if (errors.length > 0) {
+          this.db.db.run('ROLLBACK')
+          throw new Error(`批量导入失败，共 ${errors.length} 条记录有错误`)
+        }
+
+        // 提交事务
+        this.db.db.run('COMMIT')
+
+        return {
+          success: true,
+          created: results.length,
+          results: results,
+          errors: []
+        }
+      } catch (error) {
+        this.db.db.run('ROLLBACK')
+        throw error
+      }
+    } catch (error) {
+      console.error('批量创建菌株失败:', error)
+      throw new Error('批量创建菌株失败: ' + error.message)
     }
   }
 

@@ -358,7 +358,36 @@ const store = createStore({
         if (electronAPI && electronAPI.systemConfig) {
           // 使用Electron API获取系统配置
           const config = await electronAPI.systemConfig.getAll()
-          commit('SET_SYSTEM_CONFIG', config)
+
+          // 转换数据格式以适配前端
+          const formattedConfig = {
+            species: config.species.map(item => ({
+              id: item.id,
+              value: item.name,
+              label: item.name,
+              scientific_name: item.scientific_name,
+              description: item.description,
+              status: item.status
+            })),
+            regions: config.regions.map(item => ({
+              id: item.id,
+              value: item.name,
+              label: item.name,
+              code: item.code,
+              level: item.level,
+              status: item.status
+            })),
+            sources: config.sampleSources.map(item => ({
+              id: item.id,
+              value: item.name,
+              label: item.name,
+              category: item.category,
+              description: item.description,
+              status: item.status
+            }))
+          }
+
+          commit('SET_SYSTEM_CONFIG', formattedConfig)
         } else {
           // 开发环境模拟数据
           const mockConfig = {

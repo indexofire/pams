@@ -21,7 +21,7 @@
             MLST分型
           </el-menu-item>
           <el-menu-item index="resistance">
-            <el-icon><Shield /></el-icon>
+            <el-icon><Lock /></el-icon>
             耐药基因
           </el-menu-item>
           <el-menu-item index="virulence">
@@ -45,14 +45,14 @@
 <script>
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Document, DataAnalysis, Shield, Warning, Share } from '@element-plus/icons-vue'
+import { Document, DataAnalysis, Lock, Warning, Share } from '@element-plus/icons-vue'
 
 export default {
   name: 'Analysis',
   components: {
     Document,
     DataAnalysis,
-    Shield,
+    Lock,
     Warning,
     Share
   },

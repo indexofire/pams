@@ -8,7 +8,7 @@
     <div class="content-area">
       <div class="toolbar">
         <el-button type="primary" @click="startAnnotation">
-          <el-icon><Play /></el-icon>
+          <el-icon><VideoPlay /></el-icon>
           开始注释
         </el-button>
         <el-button @click="batchAnnotation">
@@ -129,12 +129,12 @@
 
 <script>
 import { ref, reactive, onMounted } from 'vue'
-import { Play, List, View as ViewIcon } from '@element-plus/icons-vue'
+import { VideoPlay, List, View as ViewIcon } from '@element-plus/icons-vue'
 
 export default {
   name: 'Annotation',
   components: {
-    Play,
+    VideoPlay,
     List,
     ViewIcon
   },

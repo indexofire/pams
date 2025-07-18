@@ -1231,29 +1231,44 @@ export default {
             return cleanRecord
           })
 
-          // 使用Electron API批量创建菌株
-          const createPromises = serializableRecords.map(async (record, index) => {
-            try {
-              return await window.electronAPI.strains.create(record)
-            } catch (error) {
-              console.error(`创建菌株失败 (第${index + 1}条):`, error)
-              throw new Error(`第${index + 1}条记录导入失败: ${error.message}`)
+          // 使用批量创建API提高效率
+          try {
+            const result = await window.electronAPI.strains.batchCreate(serializableRecords)
+
+            if (result.success) {
+              importedCount.value = result.created
+              ElMessage.success(`成功导入 ${result.created} 条记录`)
+            } else {
+              ElMessage.warning(`导入完成，但有 ${result.errors.length} 条记录失败`)
+              importedCount.value = result.created
             }
-          })
+          } catch (batchError) {
+            console.warn('批量导入失败，尝试逐条导入:', batchError)
 
-          const results = await Promise.allSettled(createPromises)
+            // 如果批量导入失败，回退到逐条导入
+            const createPromises = serializableRecords.map(async (record, index) => {
+              try {
+                return await window.electronAPI.strains.create(record)
+              } catch (error) {
+                console.error(`创建菌株失败 (第${index + 1}条):`, error)
+                throw new Error(`第${index + 1}条记录导入失败: ${error.message}`)
+              }
+            })
 
-          // 统计成功和失败的数量
-          const successful = results.filter(result => result.status === 'fulfilled')
-          const failed = results.filter(result => result.status === 'rejected')
+            const results = await Promise.allSettled(createPromises)
 
-          importedCount.value = successful.length
+            // 统计成功和失败的数量
+            const successful = results.filter(result => result.status === 'fulfilled')
+            const failed = results.filter(result => result.status === 'rejected')
 
-          if (failed.length > 0) {
-            console.warn('部分记录导入失败:', failed.map(f => f.reason.message))
-            ElMessage.warning(`成功导入 ${successful.length} 条记录，${failed.length} 条记录失败`)
-          } else {
-            ElMessage.success(`成功导入 ${successful.length} 条记录`)
+            importedCount.value = successful.length
+
+            if (failed.length > 0) {
+              console.warn('部分记录导入失败:', failed.map(f => f.reason.message))
+              ElMessage.warning(`成功导入 ${successful.length} 条记录，${failed.length} 条记录失败`)
+            } else {
+              ElMessage.success(`成功导入 ${successful.length} 条记录`)
+            }
           }
 
           await loadStrains()

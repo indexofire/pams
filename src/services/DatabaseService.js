@@ -60,11 +60,61 @@ class DatabaseService {
         password TEXT NOT NULL,
         role TEXT DEFAULT 'user',
         isActive INTEGER DEFAULT 1,
+        displayName TEXT,
+        laboratory TEXT,
+        phone TEXT,
+        language TEXT DEFAULT 'zh-CN',
+        timezone TEXT DEFAULT 'Asia/Shanghai',
+        theme TEXT DEFAULT 'light',
+        showAdvancedData INTEGER DEFAULT 1,
         lastLogin TEXT,
         createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
         updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
       )
     `)
+
+    // 添加新字段到现有用户表（如果不存在）
+    try {
+      this.db.run(`ALTER TABLE users ADD COLUMN displayName TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE users ADD COLUMN laboratory TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE users ADD COLUMN phone TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'zh-CN'`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE users ADD COLUMN timezone TEXT DEFAULT 'Asia/Shanghai'`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE users ADD COLUMN theme TEXT DEFAULT 'light'`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE users ADD COLUMN showAdvancedData INTEGER DEFAULT 1`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
 
     // 菌株表
     this.db.run(`
@@ -153,6 +203,64 @@ class DatabaseService {
       )
     `)
 
+    // 系统配置表
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS system_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        config_key TEXT UNIQUE NOT NULL,
+        config_value TEXT,
+        config_type TEXT DEFAULT 'string',
+        description TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // 菌种配置表
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS species_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        scientific_name TEXT,
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // 地区配置表
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS regions_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        code TEXT,
+        level TEXT DEFAULT 'city',
+        parent_id INTEGER,
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (parent_id) REFERENCES regions_config(id)
+      )
+    `)
+
+    // 样本来源配置表
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS sample_sources_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        category TEXT,
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
     console.log('数据库表结构创建完成')
   }
 
@@ -163,19 +271,31 @@ class DatabaseService {
 
     if (!adminExists) {
       const hashedPassword = await bcrypt.hash('admin123', 10)
-      
+
       const insertStmt = this.db.prepare(`
         INSERT INTO users (username, email, password, role)
         VALUES (?, ?, ?, ?)
       `)
-      
+
       insertStmt.run(['admin', 'admin@pams.local', hashedPassword, 'admin'])
-      
+
       console.log('默认管理员账户已创建: admin/admin123')
-      
+
       // 保存数据库
       await this.saveDatabase()
     }
+
+    // 创建默认系统配置
+    await this.createDefaultSystemConfig()
+
+    // 创建默认菌种配置
+    await this.createDefaultSpeciesConfig()
+
+    // 创建默认地区配置
+    await this.createDefaultRegionsConfig()
+
+    // 创建默认样本来源配置
+    await this.createDefaultSampleSourcesConfig()
   }
 
   async saveDatabase() {
@@ -407,7 +527,7 @@ class DatabaseService {
   // 基因组相关方法
   getAllGenomes() {
     const stmt = this.db.prepare(`
-      SELECT g.*, s.strainId, s.species
+      SELECT g.*, s.strain_id, s.species
       FROM genomes g
       LEFT JOIN strains s ON g.strainId = s.id
       ORDER BY g.createdAt DESC
@@ -469,16 +589,21 @@ class DatabaseService {
 
   // 分析任务相关方法
   getAllTasks() {
-    const stmt = this.db.prepare(`
-      SELECT t.*, u.username as creatorName,
-             COUNT(tg.genomeId) as genomeCount
-      FROM analysis_tasks t
-      LEFT JOIN users u ON t.createdBy = u.id
-      LEFT JOIN task_genomes tg ON t.id = tg.taskId
-      GROUP BY t.id
-      ORDER BY t.createdAt DESC
-    `)
-    return stmt.all()
+    try {
+      const stmt = this.db.prepare(`
+        SELECT t.*, u.username as creatorName,
+               COUNT(tg.genomeId) as genomeCount
+        FROM analysis_tasks t
+        LEFT JOIN users u ON t.createdBy = u.id
+        LEFT JOIN task_genomes tg ON t.id = tg.taskId
+        GROUP BY t.id
+        ORDER BY t.createdAt DESC
+      `)
+      return stmt.all()
+    } catch (error) {
+      console.error('getAllTasks SQL error:', error)
+      return []
+    }
   }
 
   async createTask(taskData) {
@@ -516,12 +641,119 @@ class DatabaseService {
 
   getTaskStats() {
     const stmt = this.db.prepare(`
-      SELECT 
+      SELECT
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
         SUM(CASE WHEN status IN ('pending', 'running') THEN 1 ELSE 0 END) as pending
       FROM analysis_tasks
     `)
     return stmt.get()
+  }
+
+  // 系统配置相关方法
+  async createDefaultSystemConfig() {
+    const defaultConfigs = [
+      { config_key: 'system_name', config_value: 'PAMS - 病原菌分析管理系统', description: '系统名称' },
+      { config_key: 'system_version', config_value: '1.0.0', description: '系统版本' },
+      { config_key: 'admin_email', config_value: 'admin@pams.com', description: '管理员邮箱' },
+      { config_key: 'default_language', config_value: 'zh-CN', description: '默认语言' },
+      { config_key: 'default_timezone', config_value: 'Asia/Shanghai', description: '默认时区' },
+      { config_key: 'auto_backup', config_value: 'true', config_type: 'boolean', description: '自动备份' },
+      { config_key: 'backup_interval', config_value: 'daily', description: '备份间隔' }
+    ]
+
+    for (const config of defaultConfigs) {
+      const existing = this.db.prepare('SELECT * FROM system_config WHERE config_key = ?').get(config.config_key)
+      if (!existing) {
+        this.db.prepare(`
+          INSERT INTO system_config (config_key, config_value, config_type, description)
+          VALUES (?, ?, ?, ?)
+        `).run(config.config_key, config.config_value, config.config_type || 'string', config.description)
+      }
+    }
+  }
+
+  async createDefaultSpeciesConfig() {
+    const defaultSpecies = [
+      { name: '大肠杆菌', scientific_name: 'Escherichia coli', description: '常见的肠道细菌，重要的食源性病原菌', sort_order: 1 },
+      { name: '沙门氏菌', scientific_name: 'Salmonella spp.', description: '重要的食源性病原菌，引起肠胃炎', sort_order: 2 },
+      { name: '志贺氏菌', scientific_name: 'Shigella spp.', description: '引起细菌性痢疾的病原菌', sort_order: 3 },
+      { name: '弧菌', scientific_name: 'Vibrio spp.', description: '水生细菌，包括霍乱弧菌等', sort_order: 4 },
+      { name: '金黄色葡萄球菌', scientific_name: 'Staphylococcus aureus', description: '常见的致病菌，可引起多种感染', sort_order: 5 }
+    ]
+
+    for (const species of defaultSpecies) {
+      const existing = this.db.prepare('SELECT * FROM species_config WHERE name = ?').get(species.name)
+      if (!existing) {
+        this.db.prepare(`
+          INSERT INTO species_config (name, scientific_name, description, sort_order)
+          VALUES (?, ?, ?, ?)
+        `).run(species.name, species.scientific_name, species.description, species.sort_order)
+      }
+    }
+  }
+
+  async createDefaultRegionsConfig() {
+    const defaultRegions = [
+      { name: '北京市', code: '110000', level: 'province', sort_order: 1 },
+      { name: '上海市', code: '310000', level: 'province', sort_order: 2 },
+      { name: '广东省', code: '440000', level: 'province', sort_order: 3 },
+      { name: '江苏省', code: '320000', level: 'province', sort_order: 4 },
+      { name: '浙江省', code: '330000', level: 'province', sort_order: 5 }
+    ]
+
+    for (const region of defaultRegions) {
+      const existing = this.db.prepare('SELECT * FROM regions_config WHERE name = ? AND level = ?').get(region.name, region.level)
+      if (!existing) {
+        this.db.prepare(`
+          INSERT INTO regions_config (name, code, level, sort_order)
+          VALUES (?, ?, ?, ?)
+        `).run(region.name, region.code, region.level, region.sort_order)
+      }
+    }
+  }
+
+  async createDefaultSampleSourcesConfig() {
+    const defaultSources = [
+      { name: '血液', category: 'clinical', description: '临床血液样本', sort_order: 1 },
+      { name: '粪便', category: 'clinical', description: '临床粪便样本', sort_order: 2 },
+      { name: '尿液', category: 'clinical', description: '临床尿液样本', sort_order: 3 },
+      { name: '肉类', category: 'food', description: '肉类食品样本', sort_order: 4 },
+      { name: '蔬菜', category: 'food', description: '蔬菜食品样本', sort_order: 5 }
+    ]
+
+    for (const source of defaultSources) {
+      const existing = this.db.prepare('SELECT * FROM sample_sources_config WHERE name = ?').get(source.name)
+      if (!existing) {
+        this.db.prepare(`
+          INSERT INTO sample_sources_config (name, category, description, sort_order)
+          VALUES (?, ?, ?, ?)
+        `).run(source.name, source.category, source.description, source.sort_order)
+      }
+    }
+  }
+
+  // 获取系统配置
+  getSystemConfig() {
+    const stmt = this.db.prepare('SELECT * FROM system_config ORDER BY config_key')
+    return stmt.all()
+  }
+
+  // 获取菌种配置
+  getSpeciesConfig() {
+    const stmt = this.db.prepare('SELECT * FROM species_config WHERE status = ? ORDER BY sort_order, name')
+    return stmt.all('active')
+  }
+
+  // 获取地区配置
+  getRegionsConfig() {
+    const stmt = this.db.prepare('SELECT * FROM regions_config WHERE status = ? ORDER BY sort_order, name')
+    return stmt.all('active')
+  }
+
+  // 获取样本来源配置
+  getSampleSourcesConfig() {
+    const stmt = this.db.prepare('SELECT * FROM sample_sources_config WHERE status = ? ORDER BY sort_order, name')
+    return stmt.all('active')
   }
 
   async close() {

@@ -1,9 +1,9 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
 const fs = require('fs-extra')
-const isDev = process.env.NODE_ENV === 'development'
-const electronReload =require('electron-reload')
-electronReload(__dirname, {electron:require('electron')})
+const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+//const electronReload =require('electron-reload')
+//electronReload(__dirname, {electron:require('electron')})
 
 // 导入后端服务
 const DatabaseService = require('../src/services/DatabaseService')
@@ -11,6 +11,7 @@ const StrainService = require('../src/services/StrainService')
 const GenomeService = require('../src/services/GenomeService')
 const AnalysisService = require('../src/services/AnalysisService')
 const UserService = require('../src/services/UserService')
+const SystemConfigService = require('../src/services/SystemConfigService')
 
 let mainWindow
 let dbService
@@ -44,8 +45,11 @@ async function createWindow() {
 
   // 加载应用
   if (isDev) {
-    mainWindow.loadURL('http://localhost:8080')
-    mainWindow.webContents.openDevTools()
+    // 开发模式：等待前端服务启动后再加载
+    setTimeout(() => {
+      mainWindow.loadURL('http://localhost:8080')
+      mainWindow.webContents.openDevTools()
+    }, 3000) // 给前端服务3秒启动时间
   } else {
     mainWindow.loadFile(path.join(__dirname, '../frontend/dist/index.html'))
   }
@@ -240,6 +244,27 @@ function registerIpcHandlers() {
     return await userService.register(userData)
   })
 
+  ipcMain.handle('auth:logout', async () => {
+    // 清理会话数据等
+    return true
+  })
+
+  ipcMain.handle('auth:changePassword', async (event, username, currentPassword, newPassword) => {
+    const userService = new UserService(dbService)
+    return await userService.changePassword(username, currentPassword, newPassword)
+  })
+
+  // 用户资料相关
+  ipcMain.handle('users:updateProfile', async (event, userId, profileData) => {
+    const userService = new UserService(dbService)
+    return await userService.updateUserProfile(userId, profileData)
+  })
+
+  ipcMain.handle('users:updateSettings', async (event, userId, settingsData) => {
+    const userService = new UserService(dbService)
+    return await userService.updateUserSettings(userId, settingsData)
+  })
+
   // 菌株相关
   ipcMain.handle('strains:getAll', async () => {
     const strainService = new StrainService(dbService)
@@ -249,7 +274,7 @@ function registerIpcHandlers() {
   ipcMain.handle('strains:create', async (event, strainData) => {
     // 确保日期字段为正确的字符串格式
     const processedData = { ...strainData }
-    
+
     // 处理可能的日期字段
     const dateFields = ['onset_date', 'sampling_date', 'isolation_date']
     dateFields.forEach(field => {
@@ -257,7 +282,7 @@ function registerIpcHandlers() {
         // 如果是 Date 对象，转换为 YYYY-MM-DD 格式
         if (processedData[field] instanceof Date) {
           processedData[field] = processedData[field].toISOString().split('T')[0]
-        } 
+        }
         // 如果是日期字符串，尝试解析并标准化格式
         else if (typeof processedData[field] === 'string') {
           const date = new Date(processedData[field])
@@ -267,9 +292,45 @@ function registerIpcHandlers() {
         }
       }
     })
-    
+
     const strainService = new StrainService(dbService)
     return await strainService.createStrain(processedData)
+  })
+
+  ipcMain.handle('strains:batchCreate', async (event, strainsData) => {
+    const strainService = new StrainService(dbService)
+
+    try {
+      // 处理每个菌株数据的日期字段
+      const processedStrains = strainsData.map(strainData => {
+        const processedData = { ...strainData }
+
+        // 处理可能的日期字段
+        const dateFields = ['onset_date', 'sampling_date', 'isolation_date']
+        dateFields.forEach(field => {
+          if (processedData[field]) {
+            // 如果是Date对象，转换为ISO字符串
+            if (processedData[field] instanceof Date) {
+              processedData[field] = processedData[field].toISOString().split('T')[0]
+            }
+            // 如果是字符串，确保格式正确
+            else if (typeof processedData[field] === 'string') {
+              const date = new Date(processedData[field])
+              if (!isNaN(date.getTime())) {
+                processedData[field] = date.toISOString().split('T')[0]
+              }
+            }
+          }
+        })
+
+        return processedData
+      })
+
+      return await strainService.batchCreateStrains(processedStrains)
+    } catch (error) {
+      console.error('批量创建菌株失败:', error)
+      throw error
+    }
   })
 
   ipcMain.handle('strains:update', async (event, id, strainData) => {
@@ -331,18 +392,159 @@ function registerIpcHandlers() {
     const genomeService = new GenomeService(dbService)
     const analysisService = new AnalysisService(dbService)
 
-    const [strainCount, genomeCount, taskStats] = await Promise.all([
-      strainService.getStrainCount(),
-      genomeService.getGenomeCount(),
-      analysisService.getTaskStats()
-    ])
+    try {
+      const [strainStats, genomeStats, taskStats] = await Promise.all([
+        strainService.getStrainStats(),
+        genomeService.getGenomeStats(),
+        analysisService.getTaskStats()
+      ])
 
-    return {
-      totalStrains: strainCount,
-      totalGenomes: genomeCount,
-      completedAnalysis: taskStats.completed,
-      pendingTasks: taskStats.pending
+      // 获取菌种分布数据
+      const speciesDistribution = Object.entries(strainStats.bySpecies || {}).map(([name, value]) => ({
+        name,
+        value
+      }))
+
+      // 生成月度趋势数据（最近12个月）
+      const monthlyData = []
+      const now = new Date()
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const monthStr = date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit' })
+
+        // 这里应该从数据库查询实际的月度数据，暂时使用模拟数据
+        monthlyData.push({
+          month: monthStr,
+          strains: Math.floor(Math.random() * 20) + 5,
+          genomes: Math.floor(Math.random() * 15) + 3,
+          analysis: Math.floor(Math.random() * 10) + 2
+        })
+      }
+
+      // 生成最近活动数据
+      const recentActivities = await generateRecentActivities(strainService, genomeService, analysisService)
+
+      return {
+        totalStrains: strainStats.total,
+        totalGenomes: genomeStats.total,
+        completedAnalysis: taskStats.completed,
+        pendingTasks: taskStats.pending,
+        speciesDistribution,
+        monthlyData,
+        recentActivities
+      }
+    } catch (error) {
+      console.error('获取统计数据失败:', error)
+      // 返回默认数据
+      return {
+        totalStrains: 0,
+        totalGenomes: 0,
+        completedAnalysis: 0,
+        pendingTasks: 0,
+        speciesDistribution: [],
+        monthlyData: [],
+        recentActivities: []
+      }
     }
+  })
+
+  // 生成最近活动数据的辅助函数
+  async function generateRecentActivities(strainService, genomeService, analysisService) {
+    try {
+      const activities = []
+
+      // 获取最近的菌株
+      const recentStrains = await strainService.getRecentStrains(5)
+      recentStrains.forEach((strain, index) => {
+        activities.push({
+          id: `strain-${strain.id}`,
+          description: `新增菌株记录：${strain.strain_id}`,
+          time: new Date(strain.created_at).toLocaleString(),
+          type: 'success'
+        })
+      })
+
+      // 获取最近的基因组
+      const recentGenomes = await genomeService.getRecentGenomes(3)
+      recentGenomes.forEach((genome, index) => {
+        activities.push({
+          id: `genome-${genome.id}`,
+          description: `上传基因组文件：${genome.filename}`,
+          time: new Date(genome.createdAt).toLocaleString(),
+          type: 'info'
+        })
+      })
+
+      // 获取最近完成的分析任务
+      const recentTasks = await analysisService.getRecentCompletedTasks(3)
+      recentTasks.forEach((task, index) => {
+        activities.push({
+          id: `task-${task.id}`,
+          description: `完成分析任务：${task.name}`,
+          time: new Date(task.completedAt).toLocaleString(),
+          type: 'primary'
+        })
+      })
+
+      // 按时间排序并返回最近的10条
+      return activities
+        .sort((a, b) => new Date(b.time) - new Date(a.time))
+        .slice(0, 10)
+    } catch (error) {
+      console.error('生成最近活动数据失败:', error)
+      return []
+    }
+  }
+
+  // 系统配置相关
+  ipcMain.handle('systemConfig:getAll', async () => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.getAllConfig()
+  })
+
+  ipcMain.handle('systemConfig:getSpecies', async () => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.getSpeciesConfig()
+  })
+
+  ipcMain.handle('systemConfig:saveSpecies', async (event, speciesData) => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.saveSpecies(speciesData)
+  })
+
+  ipcMain.handle('systemConfig:deleteSpecies', async (event, id) => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.deleteSpecies(id)
+  })
+
+  ipcMain.handle('systemConfig:getRegions', async () => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.getRegionsConfig()
+  })
+
+  ipcMain.handle('systemConfig:saveRegion', async (event, regionData) => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.saveRegion(regionData)
+  })
+
+  ipcMain.handle('systemConfig:deleteRegion', async (event, id) => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.deleteRegion(id)
+  })
+
+  ipcMain.handle('systemConfig:getSampleSources', async () => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.getSampleSourcesConfig()
+  })
+
+  ipcMain.handle('systemConfig:saveSampleSource', async (event, sourceData) => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.saveSampleSource(sourceData)
+  })
+
+  ipcMain.handle('systemConfig:deleteSampleSource', async (event, id) => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.deleteSampleSource(id)
   })
 }
 

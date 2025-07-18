@@ -8,7 +8,7 @@
     <div class="content-area">
       <div class="toolbar">
         <el-button type="primary" @click="startMLST">
-          <el-icon><Play /></el-icon>
+          <el-icon><VideoPlay /></el-icon>
           开始分析
         </el-button>
         <el-button @click="batchMLST">
@@ -16,7 +16,7 @@
           批量分析
         </el-button>
         <el-button @click="viewDatabase">
-          <el-icon><Database /></el-icon>
+          <el-icon><DataBoard /></el-icon>
           查看数据库
         </el-button>
       </div>
@@ -129,14 +129,14 @@
 
 <script>
 import { ref, reactive, onMounted } from 'vue'
-import { Play, List, Database } from '@element-plus/icons-vue'
+import { VideoPlay, List, DataBoard } from '@element-plus/icons-vue'
 
 export default {
   name: 'MLST',
   components: {
-    Play,
+    VideoPlay,
     List,
-    Database
+    DataBoard
   },
   setup () {
     const loading = ref(false)

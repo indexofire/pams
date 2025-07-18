@@ -292,6 +292,23 @@ class GenomeService {
   }
 
   /**
+   * 获取最近的基因组记录
+   */
+  async getRecentGenomes(limit = 10) {
+    try {
+      const allGenomes = this.db.getAllGenomes()
+
+      // 按创建时间排序，返回最新的记录
+      return allGenomes
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, limit)
+    } catch (error) {
+      console.error('获取最近基因组记录失败:', error)
+      throw new Error('获取最近基因组记录失败')
+    }
+  }
+
+  /**
    * 验证基因组文件
    */
   async validateGenomeFile(filePath) {

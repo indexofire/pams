@@ -268,6 +268,127 @@ class UserService {
   }
 
   /**
+   * 更改密码
+   */
+  async changePassword(username, currentPassword, newPassword) {
+    try {
+      const user = this.db.getUserByUsername(username)
+      if (!user) {
+        throw new Error('用户不存在')
+      }
+
+      // 验证当前密码
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password)
+      if (!isPasswordValid) {
+        throw new Error('当前密码不正确')
+      }
+
+      // 验证新密码
+      if (!newPassword || newPassword.length < 6) {
+        throw new Error('新密码长度不能少于6个字符')
+      }
+
+      // 加密新密码
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10)
+
+      // 更新密码
+      return await this.db.updateUser(user.id, {
+        password: hashedNewPassword,
+        updatedAt: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('更改密码失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 更新用户资料
+   */
+  async updateUserProfile(userId, profileData) {
+    try {
+      // 检查用户是否存在
+      const existingUser = this.db.getUserById(userId)
+      if (!existingUser) {
+        throw new Error('用户不存在')
+      }
+
+      // 验证邮箱格式（如果提供了邮箱）
+      if (profileData.email && !this.isValidEmail(profileData.email)) {
+        throw new Error('邮箱格式无效')
+      }
+
+      // 检查邮箱是否与其他用户重复
+      if (profileData.email) {
+        const allUsers = this.db.getUsers()
+        const emailExists = allUsers.some(user =>
+          user.id !== parseInt(userId) &&
+          user.email === profileData.email
+        )
+
+        if (emailExists) {
+          throw new Error('邮箱已存在')
+        }
+      }
+
+      // 准备更新数据
+      const updateData = {
+        displayName: profileData.displayName,
+        laboratory: profileData.laboratory,
+        email: profileData.email,
+        phone: profileData.phone,
+        updatedAt: new Date().toISOString()
+      }
+
+      // 移除空值
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined || updateData[key] === null) {
+          delete updateData[key]
+        }
+      })
+
+      return await this.db.updateUser(userId, updateData)
+    } catch (error) {
+      console.error('更新用户资料失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 更新用户设置
+   */
+  async updateUserSettings(userId, settingsData) {
+    try {
+      // 检查用户是否存在
+      const existingUser = this.db.getUserById(userId)
+      if (!existingUser) {
+        throw new Error('用户不存在')
+      }
+
+      // 准备更新数据
+      const updateData = {
+        language: settingsData.language,
+        timezone: settingsData.timezone,
+        theme: settingsData.theme,
+        showAdvancedData: settingsData.showAdvancedData,
+        updatedAt: new Date().toISOString()
+      }
+
+      // 移除空值
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined || updateData[key] === null) {
+          delete updateData[key]
+        }
+      })
+
+      return await this.db.updateUser(userId, updateData)
+    } catch (error) {
+      console.error('更新用户设置失败:', error)
+      throw error
+    }
+  }
+
+  /**
    * 验证邮箱格式
    */
   isValidEmail(email) {

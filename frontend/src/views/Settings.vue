@@ -257,17 +257,7 @@ export default {
 
         saving.value = true
         try {
-          // TODO: 实现保存用户信息的API调用
-          if (window.electronAPI && window.electronAPI.users) {
-            await window.electronAPI.users.updateProfile(user.value.id, {
-              displayName: profileForm.displayName,
-              laboratory: profileForm.laboratory,
-              email: profileForm.email,
-              phone: profileForm.phone
-            })
-          }
-
-          // 更新store中的用户信息
+          // 使用store action更新用户信息
           await store.dispatch('auth/updateUserProfile', {
             displayName: profileForm.displayName,
             laboratory: profileForm.laboratory,
@@ -293,14 +283,11 @@ export default {
 
         changingPassword.value = true
         try {
-          // TODO: 实现修改密码的API调用
-          if (window.electronAPI && window.electronAPI.auth) {
-            await window.electronAPI.auth.changePassword(
-              user.value.username,
-              passwordForm.currentPassword,
-              passwordForm.newPassword
-            )
-          }
+          // 使用store action更改密码
+          await store.dispatch('auth/changePassword', {
+            currentPassword: passwordForm.currentPassword,
+            newPassword: passwordForm.newPassword
+          })
 
           // 清空表单
           passwordForm.currentPassword = ''
@@ -319,12 +306,7 @@ export default {
 
     const saveAccountSettings = async () => {
       try {
-        // TODO: 实现保存账户设置的API调用
-        if (window.electronAPI && window.electronAPI.users) {
-          await window.electronAPI.users.updateSettings(user.value.id, accountForm)
-        }
-
-        // 更新store中的用户设置
+        // 使用store action更新用户设置
         await store.dispatch('auth/updateUserSettings', accountForm)
 
         ElMessage.success('账户设置保存成功')
