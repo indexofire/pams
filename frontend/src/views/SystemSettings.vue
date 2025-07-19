@@ -104,6 +104,111 @@
           </div>
         </el-tab-pane>
 
+        <!-- 地区管理 -->
+        <el-tab-pane label="地区管理" name="regions">
+          <div class="region-management">
+            <div class="toolbar">
+              <el-button type="primary" @click="addRegion">
+                <el-icon><Plus /></el-icon>
+                添加地区
+              </el-button>
+            </div>
+
+            <el-table :data="regionOptions" border>
+              <el-table-column prop="id" label="ID" width="80" />
+              <el-table-column prop="name" label="地区名称" />
+              <el-table-column prop="code" label="地区代码" width="120" />
+              <el-table-column prop="level" label="级别" width="100">
+                <template #default="scope">
+                  <el-tag size="small">
+                    {{ scope.row.level === 'province' ? '省/市' : scope.row.level === 'city' ? '市' : '区/县' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="status" label="状态" width="100">
+                <template #default="scope">
+                  <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'" size="small">
+                    {{ scope.row.status === 'active' ? '启用' : '禁用' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="200">
+                <template #default="scope">
+                  <el-button size="small" @click="editRegion(scope.row)">编辑</el-button>
+                  <el-button
+                    size="small"
+                    :type="scope.row.status === 'active' ? 'warning' : 'success'"
+                    @click="toggleRegionStatus(scope.row)"
+                  >
+                    {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                  </el-button>
+                  <el-button
+                    size="small"
+                    type="danger"
+                    @click="deleteRegion(scope.row)"
+                  >
+                    删除
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+
+        <!-- 样本来源管理 -->
+        <el-tab-pane label="样本来源" name="sources">
+          <div class="source-management">
+            <div class="toolbar">
+              <el-button type="primary" @click="addSource">
+                <el-icon><Plus /></el-icon>
+                添加样本来源
+              </el-button>
+            </div>
+
+            <el-table :data="sourceOptions" border>
+              <el-table-column prop="id" label="ID" width="80" />
+              <el-table-column prop="name" label="来源名称" />
+              <el-table-column prop="category" label="类别" width="120">
+                <template #default="scope">
+                  <el-tag
+                    :type="scope.row.category === 'clinical' ? 'primary' : scope.row.category === 'food' ? 'success' : 'warning'"
+                    size="small"
+                  >
+                    {{ scope.row.category === 'clinical' ? '临床' : scope.row.category === 'food' ? '食品' : '环境' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="description" label="描述" />
+              <el-table-column prop="status" label="状态" width="100">
+                <template #default="scope">
+                  <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'" size="small">
+                    {{ scope.row.status === 'active' ? '启用' : '禁用' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="200">
+                <template #default="scope">
+                  <el-button size="small" @click="editSource(scope.row)">编辑</el-button>
+                  <el-button
+                    size="small"
+                    :type="scope.row.status === 'active' ? 'warning' : 'success'"
+                    @click="toggleSourceStatus(scope.row)"
+                  >
+                    {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                  </el-button>
+                  <el-button
+                    size="small"
+                    type="danger"
+                    @click="deleteSource(scope.row)"
+                  >
+                    删除
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+
         <!-- 实验管理 -->
         <el-tab-pane label="实验管理" name="experiments">
           <div class="experiment-management">
@@ -260,6 +365,64 @@
       </template>
     </el-dialog>
 
+    <!-- 地区编辑对话框 -->
+    <el-dialog v-model="regionDialogVisible" title="地区管理" width="600px">
+      <el-form :model="regionForm" label-width="80px">
+        <el-form-item label="地区名称">
+          <el-input v-model="regionForm.name" placeholder="请输入地区名称" />
+        </el-form-item>
+        <el-form-item label="地区代码">
+          <el-input v-model="regionForm.code" placeholder="请输入地区代码" />
+        </el-form-item>
+        <el-form-item label="级别">
+          <el-select v-model="regionForm.level" placeholder="请选择级别">
+            <el-option label="省/直辖市" value="province" />
+            <el-option label="市" value="city" />
+            <el-option label="区/县" value="district" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="regionForm.status" placeholder="请选择状态">
+            <el-option label="启用" value="active" />
+            <el-option label="禁用" value="inactive" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="regionDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveRegion">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 样本来源编辑对话框 -->
+    <el-dialog v-model="sourceDialogVisible" title="样本来源管理" width="600px">
+      <el-form :model="sourceForm" label-width="80px">
+        <el-form-item label="来源名称">
+          <el-input v-model="sourceForm.name" placeholder="请输入样本来源名称" />
+        </el-form-item>
+        <el-form-item label="类别">
+          <el-select v-model="sourceForm.category" placeholder="请选择类别">
+            <el-option label="临床" value="clinical" />
+            <el-option label="食品" value="food" />
+            <el-option label="环境" value="environmental" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="sourceForm.description" type="textarea" :rows="3" placeholder="请输入描述" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="sourceForm.status" placeholder="请选择状态">
+            <el-option label="启用" value="active" />
+            <el-option label="禁用" value="inactive" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="sourceDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveSource">确定</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 实验类型编辑对话框 -->
     <el-dialog v-model="experimentDialogVisible" title="实验类型管理" width="600px">
       <el-form :model="experimentForm" label-width="80px">
@@ -291,6 +454,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
+import { useStore } from 'vuex'
 
 export default {
   name: 'SystemSettings',
@@ -299,6 +463,7 @@ export default {
     Refresh
   },
   setup () {
+    const store = useStore()
     const activeTab = ref('users')
 
     // 用户管理相关
@@ -324,6 +489,41 @@ export default {
       id: null,
       name: '',
       scientific_name: '',
+      description: '',
+      status: 'active'
+    })
+
+    // 地区管理相关
+    const regionOptions = ref([
+      { id: 1, name: '北京市', code: 'BJ', level: 'province', status: 'active' },
+      { id: 2, name: '上海市', code: 'SH', level: 'province', status: 'active' },
+      { id: 3, name: '广东省', code: 'GD', level: 'province', status: 'active' },
+      { id: 4, name: '江苏省', code: 'JS', level: 'province', status: 'active' },
+      { id: 5, name: '浙江省', code: 'ZJ', level: 'province', status: 'active' }
+    ])
+    const regionDialogVisible = ref(false)
+    const regionForm = reactive({
+      id: null,
+      name: '',
+      code: '',
+      level: 'province',
+      status: 'active'
+    })
+
+    // 样本来源管理相关
+    const sourceOptions = ref([
+      { id: 1, name: '血液', category: 'clinical', description: '临床血液样本', status: 'active' },
+      { id: 2, name: '粪便', category: 'clinical', description: '临床粪便样本', status: 'active' },
+      { id: 3, name: '尿液', category: 'clinical', description: '临床尿液样本', status: 'active' },
+      { id: 4, name: '肉类', category: 'food', description: '食品肉类样本', status: 'active' },
+      { id: 5, name: '饮用水', category: 'environmental', description: '环境水样', status: 'active' },
+      { id: 6, name: '土壤', category: 'environmental', description: '环境土样', status: 'active' }
+    ])
+    const sourceDialogVisible = ref(false)
+    const sourceForm = reactive({
+      id: null,
+      name: '',
+      category: 'clinical',
       description: '',
       status: 'active'
     })
@@ -508,6 +708,9 @@ export default {
         speciesOptions.value.push(newSpecies)
         ElMessage.success('菌种添加成功')
       }
+
+      // 同步到store
+      syncSystemConfigToStore()
       speciesDialogVisible.value = false
     }
 
@@ -528,6 +731,147 @@ export default {
     const toggleSpeciesStatus = (species) => {
       species.status = species.status === 'active' ? 'inactive' : 'active'
       ElMessage.success(`菌种已${species.status === 'active' ? '启用' : '禁用'}`)
+    }
+
+    // 地区管理方法
+    const addRegion = () => {
+      Object.assign(regionForm, { id: null, name: '', code: '', level: 'province', status: 'active' })
+      regionDialogVisible.value = true
+    }
+
+    const editRegion = (region) => {
+      Object.assign(regionForm, region)
+      regionDialogVisible.value = true
+    }
+
+    const saveRegion = () => {
+      if (regionForm.id) {
+        // 更新地区
+        const index = regionOptions.value.findIndex(r => r.id === regionForm.id)
+        if (index !== -1) {
+          regionOptions.value[index] = { ...regionForm }
+        }
+        ElMessage.success('地区更新成功')
+      } else {
+        // 添加地区
+        const newRegion = {
+          id: Date.now(),
+          name: regionForm.name,
+          code: regionForm.code,
+          level: regionForm.level,
+          status: regionForm.status
+        }
+        regionOptions.value.push(newRegion)
+        ElMessage.success('地区添加成功')
+      }
+      syncSystemConfigToStore()
+      regionDialogVisible.value = false
+    }
+
+    const deleteRegion = (region) => {
+      ElMessageBox.confirm('确定要删除该地区吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        const index = regionOptions.value.findIndex(r => r.id === region.id)
+        if (index !== -1) {
+          regionOptions.value.splice(index, 1)
+        }
+        ElMessage.success('地区删除成功')
+      }).catch(() => {})
+    }
+
+    const toggleRegionStatus = (region) => {
+      region.status = region.status === 'active' ? 'inactive' : 'active'
+      ElMessage.success(`地区已${region.status === 'active' ? '启用' : '禁用'}`)
+    }
+
+    // 样本来源管理方法
+    const addSource = () => {
+      Object.assign(sourceForm, { id: null, name: '', category: 'clinical', description: '', status: 'active' })
+      sourceDialogVisible.value = true
+    }
+
+    const editSource = (source) => {
+      Object.assign(sourceForm, source)
+      sourceDialogVisible.value = true
+    }
+
+    const saveSource = () => {
+      if (sourceForm.id) {
+        // 更新样本来源
+        const index = sourceOptions.value.findIndex(s => s.id === sourceForm.id)
+        if (index !== -1) {
+          sourceOptions.value[index] = { ...sourceForm }
+        }
+        ElMessage.success('样本来源更新成功')
+      } else {
+        // 添加样本来源
+        const newSource = {
+          id: Date.now(),
+          name: sourceForm.name,
+          category: sourceForm.category,
+          description: sourceForm.description,
+          status: sourceForm.status
+        }
+        sourceOptions.value.push(newSource)
+        ElMessage.success('样本来源添加成功')
+      }
+      syncSystemConfigToStore()
+      sourceDialogVisible.value = false
+    }
+
+    const deleteSource = (source) => {
+      ElMessageBox.confirm('确定要删除该样本来源吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        const index = sourceOptions.value.findIndex(s => s.id === source.id)
+        if (index !== -1) {
+          sourceOptions.value.splice(index, 1)
+        }
+        ElMessage.success('样本来源删除成功')
+      }).catch(() => {})
+    }
+
+    const toggleSourceStatus = (source) => {
+      source.status = source.status === 'active' ? 'inactive' : 'active'
+      ElMessage.success(`样本来源已${source.status === 'active' ? '启用' : '禁用'}`)
+      syncSystemConfigToStore()
+    }
+
+    // 同步系统配置到store
+    const syncSystemConfigToStore = () => {
+      const systemConfig = {
+        species: speciesOptions.value.map(item => ({
+          id: item.id,
+          value: item.name,
+          label: item.name,
+          scientific_name: item.scientific_name,
+          description: item.description,
+          status: item.status
+        })),
+        regions: regionOptions.value.map(item => ({
+          id: item.id,
+          value: item.name,
+          label: item.name,
+          code: item.code,
+          level: item.level,
+          status: item.status
+        })),
+        sources: sourceOptions.value.map(item => ({
+          id: item.id,
+          value: item.name,
+          label: item.name,
+          category: item.category,
+          description: item.description,
+          status: item.status
+        }))
+      }
+
+      store.commit('SET_SYSTEM_CONFIG', systemConfig)
     }
 
     // 实验管理方法
@@ -597,9 +941,50 @@ export default {
     }
 
     // 页面加载时获取用户列表
-    onMounted(() => {
+    onMounted(async () => {
       loadUsers()
+      // 加载系统配置
+      await store.dispatch('fetchSystemConfig')
+      loadSystemConfigFromStore()
     })
+
+    // 从store加载系统配置
+    const loadSystemConfigFromStore = () => {
+      const config = store.state.systemConfig
+
+      // 更新菌种选项
+      if (config.species && config.species.length > 0) {
+        speciesOptions.value = config.species.map(item => ({
+          id: item.id,
+          name: item.value,
+          scientific_name: item.scientific_name || '',
+          description: item.description || '',
+          status: item.status
+        }))
+      }
+
+      // 更新地区选项
+      if (config.regions && config.regions.length > 0) {
+        regionOptions.value = config.regions.map(item => ({
+          id: item.id,
+          name: item.value,
+          code: item.code || '',
+          level: item.level || 'province',
+          status: item.status
+        }))
+      }
+
+      // 更新样本来源选项
+      if (config.sources && config.sources.length > 0) {
+        sourceOptions.value = config.sources.map(item => ({
+          id: item.id,
+          name: item.value,
+          category: item.category || 'clinical',
+          description: item.description || '',
+          status: item.status
+        }))
+      }
+    }
 
     return {
       activeTab,
@@ -626,6 +1011,24 @@ export default {
       saveSpecies,
       deleteSpecies,
       toggleSpeciesStatus,
+      // 地区管理
+      regionOptions,
+      regionDialogVisible,
+      regionForm,
+      addRegion,
+      editRegion,
+      saveRegion,
+      deleteRegion,
+      toggleRegionStatus,
+      // 样本来源管理
+      sourceOptions,
+      sourceDialogVisible,
+      sourceForm,
+      addSource,
+      editSource,
+      saveSource,
+      deleteSource,
+      toggleSourceStatus,
       addExperiment,
       editExperiment,
       saveExperiment,

@@ -106,23 +106,121 @@
         </div>
       </div>
     </div>
+
+    <!-- 基因组上传对话框 -->
+    <el-dialog
+      v-model="uploadDialogVisible"
+      title="上传基因组文件"
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <div class="upload-section">
+        <el-upload
+          ref="uploadRef"
+          class="upload-demo"
+          drag
+          :action="uploadAction"
+          :multiple="true"
+          :auto-upload="false"
+          :accept="acceptedFormats"
+          :on-change="handleFileChange"
+          :on-remove="handleFileRemove"
+          :file-list="fileList"
+          :before-upload="beforeUpload"
+        >
+          <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+          <div class="el-upload__text">
+            将文件拖到此处，或<em>点击上传</em>
+          </div>
+          <template #tip>
+            <div class="el-upload__tip">
+              支持 .fasta, .fa, .fna, .gz 格式的基因组文件，单个文件不超过 500MB
+            </div>
+          </template>
+        </el-upload>
+
+        <div v-if="fileList.length > 0" class="file-association-section">
+          <h4>文件关联设置</h4>
+          <div v-for="(file, index) in fileList" :key="index" class="file-item">
+            <div class="file-info">
+              <el-icon><Document /></el-icon>
+              <span class="file-name">{{ file.name }}</span>
+              <span class="file-size">({{ formatFileSize(file.size) }})</span>
+            </div>
+            <div class="association-controls">
+              <el-form-item label="关联菌株">
+                <el-select
+                  v-model="file.associatedStrain"
+                  placeholder="选择关联的菌株"
+                  filterable
+                  clearable
+                  style="width: 200px"
+                >
+                  <el-option
+                    v-for="strain in availableStrains"
+                    :key="strain.id"
+                    :label="`${strain.strain_id} (${strain.species})`"
+                    :value="strain.id"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-button
+                v-if="!file.associatedStrain"
+                type="text"
+                @click="autoAssociateStrain(file)"
+              >
+                自动关联
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="cancelUpload">取消</el-button>
+          <el-button
+            type="primary"
+            :loading="uploading"
+            :disabled="fileList.length === 0"
+            @click="startUpload"
+          >
+            {{ uploading ? '上传中...' : '开始上传' }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import { ref, reactive, onMounted } from 'vue'
-import { Upload, Download, Refresh } from '@element-plus/icons-vue'
+import { Upload, Download, Refresh, UploadFilled, Document } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+// import { useStore } from 'vuex' // 暂时不使用，但保留以备将来使用
 
 export default {
   name: 'Genomes',
   components: {
     Upload,
     Download,
-    Refresh
+    Refresh,
+    UploadFilled,
+    Document
   },
   setup () {
+    // const store = useStore() // 暂时不使用，但保留以备将来使用
     const loading = ref(false)
     const genomes = ref([])
+
+    // 上传相关数据
+    const uploadDialogVisible = ref(false)
+    const uploading = ref(false)
+    const fileList = ref([])
+    const uploadRef = ref(null)
+    const availableStrains = ref([])
+    const uploadAction = '#' // 不使用自动上传
+    const acceptedFormats = '.fasta,.fa,.fna,.gz'
 
     const filterForm = reactive({
       name: '',
@@ -176,9 +274,10 @@ export default {
       searchGenomes()
     }
 
-    const uploadGenome = () => {
-      // TODO: 实现上传基因组的逻辑
-      console.log('上传基因组')
+    const uploadGenome = async () => {
+      // 加载可用的菌株列表
+      await loadAvailableStrains()
+      uploadDialogVisible.value = true
     }
 
     const downloadGenomes = () => {
@@ -221,6 +320,240 @@ export default {
       loadGenomes()
     }
 
+    // 加载可用菌株
+    const loadAvailableStrains = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.strains) {
+          const strains = await window.electronAPI.strains.getAll()
+          availableStrains.value = strains || []
+        } else {
+          // 开发环境从localStorage获取
+          const savedStrains = localStorage.getItem('pams_strains')
+          if (savedStrains) {
+            availableStrains.value = JSON.parse(savedStrains)
+          } else {
+            availableStrains.value = []
+          }
+        }
+      } catch (error) {
+        console.error('加载菌株列表失败:', error)
+        ElMessage.error('加载菌株列表失败')
+      }
+    }
+
+    // 文件变化处理
+    const handleFileChange = (file, fileList) => {
+      // 验证文件格式
+      const allowedExtensions = ['.fasta', '.fa', '.fna', '.gz']
+      const fileName = file.name.toLowerCase()
+      const isValidFormat = allowedExtensions.some(ext => fileName.endsWith(ext))
+
+      if (!isValidFormat) {
+        ElMessage.error(`不支持的文件格式: ${file.name}`)
+        return false
+      }
+
+      // 验证文件大小 (500MB)
+      const maxSize = 500 * 1024 * 1024
+      if (file.size > maxSize) {
+        ElMessage.error(`文件过大: ${file.name}，最大支持500MB`)
+        return false
+      }
+
+      // 添加自定义属性
+      file.associatedStrain = null
+      file.uploadStatus = 'pending'
+
+      // 自动尝试关联菌株
+      setTimeout(() => {
+        autoAssociateStrain(file)
+      }, 100)
+    }
+
+    // 文件移除处理
+    const handleFileRemove = (file, fileList) => {
+      // 文件移除时的处理逻辑
+    }
+
+    // 上传前验证
+    const beforeUpload = (file) => {
+      return false // 阻止自动上传
+    }
+
+    // 自动关联菌株
+    const autoAssociateStrain = (file) => {
+      const fileName = file.name.toLowerCase()
+      let bestMatch = null
+      let bestScore = 0
+
+      // 尝试从文件名中提取菌株信息
+      for (const strain of availableStrains.value) {
+        const strainId = strain.strain_id.toLowerCase()
+        const sampleId = strain.sample_id ? strain.sample_id.toLowerCase() : ''
+
+        let score = 0
+
+        // 精确匹配菌株ID
+        if (fileName.includes(strainId)) {
+          score += 10
+        }
+
+        // 精确匹配样本ID
+        if (sampleId && fileName.includes(sampleId)) {
+          score += 8
+        }
+
+        // 模糊匹配：移除特殊字符后比较
+        const cleanFileName = fileName.replace(/[_\-.]/g, '')
+        const cleanStrainId = strainId.replace(/[_\-.]/g, '')
+        const cleanSampleId = sampleId.replace(/[_\-.]/g, '')
+
+        if (cleanFileName.includes(cleanStrainId)) {
+          score += 5
+        }
+
+        if (cleanSampleId && cleanFileName.includes(cleanSampleId)) {
+          score += 3
+        }
+
+        // 菌种匹配
+        if (strain.species) {
+          const species = strain.species.toLowerCase()
+          if (fileName.includes(species.replace(/\s+/g, ''))) {
+            score += 2
+          }
+        }
+
+        if (score > bestScore) {
+          bestScore = score
+          bestMatch = strain
+        }
+      }
+
+      if (bestMatch && bestScore >= 5) {
+        file.associatedStrain = bestMatch.id
+        ElMessage.success(`已自动关联菌株: ${bestMatch.strain_id} (匹配度: ${bestScore})`)
+      } else if (bestMatch && bestScore > 0) {
+        // 低匹配度时询问用户
+        ElMessageBox.confirm(
+          `找到可能匹配的菌株: ${bestMatch.strain_id}，是否关联？`,
+          '确认关联',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'question'
+          }
+        ).then(() => {
+          file.associatedStrain = bestMatch.id
+          ElMessage.success(`已关联菌株: ${bestMatch.strain_id}`)
+        }).catch(() => {
+          ElMessage.info('已取消自动关联')
+        })
+      } else {
+        ElMessage.warning('无法自动关联，请手动选择菌株')
+      }
+    }
+
+    // 格式化文件大小
+    const formatFileSize = (bytes) => {
+      if (bytes === 0) return '0 B'
+      const k = 1024
+      const sizes = ['B', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    }
+
+    // 开始上传
+    const startUpload = async () => {
+      // 检查所有文件是否都已关联菌株
+      const unassociatedFiles = fileList.value.filter(file => !file.associatedStrain)
+      if (unassociatedFiles.length > 0) {
+        ElMessage.warning('请为所有文件关联菌株')
+        return
+      }
+
+      uploading.value = true
+      try {
+        for (const file of fileList.value) {
+          await uploadSingleFile(file)
+        }
+
+        ElMessage.success(`成功上传 ${fileList.value.length} 个基因组文件`)
+        uploadDialogVisible.value = false
+        fileList.value = []
+        loadGenomes() // 重新加载基因组列表
+      } catch (error) {
+        console.error('上传失败:', error)
+        ElMessage.error('上传失败：' + error.message)
+      } finally {
+        uploading.value = false
+      }
+    }
+
+    // 上传单个文件
+    const uploadSingleFile = async (file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+
+        reader.onload = async (e) => {
+          try {
+            const content = e.target.result
+            let fileName = file.name
+            let isCompressed = false
+
+            // 如果是gz文件，标记为压缩
+            if (fileName.toLowerCase().endsWith('.gz')) {
+              isCompressed = true
+              fileName = fileName.replace(/\.gz$/, '')
+            }
+
+            // 生成新的文件名
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+            const newFileName = `${timestamp}_${fileName}`
+
+            const genomeData = {
+              id: Date.now() + Math.random(),
+              name: newFileName,
+              originalName: file.name,
+              strainId: file.associatedStrain,
+              size: file.size,
+              content: content,
+              isCompressed: isCompressed,
+              uploadDate: new Date().toISOString(),
+              status: 'uploaded'
+            }
+
+            if (window.electronAPI && window.electronAPI.genomes) {
+              // 使用Electron API保存
+              await window.electronAPI.genomes.create(genomeData)
+            } else {
+              // 开发环境保存到localStorage
+              const savedGenomes = localStorage.getItem('pams_genomes')
+              const genomes = savedGenomes ? JSON.parse(savedGenomes) : []
+              genomes.push(genomeData)
+              localStorage.setItem('pams_genomes', JSON.stringify(genomes))
+            }
+
+            resolve()
+          } catch (error) {
+            reject(error)
+          }
+        }
+
+        reader.onerror = () => {
+          reject(new Error('文件读取失败'))
+        }
+
+        reader.readAsText(file.raw)
+      })
+    }
+
+    // 取消上传
+    const cancelUpload = () => {
+      fileList.value = []
+      uploadDialogVisible.value = false
+    }
+
     onMounted(() => {
       loadGenomes()
     })
@@ -240,7 +573,23 @@ export default {
       downloadGenome,
       deleteGenome,
       handleSizeChange,
-      handleCurrentChange
+      handleCurrentChange,
+      // 上传相关
+      uploadDialogVisible,
+      uploading,
+      fileList,
+      uploadRef,
+      availableStrains,
+      uploadAction,
+      acceptedFormats,
+      loadAvailableStrains,
+      handleFileChange,
+      handleFileRemove,
+      beforeUpload,
+      autoAssociateStrain,
+      formatFileSize,
+      startUpload,
+      cancelUpload
     }
   }
 }
@@ -294,5 +643,60 @@ export default {
 .pagination {
   margin-top: 20px;
   text-align: right;
+}
+
+/* 上传对话框样式 */
+.upload-section {
+  padding: 20px 0;
+}
+
+.file-association-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ebeef5;
+}
+
+.file-association-section h4 {
+  margin: 0 0 15px 0;
+  color: #303133;
+  font-size: 16px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #f5f7fa;
+  border-radius: 4px;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.file-name {
+  margin-left: 8px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.file-size {
+  margin-left: 8px;
+  color: #909399;
+  font-size: 12px;
+}
+
+.association-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.association-controls .el-form-item {
+  margin-bottom: 0;
 }
 </style>

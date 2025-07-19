@@ -304,6 +304,56 @@
       </template>
     </el-dialog>
 
+    <!-- 导出对话框 -->
+    <el-dialog
+      v-model="exportDialogVisible"
+      title="导出菌株数据"
+      width="400px"
+    >
+      <div>
+        <p style="margin-bottom: 20px; color: #606266;">
+          已选择 {{ selectedStrains.length }} 条菌株数据，请选择导出格式：
+        </p>
+
+        <el-radio-group v-model="exportFormat" style="display: flex; flex-direction: column; gap: 10px;">
+          <el-radio value="xlsx">
+            <span style="font-weight: 500;">Excel 格式 (.xlsx)</span>
+            <br>
+            <span style="color: #909399; font-size: 12px; margin-left: 20px;">
+              推荐格式，支持复杂格式和公式
+            </span>
+          </el-radio>
+          <el-radio value="csv">
+            <span style="font-weight: 500;">CSV 格式 (.csv)</span>
+            <br>
+            <span style="color: #909399; font-size: 12px; margin-left: 20px;">
+              通用格式，兼容性好
+            </span>
+          </el-radio>
+          <el-radio value="tsv">
+            <span style="font-weight: 500;">TSV 格式 (.tsv)</span>
+            <br>
+            <span style="color: #909399; font-size: 12px; margin-left: 20px;">
+              制表符分隔，适合数据分析
+            </span>
+          </el-radio>
+        </el-radio-group>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="exportDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            :loading="exportLoading"
+            @click="performExport"
+          >
+            {{ exportLoading ? '导出中...' : '确定导出' }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 菌株详情/编辑对话框 -->
     <el-dialog
       v-model="strainDialogVisible"
@@ -538,6 +588,11 @@ export default {
     const validRecords = ref([])
     const errorRecords = ref([])
     const importedCount = ref(0)
+
+    // 导出相关数据
+    const exportDialogVisible = ref(false)
+    const exportFormat = ref('xlsx')
+    const exportLoading = ref(false)
     const uploadRef = ref(null)
 
     // 字段映射配置
@@ -638,34 +693,21 @@ export default {
           strains.value = allStrains || []
           pagination.total = strains.value.length
         } else {
-          // 开发环境或Web环境的模拟数据
-          strains.value = [
-            {
-              id: 1,
-              strain_id: 'E.coli-001',
-              species: 'E.coli',
-              sample_id: 'S001',
-              sample_source: 'blood',
-              region: 'beijing',
-              onset_date: '2023-01-10',
-              sampling_date: '2023-01-12',
-              isolation_date: '2023-01-15',
-              uploaded_by: 'admin'
-            },
-            {
-              id: 2,
-              strain_id: 'Salmonella-002',
-              species: 'Salmonella',
-              sample_id: 'S002',
-              sample_source: 'feces',
-              region: 'shanghai',
-              onset_date: '2023-01-08',
-              sampling_date: '2023-01-10',
-              isolation_date: '2023-01-12',
-              uploaded_by: 'advanced'
+          // 开发环境或Web环境：从localStorage获取数据，如果没有则使用模拟数据
+          const savedStrains = localStorage.getItem('pams_strains')
+          if (savedStrains) {
+            try {
+              strains.value = JSON.parse(savedStrains)
+              pagination.total = strains.value.length
+            } catch (e) {
+              console.error('解析保存的菌株数据失败:', e)
+              // 如果解析失败，使用默认数据
+              initializeDefaultStrains()
             }
-          ]
-          pagination.total = 2
+          } else {
+            // 初始化默认数据
+            initializeDefaultStrains()
+          }
         }
       } catch (error) {
         console.error('加载菌株数据失败:', error)
@@ -673,6 +715,43 @@ export default {
       } finally {
         loading.value = false
       }
+    }
+
+    // 初始化默认菌株数据
+    const initializeDefaultStrains = () => {
+      strains.value = [
+        {
+          id: 1,
+          strain_id: 'E.coli-001',
+          species: '大肠杆菌',
+          sample_id: 'S001',
+          sample_source: '血液',
+          region: '北京市',
+          onset_date: '2023-01-10',
+          sampling_date: '2023-01-12',
+          isolation_date: '2023-01-15',
+          uploaded_by: 'admin',
+          created_at: '2023-01-15T08:00:00.000Z',
+          updated_at: '2023-01-15T08:00:00.000Z'
+        },
+        {
+          id: 2,
+          strain_id: 'Salmonella-002',
+          species: '沙门氏菌',
+          sample_id: 'S002',
+          sample_source: '粪便',
+          region: '上海市',
+          onset_date: '2023-01-08',
+          sampling_date: '2023-01-10',
+          isolation_date: '2023-01-12',
+          uploaded_by: 'advanced',
+          created_at: '2023-01-12T08:00:00.000Z',
+          updated_at: '2023-01-12T08:00:00.000Z'
+        }
+      ]
+      pagination.total = strains.value.length
+      // 保存到localStorage
+      localStorage.setItem('pams_strains', JSON.stringify(strains.value))
     }
 
     const searchStrains = () => {
@@ -715,8 +794,14 @@ export default {
     }
 
     const exportStrains = () => {
-      // TODO: 实现导出菌株的逻辑
-      console.log('导出菌株')
+      // 检查是否有选中的菌株
+      if (selectedStrains.value.length === 0) {
+        ElMessage.warning('请先选择要导出的菌株')
+        return
+      }
+
+      // 显示导出格式选择对话框
+      exportDialogVisible.value = true
     }
 
     const viewStrain = (strain) => {
@@ -747,11 +832,13 @@ export default {
           ElMessage.success('删除成功')
           await loadStrains()
         } else {
-          // 开发环境的内存删除
+          // 开发环境的localStorage删除
           const index = strains.value.findIndex(s => s.id === strain.id)
           if (index !== -1) {
             strains.value.splice(index, 1)
             pagination.total = strains.value.length
+            // 保存到localStorage
+            localStorage.setItem('pams_strains', JSON.stringify(strains.value))
             ElMessage.success('删除成功')
           } else {
             ElMessage.error('菌株不存在')
@@ -797,11 +884,14 @@ export default {
           selectedStrains.value = []
           await loadStrains()
         } else {
-          // 开发环境的内存批量删除
+          // 开发环境的localStorage批量删除
+          const deleteCount = selectedStrains.value.length
           const idsToDelete = selectedStrains.value.map(strain => strain.id)
           strains.value = strains.value.filter(strain => !idsToDelete.includes(strain.id))
           pagination.total = strains.value.length
-          ElMessage.success(`成功删除 ${selectedStrains.value.length} 个菌株`)
+          // 保存到localStorage
+          localStorage.setItem('pams_strains', JSON.stringify(strains.value))
+          ElMessage.success(`成功删除 ${deleteCount} 个菌株`)
           selectedStrains.value = []
         }
       } catch (error) {
@@ -1273,18 +1363,46 @@ export default {
 
           await loadStrains()
         } else {
-          // 开发环境的内存导入
-          validRecords.value.forEach(record => {
-            const strainData = {
-              ...record,
-              id: Date.now() + Math.random(),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+          // 开发环境的localStorage导入
+          let successCount = 0
+          const errors = []
+
+          validRecords.value.forEach((record, index) => {
+            try {
+              // 检查菌株编号是否重复
+              const existingStrain = strains.value.find(strain =>
+                strain.strain_id === record.strain_id
+              )
+
+              if (existingStrain) {
+                errors.push(`第${index + 1}条记录：菌株编号 ${record.strain_id} 已存在`)
+                return
+              }
+
+              const strainData = {
+                ...record,
+                id: Date.now() + Math.random() + index, // 确保ID唯一
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+              strains.value.push(strainData)
+              successCount++
+            } catch (error) {
+              errors.push(`第${index + 1}条记录导入失败: ${error.message}`)
             }
-            strains.value.push(strainData)
           })
+
+          // 保存到localStorage
+          localStorage.setItem('pams_strains', JSON.stringify(strains.value))
           pagination.total = strains.value.length
-          importedCount.value = validRecords.value.length
+          importedCount.value = successCount
+
+          if (errors.length > 0) {
+            console.warn('部分记录导入失败:', errors)
+            ElMessage.warning(`成功导入 ${successCount} 条记录，${errors.length} 条记录失败`)
+          } else {
+            ElMessage.success(`成功导入 ${successCount} 条记录`)
+          }
         }
       } catch (error) {
         console.error('导入菌株失败:', error)
@@ -1296,6 +1414,114 @@ export default {
     const finishImport = () => {
       importDialogVisible.value = false
       loadStrains()
+    }
+
+    // 导出功能
+    const performExport = async () => {
+      if (selectedStrains.value.length === 0) {
+        ElMessage.warning('请先选择要导出的菌株')
+        return
+      }
+
+      exportLoading.value = true
+      try {
+        // 准备导出数据
+        const exportData = selectedStrains.value.map(strain => ({
+          菌株编号: strain.strain_id || '',
+          菌种: strain.species || '',
+          样本编号: strain.sample_id || '',
+          样本来源: strain.sample_source || '',
+          地区: strain.region || '',
+          发病日期: strain.onset_date || '',
+          采样日期: strain.sampling_date || '',
+          分离日期: strain.isolation_date || '',
+          上传者: strain.uploaded_by || '',
+          创建时间: strain.created_at ? new Date(strain.created_at).toLocaleString() : '',
+          更新时间: strain.updated_at ? new Date(strain.updated_at).toLocaleString() : ''
+        }))
+
+        // 根据选择的格式导出
+        if (exportFormat.value === 'xlsx') {
+          await exportToExcel(exportData)
+        } else if (exportFormat.value === 'csv') {
+          await exportToCSV(exportData)
+        } else if (exportFormat.value === 'tsv') {
+          await exportToTSV(exportData)
+        }
+
+        ElMessage.success(`成功导出 ${selectedStrains.value.length} 条菌株数据`)
+        exportDialogVisible.value = false
+      } catch (error) {
+        console.error('导出失败:', error)
+        ElMessage.error('导出失败：' + error.message)
+      } finally {
+        exportLoading.value = false
+      }
+    }
+
+    // 导出为Excel格式
+    const exportToExcel = async (data) => {
+      const XLSX = await import('xlsx')
+      const worksheet = XLSX.utils.json_to_sheet(data)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, '菌株数据')
+
+      // 设置列宽
+      const colWidths = [
+        { wch: 15 }, // 菌株编号
+        { wch: 12 }, // 菌种
+        { wch: 15 }, // 样本编号
+        { wch: 12 }, // 样本来源
+        { wch: 10 }, // 地区
+        { wch: 12 }, // 发病日期
+        { wch: 12 }, // 采样日期
+        { wch: 12 }, // 分离日期
+        { wch: 10 }, // 上传者
+        { wch: 18 }, // 创建时间
+        { wch: 18 } // 更新时间
+      ]
+      worksheet['!cols'] = colWidths
+
+      const fileName = `菌株数据_${new Date().toISOString().split('T')[0]}.xlsx`
+      XLSX.writeFile(workbook, fileName)
+    }
+
+    // 导出为CSV格式
+    const exportToCSV = async (data) => {
+      const headers = Object.keys(data[0])
+      const csvContent = [
+        headers.join(','),
+        ...data.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
+      ].join('\n')
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `菌株数据_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    // 导出为TSV格式
+    const exportToTSV = async (data) => {
+      const headers = Object.keys(data[0])
+      const tsvContent = [
+        headers.join('\t'),
+        ...data.map(row => headers.map(header => row[header] || '').join('\t'))
+      ].join('\n')
+
+      const blob = new Blob(['\uFEFF' + tsvContent], { type: 'text/tab-separated-values;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `菌株数据_${new Date().toISOString().split('T')[0]}.tsv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     }
 
     const handleSizeChange = (size) => {
@@ -1430,6 +1656,9 @@ export default {
             pagination.total = strains.value.length
             ElMessage.success('菌株添加成功')
           }
+
+          // 保存到localStorage
+          localStorage.setItem('pams_strains', JSON.stringify(strains.value))
         }
 
         strainDialogVisible.value = false
@@ -1562,7 +1791,12 @@ export default {
       canNextStep,
       nextStep,
       prevStep,
-      finishImport
+      finishImport,
+      // 导出相关
+      exportDialogVisible,
+      exportFormat,
+      exportLoading,
+      performExport
     }
   }
 }

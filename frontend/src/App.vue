@@ -49,10 +49,6 @@
             <el-icon><Document /></el-icon>
             <span>报告中心</span>
           </el-menu-item>
-          <el-menu-item index="/user-management" v-if="isAdmin">
-            <el-icon><UserFilled /></el-icon>
-            <span>用户管理</span>
-          </el-menu-item>
           <el-menu-item index="/system-settings" v-if="isAdmin">
             <el-icon><Setting /></el-icon>
             <span>系统设置</span>

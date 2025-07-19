@@ -94,9 +94,7 @@ const routes = [
   },
   {
     path: '/user-management',
-    name: 'UserManagement',
-    component: () => import('../views/UserManagement.vue'),
-    meta: { title: '用户管理', requiresAuth: true, requiresRole: 'admin' }
+    redirect: '/system-settings'
   },
   {
     path: '/system-settings',
