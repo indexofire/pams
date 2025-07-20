@@ -9,7 +9,20 @@ module.exports = defineConfig({
     open: false,
     allowedHosts: 'all',
     client: {
-      webSocketURL: 'ws://localhost:8080/ws'
+      webSocketURL: 'ws://localhost:8080/ws',
+      overlay: {
+        errors: (error) => {
+          // 过滤掉ResizeObserver错误
+          const ignoreErrors = [
+            'ResizeObserver loop limit exceeded',
+            'ResizeObserver loop completed with undelivered notifications'
+          ]
+          return !ignoreErrors.some(ignoreError =>
+            error.message && error.message.includes(ignoreError)
+          )
+        },
+        warnings: false
+      }
     }
   },
   configureWebpack: {

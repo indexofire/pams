@@ -157,9 +157,46 @@ class UserService {
    */
   async login(username, password) {
     try {
-      const user = this.db.getUserByUsername(username)
+      // 确保参数有效
+      if (!username || !password) {
+        throw new Error('用户名和密码不能为空')
+      }
+
+      let user = this.db.getUserByUsername(username)
+      console.log('查询用户结果:', user)
+
+      // 如果数据库中没有用户，创建默认管理员用户
+      if (!user && username === 'admin') {
+        console.log('创建默认管理员用户')
+        const hashedPassword = await bcrypt.hash('admin123', 10)
+        const adminUser = {
+          username: 'admin',
+          password: hashedPassword,
+          email: 'admin@pams.local',
+          role: 'admin',
+          isActive: 1,
+          createdAt: new Date().toISOString()
+        }
+
+        try {
+          const userId = await this.db.createUser(adminUser)
+          console.log('创建用户ID:', userId)
+          user = this.db.getUserByUsername(username) // 重新查询用户
+          console.log('重新查询用户结果:', user)
+        } catch (createError) {
+          console.error('创建默认用户失败:', createError)
+          throw new Error('系统初始化失败')
+        }
+      }
+
       if (!user) {
         throw new Error('用户名不存在')
+      }
+
+      // 检查用户密码字段
+      if (!user.password) {
+        console.error('用户密码字段为空:', user)
+        throw new Error('用户数据异常，请联系管理员')
       }
 
       // 验证密码
@@ -174,9 +211,14 @@ class UserService {
       }
 
       // 更新最后登录时间
-      await this.db.updateUser(user.id, { 
-        lastLogin: new Date().toISOString() 
-      })
+      try {
+        await this.db.updateUser(user.id, {
+          lastLogin: new Date().toISOString()
+        })
+      } catch (updateError) {
+        console.warn('更新登录时间失败:', updateError)
+        // 不阻止登录流程
+      }
 
       // 返回用户信息（不包含密码）
       const { password: _, ...userInfo } = user

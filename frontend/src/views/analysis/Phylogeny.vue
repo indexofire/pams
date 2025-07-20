@@ -8,7 +8,7 @@
     <div class="content-area">
       <div class="toolbar">
         <el-button type="primary" @click="startAnalysis">
-          <el-icon><Play /></el-icon>
+          <el-icon><VideoPlay /></el-icon>
           开始分析
         </el-button>
         <el-button @click="batchAnalysis">
@@ -187,12 +187,12 @@
 
 <script>
 import { ref, reactive, onMounted } from 'vue'
-import { Play, List, Share, ZoomIn, ZoomOut, Refresh } from '@element-plus/icons-vue'
+import { VideoPlay, List, Share, ZoomIn, ZoomOut, Refresh } from '@element-plus/icons-vue'
 
 export default {
   name: 'Phylogeny',
   components: {
-    Play,
+    VideoPlay,
     List,
     Share,
     ZoomIn,

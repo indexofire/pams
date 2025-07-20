@@ -69,12 +69,45 @@
           style="width: 100%"
         >
           <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="name" label="基因组名称" />
-          <el-table-column prop="species" label="物种" />
-          <el-table-column prop="data_type" label="数据类型" />
-          <el-table-column prop="genome_size" label="基因组大小" />
-          <el-table-column prop="gc_content" label="GC含量" />
-          <el-table-column prop="upload_date" label="上传日期" />
+          <el-table-column prop="originalName" label="基因组名称" min-width="150" />
+          <el-table-column label="序列信息" min-width="120">
+            <template #default="scope">
+              <div v-if="scope.row.analysis">
+                <div>序列数: {{ scope.row.analysis.totalSequences }}</div>
+                <div>总长度: {{ formatSize(scope.row.analysis.summary.totalLength) }}</div>
+              </div>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="GC含量" width="100">
+            <template #default="scope">
+              <span v-if="scope.row.analysis">{{ scope.row.analysis.summary.gcPercentage }}%</span>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="N50" width="100">
+            <template #default="scope">
+              <span v-if="scope.row.analysis">{{ formatSize(scope.row.analysis.summary.n50) }}</span>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="质量" width="80">
+            <template #default="scope">
+              <el-tag
+                v-if="scope.row.qualityReport"
+                :type="getQualityTagType(scope.row.qualityReport.overall)"
+                size="small"
+              >
+                {{ getQualityLabel(scope.row.qualityReport.overall) }}
+              </el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="uploadDate" label="上传日期" width="120">
+            <template #default="scope">
+              {{ formatDate(scope.row.uploadDate) }}
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="250">
             <template #default="scope">
               <el-button size="small" @click="viewGenome(scope.row)">
@@ -182,11 +215,82 @@
           <el-button
             type="primary"
             :loading="uploading"
-            :disabled="fileList.length === 0"
+            :disabled="fileList.length === 0 || uploading"
             @click="startUpload"
           >
             {{ uploading ? '上传中...' : '开始上传' }}
           </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 基因组分析结果对话框 -->
+    <el-dialog
+      v-model="analysisDialogVisible"
+      title="基因组序列分析结果"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <div v-if="selectedGenome && selectedGenome.analysis" class="analysis-results">
+        <el-tabs v-model="activeAnalysisTab">
+          <el-tab-pane label="基本信息" name="basic">
+            <el-descriptions :column="2" border>
+              <el-descriptions-item label="文件名">{{ selectedGenome.originalName }}</el-descriptions-item>
+              <el-descriptions-item label="序列总数">{{ selectedGenome.analysis.totalSequences }}</el-descriptions-item>
+              <el-descriptions-item label="总长度">{{ formatSize(selectedGenome.analysis.summary.totalLength) }}</el-descriptions-item>
+              <el-descriptions-item label="平均长度">{{ formatSize(selectedGenome.analysis.summary.averageLength) }}</el-descriptions-item>
+              <el-descriptions-item label="最大长度">{{ formatSize(selectedGenome.analysis.summary.maxLength) }}</el-descriptions-item>
+              <el-descriptions-item label="最小长度">{{ formatSize(selectedGenome.analysis.summary.minLength) }}</el-descriptions-item>
+              <el-descriptions-item label="GC含量">{{ selectedGenome.analysis.summary.gcPercentage }}%</el-descriptions-item>
+              <el-descriptions-item label="N含量">{{ selectedGenome.analysis.summary.nPercentage }}%</el-descriptions-item>
+              <el-descriptions-item label="Contigs数量">{{ selectedGenome.analysis.summary.contigs }}</el-descriptions-item>
+              <el-descriptions-item label="N50值">{{ formatSize(selectedGenome.analysis.summary.n50) }}</el-descriptions-item>
+            </el-descriptions>
+          </el-tab-pane>
+
+          <el-tab-pane label="质量报告" name="quality">
+            <div v-if="selectedGenome.qualityReport">
+              <el-alert
+                :title="`总体质量: ${getQualityLabel(selectedGenome.qualityReport.overall)}`"
+                :type="getQualityTagType(selectedGenome.qualityReport.overall)"
+                :closable="false"
+                style="margin-bottom: 20px;"
+              />
+
+              <div v-if="selectedGenome.qualityReport.issues.length > 0">
+                <h4>发现的问题:</h4>
+                <ul>
+                  <li v-for="issue in selectedGenome.qualityReport.issues" :key="issue">{{ issue }}</li>
+                </ul>
+              </div>
+
+              <div v-if="selectedGenome.qualityReport.recommendations.length > 0">
+                <h4>改进建议:</h4>
+                <ul>
+                  <li v-for="rec in selectedGenome.qualityReport.recommendations" :key="rec">{{ rec }}</li>
+                </ul>
+              </div>
+            </div>
+          </el-tab-pane>
+
+          <el-tab-pane label="序列详情" name="sequences">
+            <el-table :data="selectedGenome.analysis.sequences" border max-height="400">
+              <el-table-column prop="id" label="序列ID" min-width="150" />
+              <el-table-column label="长度" width="100">
+                <template #default="scope">{{ formatSize(scope.row.length) }}</template>
+              </el-table-column>
+              <el-table-column prop="gcPercentage" label="GC%" width="80" />
+              <el-table-column prop="atPercentage" label="AT%" width="80" />
+              <el-table-column prop="nPercentage" label="N%" width="80" />
+            </el-table>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="analysisDialogVisible = false">关闭</el-button>
+          <el-button type="primary" @click="exportAnalysisReport">导出报告</el-button>
         </div>
       </template>
     </el-dialog>
@@ -197,6 +301,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Upload, Download, Refresh, UploadFilled, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { analyzeFastaSequence, validateFastaFormat, formatAnalysisResults, generateQualityReport } from '@/utils/genomeAnalysis'
 // import { useStore } from 'vuex' // 暂时不使用，但保留以备将来使用
 
 export default {
@@ -221,6 +326,11 @@ export default {
     const availableStrains = ref([])
     const uploadAction = '#' // 不使用自动上传
     const acceptedFormats = '.fasta,.fa,.fna,.gz'
+
+    // 分析对话框相关数据
+    const analysisDialogVisible = ref(false)
+    const selectedGenome = ref(null)
+    const activeAnalysisTab = ref('basic')
 
     const filterForm = reactive({
       name: '',
@@ -291,8 +401,9 @@ export default {
     }
 
     const viewGenome = (genome) => {
-      // TODO: 实现查看基因组详情的逻辑
-      console.log('查看基因组:', genome)
+      selectedGenome.value = genome
+      activeAnalysisTab.value = 'basic'
+      analysisDialogVisible.value = true
     }
 
     const analyzeGenome = (genome) => {
@@ -507,6 +618,24 @@ export default {
               fileName = fileName.replace(/\.gz$/, '')
             }
 
+            // 验证FASTA格式
+            if (!validateFastaFormat(content)) {
+              throw new Error(`文件 ${file.name} 不是有效的FASTA格式`)
+            }
+
+            // 分析序列
+            let analysisResults = null
+            let qualityReport = null
+            try {
+              analysisResults = analyzeFastaSequence(content)
+              qualityReport = generateQualityReport(analysisResults)
+
+              ElMessage.success(`${file.name} 序列分析完成: 发现 ${analysisResults.totalSequences} 个序列`)
+            } catch (analysisError) {
+              console.warn('序列分析失败:', analysisError)
+              ElMessage.warning(`${file.name} 上传成功，但序列分析失败: ${analysisError.message}`)
+            }
+
             // 生成新的文件名
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
             const newFileName = `${timestamp}_${fileName}`
@@ -517,10 +646,13 @@ export default {
               originalName: file.name,
               strainId: file.associatedStrain,
               size: file.size,
-              content: content,
-              isCompressed: isCompressed,
+              content,
+              isCompressed,
               uploadDate: new Date().toISOString(),
-              status: 'uploaded'
+              status: 'uploaded',
+              // 添加序列分析结果
+              analysis: analysisResults,
+              qualityReport
             }
 
             if (window.electronAPI && window.electronAPI.genomes) {
@@ -552,6 +684,71 @@ export default {
     const cancelUpload = () => {
       fileList.value = []
       uploadDialogVisible.value = false
+    }
+
+    // 格式化文件大小
+    const formatSize = (bytes) => {
+      if (!bytes || bytes === 0) return '0 B'
+      const k = 1024
+      const sizes = ['B', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+    }
+
+    // 格式化日期
+    const formatDate = (dateString) => {
+      if (!dateString) return '-'
+      return new Date(dateString).toLocaleDateString()
+    }
+
+    // 获取质量标签类型
+    const getQualityTagType = (quality) => {
+      switch (quality) {
+      case 'excellent': return 'success'
+      case 'good': return 'success'
+      case 'warning': return 'warning'
+      case 'poor': return 'danger'
+      default: return 'info'
+      }
+    }
+
+    // 获取质量标签文本
+    const getQualityLabel = (quality) => {
+      switch (quality) {
+      case 'excellent': return '优秀'
+      case 'good': return '良好'
+      case 'warning': return '警告'
+      case 'poor': return '较差'
+      default: return '未知'
+      }
+    }
+
+    // 导出分析报告
+    const exportAnalysisReport = () => {
+      if (!selectedGenome.value || !selectedGenome.value.analysis) {
+        ElMessage.warning('没有可导出的分析数据')
+        return
+      }
+
+      try {
+        const reportData = formatAnalysisResults(selectedGenome.value.analysis)
+        const reportText = JSON.stringify(reportData, null, 2)
+
+        const blob = new Blob([reportText], { type: 'application/json' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `${selectedGenome.value.originalName}_analysis_report.json`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        ElMessage.success('分析报告导出成功')
+      } catch (error) {
+        console.error('导出报告失败:', error)
+        ElMessage.error('导出报告失败')
+      }
     }
 
     onMounted(() => {
@@ -589,7 +786,17 @@ export default {
       autoAssociateStrain,
       formatFileSize,
       startUpload,
-      cancelUpload
+      cancelUpload,
+      // 格式化和显示方法
+      formatSize,
+      formatDate,
+      getQualityTagType,
+      getQualityLabel,
+      // 分析对话框相关
+      analysisDialogVisible,
+      selectedGenome,
+      activeAnalysisTab,
+      exportAnalysisReport
     }
   }
 }

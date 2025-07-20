@@ -3,6 +3,15 @@ import App from './App.vue'
 import router from './router'
 import store from './store'
 
+// 简单有效的ResizeObserver错误拦截
+const originalError = console.error
+console.error = (...args) => {
+  if (args[0] && String(args[0]).includes('ResizeObserver loop completed')) {
+    return
+  }
+  originalError.apply(console, args)
+}
+
 // Element Plus
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'

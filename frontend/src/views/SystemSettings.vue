@@ -314,6 +314,52 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
+
+        <!-- 路径设置 -->
+        <el-tab-pane label="路径设置" name="paths">
+          <el-form :model="pathForm" label-width="150px">
+            <el-form-item label="基因组数据保存路径">
+              <el-input v-model="pathForm.genomesPath" placeholder="请输入基因组数据保存路径">
+                <template #append>
+                  <el-button @click="selectGenomesPath">选择</el-button>
+                </template>
+              </el-input>
+              <div class="form-help">基因组文件上传后的保存目录</div>
+            </el-form-item>
+
+            <el-form-item label="SQLite数据库路径">
+              <el-input v-model="pathForm.databasePath" placeholder="请输入SQLite数据库文件路径">
+                <template #append>
+                  <el-button @click="selectDatabasePath">选择</el-button>
+                </template>
+              </el-input>
+              <div class="form-help">SQLite数据库文件的存储路径</div>
+            </el-form-item>
+
+            <el-form-item label="分析结果保存路径">
+              <el-input v-model="pathForm.analysisPath" placeholder="请输入分析结果保存路径">
+                <template #append>
+                  <el-button @click="selectAnalysisPath">选择</el-button>
+                </template>
+              </el-input>
+              <div class="form-help">分析结果和报告的保存目录</div>
+            </el-form-item>
+
+            <el-form-item label="临时文件路径">
+              <el-input v-model="pathForm.tempPath" placeholder="请输入临时文件路径">
+                <template #append>
+                  <el-button @click="selectTempPath">选择</el-button>
+                </template>
+              </el-input>
+              <div class="form-help">临时文件和缓存的存储目录</div>
+            </el-form-item>
+
+            <el-form-item>
+              <el-button type="primary" @click="savePathSettings">保存路径设置</el-button>
+              <el-button @click="resetPathSettings">重置为默认</el-button>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
       </el-tabs>
     </div>
 
@@ -451,7 +497,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onErrorCaptured } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
 import { useStore } from 'vuex'
@@ -528,12 +574,8 @@ export default {
       status: 'active'
     })
 
-    // 实验管理相关
-    const experimentTypes = ref([
-      { id: 1, name: 'MLST分型', description: '多位点序列分型', protocol: '基于7个管家基因的序列分析...', status: 'active' },
-      { id: 2, name: '耐药基因检测', description: '检测细菌的耐药基因', protocol: '使用PCR或NGS技术检测...', status: 'active' },
-      { id: 3, name: '毒力基因检测', description: '检测细菌的毒力基因', protocol: '使用特定引物进行PCR检测...', status: 'active' }
-    ])
+    // 实验管理相关 - 初始化为空数组，避免数据重复更新
+    const experimentTypes = ref([])
 
     const experimentDialogVisible = ref(false)
     const experimentForm = reactive({
@@ -560,6 +602,14 @@ export default {
       database: 'pams',
       username: '',
       password: ''
+    })
+
+    // 路径设置
+    const pathForm = reactive({
+      genomesPath: '',
+      databasePath: '',
+      analysisPath: '',
+      tempPath: ''
     })
 
     // 用户管理方法
@@ -940,12 +990,144 @@ export default {
       ElMessage.success('数据库设置保存成功')
     }
 
+    // 路径设置相关方法
+    const selectGenomesPath = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.showOpenDialog) {
+          const result = await window.electronAPI.showOpenDialog({
+            properties: ['openDirectory'],
+            title: '选择基因组数据保存路径'
+          })
+          if (!result.canceled && result.filePaths.length > 0) {
+            pathForm.genomesPath = result.filePaths[0]
+          }
+        } else {
+          ElMessage.warning('此功能仅在Electron环境下可用')
+        }
+      } catch (error) {
+        ElMessage.error('选择路径失败: ' + error.message)
+      }
+    }
+
+    const selectDatabasePath = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.showSaveDialog) {
+          const result = await window.electronAPI.showSaveDialog({
+            title: '选择SQLite数据库文件路径',
+            defaultPath: 'pams.db',
+            filters: [
+              { name: 'SQLite数据库', extensions: ['db', 'sqlite', 'sqlite3'] },
+              { name: '所有文件', extensions: ['*'] }
+            ]
+          })
+          if (!result.canceled && result.filePath) {
+            pathForm.databasePath = result.filePath
+          }
+        } else {
+          ElMessage.warning('此功能仅在Electron环境下可用')
+        }
+      } catch (error) {
+        ElMessage.error('选择路径失败: ' + error.message)
+      }
+    }
+
+    const selectAnalysisPath = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.showOpenDialog) {
+          const result = await window.electronAPI.showOpenDialog({
+            properties: ['openDirectory'],
+            title: '选择分析结果保存路径'
+          })
+          if (!result.canceled && result.filePaths.length > 0) {
+            pathForm.analysisPath = result.filePaths[0]
+          }
+        } else {
+          ElMessage.warning('此功能仅在Electron环境下可用')
+        }
+      } catch (error) {
+        ElMessage.error('选择路径失败: ' + error.message)
+      }
+    }
+
+    const selectTempPath = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.showOpenDialog) {
+          const result = await window.electronAPI.showOpenDialog({
+            properties: ['openDirectory'],
+            title: '选择临时文件路径'
+          })
+          if (!result.canceled && result.filePaths.length > 0) {
+            pathForm.tempPath = result.filePaths[0]
+          }
+        } else {
+          ElMessage.warning('此功能仅在Electron环境下可用')
+        }
+      } catch (error) {
+        ElMessage.error('选择路径失败: ' + error.message)
+      }
+    }
+
+    const savePathSettings = async () => {
+      try {
+        // 这里可以调用Electron API保存路径设置
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          await window.electronAPI.systemConfig.savePathSettings(pathForm)
+        } else {
+          // 开发环境保存到localStorage
+          localStorage.setItem('pams_path_settings', JSON.stringify(pathForm))
+        }
+        ElMessage.success('路径设置保存成功')
+      } catch (error) {
+        ElMessage.error('保存路径设置失败: ' + error.message)
+      }
+    }
+
+    const resetPathSettings = () => {
+      pathForm.genomesPath = ''
+      pathForm.databasePath = ''
+      pathForm.analysisPath = ''
+      pathForm.tempPath = ''
+      ElMessage.success('路径设置已重置')
+    }
+
+    const loadPathSettings = () => {
+      try {
+        const savedSettings = localStorage.getItem('pams_path_settings')
+        if (savedSettings) {
+          const settings = JSON.parse(savedSettings)
+          Object.assign(pathForm, settings)
+        }
+      } catch (error) {
+        console.error('加载路径设置失败:', error)
+      }
+    }
+
     // 页面加载时获取用户列表
     onMounted(async () => {
+      // 加载用户数据
       loadUsers()
-      // 加载系统配置
-      await store.dispatch('fetchSystemConfig')
-      loadSystemConfigFromStore()
+
+      try {
+        // 加载系统配置
+        await store.dispatch('fetchSystemConfig')
+        // 从store加载配置，如果有数据则覆盖默认数据
+        loadSystemConfigFromStore()
+      } catch (error) {
+        console.error('加载系统配置失败:', error)
+        // 如果加载失败，保持使用默认数据
+      }
+
+      // 加载路径设置
+      loadPathSettings()
+    })
+
+    // 捕获ResizeObserver错误
+    onErrorCaptured((err) => {
+      if (err.message && err.message.includes('ResizeObserver')) {
+        // 忽略ResizeObserver错误，这是Element Plus的已知问题
+        return false
+      }
+      return true
     })
 
     // 从store加载系统配置
@@ -1036,7 +1218,15 @@ export default {
       toggleExperimentStatus,
       saveBasicSettings,
       testDatabaseConnection,
-      saveDatabaseSettings
+      saveDatabaseSettings,
+      // 路径设置
+      pathForm,
+      selectGenomesPath,
+      selectDatabasePath,
+      selectAnalysisPath,
+      selectTempPath,
+      savePathSettings,
+      resetPathSettings
     }
   }
 }
@@ -1098,5 +1288,13 @@ export default {
 em {
   font-style: italic;
   color: #606266;
+}
+
+// 表单帮助文本样式
+.form-help {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 </style>

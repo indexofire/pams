@@ -1,22 +1,38 @@
 # To do list
 
-## 菌株管理
+## 功能添加
 
-1. 菌株管理模块中存在bugs，目前导入csv可以按照字段自动对应并顺利导入，但是导入后页面看不到导入后的数据，也就是说导入缺乏数据写书数据库的操作。这是因为我在locahost:8080上进行测试，不会修改数据库的原因。还是说代码中缺少数据读写操作？
-2. 菌株管理模块中数据导出功能需要完善。通过选中相应的菌株条目后，导出成xlsx或者csv,tsv格式的数据。
+1. 系统设置中菌种管理功能实现，可以定义菌种名称，以及其拉丁文对应名称。定义的菌种名称会与菌株管理的“菌种（属）”字段的下拉菜单中对应，而不是使用现在默认的几个选项。
+2. 系统设置中地区管理功能实现，可以定义地区名称，定义的地区名称会与菌株管理的“地区”字段的下拉菜单中对应，而不是使用现在默认的几个选项。
 
-## 系统设置
 
-1. 系统设置中的菌种管理可以设置菌种名称，将其与菌株管理中菌种名称对应。
-2. 可以设置地区名称，与菌株管理中地区字段对应，成为既支持下拉又支持输入的输入框。
-3. 样本来源可以定义，与菌株管理中的样本来源对应，成为既支持下拉又支持输入的输入框。
+## 错误修复
 
-## 基因组数据
-
-1. 在基因组数据模块中增加上传基因组功能，支持同时多个文件上传，支持文件名后缀为fasta,fa,fna，也支持压缩成gz格式的序列文件。
-2. 将上传的序列文件以gz压缩格式统一保存到某一个设置的路径中，重新命名文件名，与数据库的索引对应。
-3. 上传的基因组文件名称自动与菌株名称如果一致就自动关联，如果不一致，上传成功后还需要手动去关联菌株名称。
+1. 基因组序列选中后，继续上传按钮无法点击。
+2. 系统设置中，当点击"菌种管理"，"地区管理"，"样本来源","实验管理“时，出现”Uncaught runtime errors:“错误。比如点击菌种管理，跳出页面显示：
+```
+“ERROR
+ResizeObserver loop completed with undelivered notifications.
+    at handleError (webpack-internal:///./node_modules/webpack-dev-server/client/overlay.js:251:58)
+    at eval (webpack-internal:///./node_modules/webpack-dev-server/client/overlay.js:270:7)”
+```
+3. npm run dev 启动electron应用程序后，使用admin/admin123登录，提示错误“Error invoking remote method 'auth:login': Error: 用户数据异常，请联系管理员”，用户无法登录。
+查看命令行错误，提示：
+```
+"Uncaught (in promise) TypeError: Failed to fetch", source: devtools://devtools/bundled/panels/elements/elements.js (1)
+[1] 用户密码字段为空: []
+[1] 用户登录失败: Error: 用户数据异常，请联系管理员
+[1]     at UserService.login (/home/mark/repos/github/pams/src/services/UserService.js:196:15)
+[1]     at /home/mark/repos/github/pams/electron/main.js:239:30
+[1]     at WebContents.<anonymous> (node:electron/js2c/browser_init:2:89153)
+[1]     at WebContents.emit (node:events:513:28)
+[1] Error occurred in handler for 'auth:login': Error: 用户数据异常，请联系管理员
+[1]     at UserService.login (/home/mark/repos/github/pams/src/services/UserService.js:196:15)
+[1]     at /home/mark/repos/github/pams/electron/main.js:239:30
+[1]     at WebContents.<anonymous> (node:electron/js2c/browser_init:2:89153)
+[1]     at WebContents.emit (node:events:513:28)
+```
 
 ## 其他
 
-1. 左侧菜单栏中，“用户管理”不再保留，目前已经在“系统设置“内整合了。
+1. sass-loader包版本较老，不符合Dart Sass 2.0的规范，因此开发依赖包更新为sass-embedded和sass-loader符合规范的版本。并更新frontend/src/App.vue中代码。

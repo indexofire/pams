@@ -14,14 +14,12 @@
               <span>筛选条件</span>
               <el-button
                 type="primary"
-                size="small"
                 @click="applyFilter"
                 style="float: right; margin-left: 10px;"
               >
                 应用筛选
               </el-button>
               <el-button
-                size="small"
                 @click="resetFilter"
                 style="float: right;"
               >
@@ -133,14 +131,12 @@
               <span>分析结果</span>
               <el-button
                 type="success"
-                size="small"
                 @click="exportResults"
                 style="float: right; margin-left: 10px;"
               >
                 导出结果
               </el-button>
               <el-button
-                size="small"
                 @click="generateReport"
                 style="float: right;"
               >
