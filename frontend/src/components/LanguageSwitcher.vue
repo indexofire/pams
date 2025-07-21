@@ -22,7 +22,8 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getCurrentLocale, getSupportedLocales, setLocale } from '../i18n'
 import { ArrowDown } from '@element-plus/icons-vue'
 
@@ -32,17 +33,24 @@ export default {
     ArrowDown
   },
   setup () {
-    const currentLocale = computed(() => getCurrentLocale())
+    const { locale } = useI18n()
+    const currentLocale = ref(getCurrentLocale())
     const supportedLocales = getSupportedLocales()
 
     const currentLocaleLabel = computed(() => {
-      const locale = supportedLocales.find(l => l.value === currentLocale.value)
-      return locale ? locale.label : ''
+      const localeObj = supportedLocales.find(l => l.value === currentLocale.value)
+      return localeObj ? localeObj.label : ''
     })
 
     const handleCommand = (command) => {
       setLocale(command)
+      currentLocale.value = command
     }
+
+    // 监听语言变化
+    watch(() => locale.value, (newLocale) => {
+      currentLocale.value = newLocale
+    })
 
     return {
       currentLocale,

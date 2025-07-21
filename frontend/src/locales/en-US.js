@@ -1,6 +1,7 @@
 export default {
   // Common
   common: {
+    systemName: 'Pathogen Analysis Management System',
     confirm: 'Confirm',
     cancel: 'Cancel',
     save: 'Save',
@@ -42,13 +43,20 @@ export default {
   nav: {
     dashboard: 'Dashboard',
     strains: 'Strain Management',
+    strainAnalysis: 'Strain Screening Analysis',
     genomes: 'Genome Management',
     analysis: 'Bioinformatics Analysis',
+    annotation: 'Genome Annotation',
     mlst: 'MLST Analysis',
     serotyping: 'Serotyping',
     virulence: 'Virulence Genes',
     resistance: 'Resistance Genes',
-    settings: 'System Settings',
+    phylogeny: 'Phylogenetic Analysis',
+    reports: 'Report Center',
+    systemManagement: 'System Management',
+    systemSettings: 'System Settings',
+    roleManagement: 'Role & Permission Management',
+    securityAudit: 'Security Audit',
     logout: 'Logout'
   },
 
@@ -234,7 +242,9 @@ export default {
     operationSuccess: 'Operation successful',
     operationFailed: 'Operation failed',
     confirmOperation: 'Are you sure you want to perform this operation?',
-    unsavedChanges: 'You have unsaved changes. Are you sure you want to leave?'
+    unsavedChanges: 'You have unsaved changes. Are you sure you want to leave?',
+    logoutSuccess: 'Logout successful',
+    logoutFailed: 'Logout failed'
   },
 
   // Pagination

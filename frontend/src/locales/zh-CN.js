@@ -1,6 +1,7 @@
 export default {
   // 通用
   common: {
+    systemName: '病原微生物分析管理系统',
     confirm: '确定',
     cancel: '取消',
     save: '保存',
@@ -42,13 +43,20 @@ export default {
   nav: {
     dashboard: '仪表板',
     strains: '菌株管理',
+    strainAnalysis: '菌株筛选分析',
     genomes: '基因组管理',
     analysis: '生物信息学分析',
+    annotation: '基因组注释',
     mlst: 'MLST分析',
     serotyping: '血清分型',
     virulence: '毒力基因',
     resistance: '耐药基因',
-    settings: '系统设置',
+    phylogeny: '系统发育',
+    reports: '报告中心',
+    systemManagement: '系统管理',
+    systemSettings: '系统设置',
+    roleManagement: '角色权限管理',
+    securityAudit: '安全审计',
     logout: '退出登录'
   },
 
@@ -234,7 +242,9 @@ export default {
     operationSuccess: '操作成功',
     operationFailed: '操作失败',
     confirmOperation: '确定要执行此操作吗？',
-    unsavedChanges: '有未保存的更改，确定要离开吗？'
+    unsavedChanges: '有未保存的更改，确定要离开吗？',
+    logoutSuccess: '退出登录成功',
+    logoutFailed: '退出登录失败'
   },
 
   // 分页

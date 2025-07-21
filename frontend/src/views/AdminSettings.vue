@@ -1849,8 +1849,18 @@ export default {
     // 权限管理方法
     const loadRoles = async () => {
       try {
-        if (window.electronAPI && window.electronAPI.permissions) {
-          roles.value = await window.electronAPI.permissions.getRoles()
+        if (window.electronAPI && window.electronAPI.users) {
+          const rolesData = await window.electronAPI.users.getAllRoles()
+          // 将角色对象转换为数组格式
+          roles.value = Object.keys(rolesData).map((key, index) => ({
+            id: index + 1,
+            name: key,
+            display_name: rolesData[key].name,
+            description: rolesData[key].description,
+            is_system: !rolesData[key].custom,
+            user_count: 0, // TODO: 从数据库获取实际用户数
+            permission_count: rolesData[key].permissions ? rolesData[key].permissions.length : 0
+          }))
         } else {
           // 浏览器环境模拟
           roles.value = [
@@ -1882,8 +1892,20 @@ export default {
 
     const loadPermissions = async () => {
       try {
-        if (window.electronAPI && window.electronAPI.permissions) {
-          permissions.value = await window.electronAPI.permissions.getPermissions()
+        if (window.electronAPI && window.electronAPI.users) {
+          const permissionsData = await window.electronAPI.users.getAllPermissions()
+          // 将权限对象转换为数组格式
+          permissions.value = Object.keys(permissionsData).map((key, index) => {
+            const parts = key.split('.')
+            return {
+              id: index + 1,
+              name: key,
+              display_name: permissionsData[key],
+              module: parts[0] || 'system',
+              action: parts[1] || 'unknown',
+              description: ''
+            }
+          })
         } else {
           // 浏览器环境模拟
           permissions.value = [

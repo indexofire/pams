@@ -8,7 +8,7 @@
       <el-aside width="200px" class="sidebar">
         <div class="logo">
           <h2>PAMS</h2>
-          <p>{{ $t('login.title') }}</p>
+          <p>{{ $t('common.systemName') }}</p>
         </div>
         <el-menu
           :default-active="$route.path"
@@ -28,7 +28,7 @@
           </el-menu-item>
           <el-menu-item index="/strain-analysis">
             <el-icon><TrendCharts /></el-icon>
-            <span>菌株筛选分析</span>
+            <span>{{ $t('nav.strainAnalysis') }}</span>
           </el-menu-item>
           <el-menu-item index="/genomes">
             <el-icon><Document /></el-icon>
@@ -39,24 +39,24 @@
               <el-icon><DataAnalysis /></el-icon>
               <span>{{ $t('nav.analysis') }}</span>
             </template>
-            <el-menu-item index="/analysis/annotation">基因组注释</el-menu-item>
+            <el-menu-item index="/analysis/annotation">{{ $t('nav.annotation') }}</el-menu-item>
             <el-menu-item index="/analysis/mlst">{{ $t('nav.mlst') }}</el-menu-item>
             <el-menu-item index="/analysis/resistance">{{ $t('nav.resistance') }}</el-menu-item>
             <el-menu-item index="/analysis/virulence">{{ $t('nav.virulence') }}</el-menu-item>
-            <el-menu-item index="/analysis/phylogeny">系统发育</el-menu-item>
+            <el-menu-item index="/analysis/phylogeny">{{ $t('nav.phylogeny') }}</el-menu-item>
           </el-sub-menu>
           <el-menu-item index="/reports">
             <el-icon><Document /></el-icon>
-            <span>报告中心</span>
+            <span>{{ $t('nav.reports') }}</span>
           </el-menu-item>
           <el-sub-menu index="admin" v-if="isAdmin">
             <template #title>
               <el-icon><Setting /></el-icon>
-              <span>{{ $t('settings.title') }}</span>
+              <span>{{ $t('nav.systemManagement') }}</span>
             </template>
-            <el-menu-item index="/system-settings">{{ $t('settings.title') }}</el-menu-item>
-            <el-menu-item index="/role-management">{{ $t('settings.permissionManagement') }}</el-menu-item>
-            <el-menu-item index="/security-audit">安全审计</el-menu-item>
+            <el-menu-item index="/system-settings">{{ $t('nav.systemSettings') }}</el-menu-item>
+            <el-menu-item index="/role-management">{{ $t('nav.roleManagement') }}</el-menu-item>
+            <el-menu-item index="/security-audit">{{ $t('nav.securityAudit') }}</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-aside>
@@ -110,6 +110,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import LanguageSwitcher from './components/LanguageSwitcher.vue'
 
@@ -122,6 +123,7 @@ export default {
     const route = useRoute()
     const router = useRouter()
     const store = useStore()
+    const { t } = useI18n()
 
     const breadcrumbItems = computed(() => {
       const matched = route.matched.filter(item => item.meta && item.meta.title)
@@ -142,10 +144,10 @@ export default {
     const handleLogout = async () => {
       try {
         await store.dispatch('auth/logout')
-        ElMessage.success('退出登录成功')
+        ElMessage.success(t('messages.logoutSuccess'))
         router.push('/login')
       } catch (error) {
-        ElMessage.error('退出登录失败')
+        ElMessage.error(t('messages.logoutFailed'))
       }
     }
 
