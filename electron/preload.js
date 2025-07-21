@@ -69,6 +69,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteSampleSource: (id) => ipcRenderer.invoke('systemConfig:deleteSampleSource', id)
   },
 
+  // NCBI服务
+  ncbi: {
+    searchTaxonomyId: (scientificName) => ipcRenderer.invoke('ncbi:searchTaxonomyId', scientificName),
+    getTaxonomyDetails: (txid) => ipcRenderer.invoke('ncbi:getTaxonomyDetails', txid),
+    validateTaxonomyId: (txid) => ipcRenderer.invoke('ncbi:validateTaxonomyId', txid),
+    generateAbbreviation: (scientificName) => ipcRenderer.invoke('ncbi:generateAbbreviation', scientificName),
+    batchSearchTaxonomyIds: (scientificNames) => ipcRenderer.invoke('ncbi:batchSearchTaxonomyIds', scientificNames)
+  },
+
+  // 生物信息学分析服务
+  bioinformatics: {
+    performMLSTAnalysis: (genomeFiles, options) => ipcRenderer.invoke('bioinformatics:performMLSTAnalysis', genomeFiles, options),
+    performSerotypingAnalysis: (genomeFiles, options) => ipcRenderer.invoke('bioinformatics:performSerotypingAnalysis', genomeFiles, options),
+    performVirulenceAnalysis: (genomeFiles, options) => ipcRenderer.invoke('bioinformatics:performVirulenceAnalysis', genomeFiles, options),
+    performResistanceAnalysis: (genomeFiles, options) => ipcRenderer.invoke('bioinformatics:performResistanceAnalysis', genomeFiles, options),
+    generateAnalysisReport: (results) => ipcRenderer.invoke('bioinformatics:generateAnalysisReport', results)
+  },
+
   // 事件监听
   onAppReady: (callback) => ipcRenderer.on('app-ready', callback),
   onNavigateTo: (callback) => ipcRenderer.on('navigate-to', (event, path) => callback(path)),

@@ -143,6 +143,7 @@ export default {
     const genomes = ref([])
     const mlstResults = ref([])
     const schemes = ref([])
+    const selectedGenomes = ref([])
 
     const mlstForm = reactive({
       genomeId: '',
@@ -245,12 +246,151 @@ export default {
       console.log('选择方案:', value)
     }
 
-    const startMLST = () => {
-      console.log('开始MLST分析')
+    const startMLST = async () => {
+      if (!mlstForm.genomeId) {
+        ElMessage.warning('请选择要分析的基因组')
+        return
+      }
+
+      try {
+        loading.value = true
+        // 获取基因组文件路径
+        const selectedGenome = genomes.value.find(g => g.id === mlstForm.genomeId)
+        if (!selectedGenome) {
+          throw new Error('未找到选择的基因组')
+        }
+
+        const genomeFiles = [selectedGenome.file_path]
+        const options = {
+          species: mlstForm.scheme,
+          threshold: mlstForm.threshold
+        }
+
+        let results
+        if (window.electronAPI && window.electronAPI.bioinformatics) {
+          // 使用真实的生物信息学分析服务
+          results = await window.electronAPI.bioinformatics.performMLSTAnalysis(genomeFiles, options)
+          ElMessage.success('MLST分析完成')
+        } else {
+          // 浏览器环境下的模拟分析
+          results = await simulateMLSTAnalysis(genomeFiles, options)
+          ElMessage.success('MLST分析完成（模拟）')
+        }
+
+        // 添加到结果列表
+        mlstResults.value.unshift({
+          id: Date.now(),
+          name: `MLST_${selectedGenome.name}_${new Date().toLocaleString()}`,
+          genome_name: selectedGenome.name,
+          scheme: mlstForm.scheme,
+          sequence_type: results.genomes[0]?.sequenceType || 'Unknown',
+          alleles: results.genomes[0]?.alleles || {},
+          confidence: results.genomes[0]?.confidence || 0,
+          status: 'completed',
+          created_at: new Date().toLocaleString(),
+          results: results
+        })
+
+      } catch (error) {
+        console.error('MLST分析失败:', error)
+        ElMessage.error('MLST分析失败: ' + error.message)
+      } finally {
+        loading.value = false
+      }
     }
 
-    const batchMLST = () => {
-      console.log('批量MLST分析')
+    const batchMLST = async () => {
+      if (selectedGenomes.value.length === 0) {
+        ElMessage.warning('请选择要分析的基因组')
+        return
+      }
+
+      try {
+        loading.value = true
+        const genomeFiles = selectedGenomes.value.map(id => {
+          const genome = genomes.value.find(g => g.id === id)
+          return genome?.file_path
+        }).filter(Boolean)
+
+        const options = {
+          species: mlstForm.scheme,
+          threshold: mlstForm.threshold
+        }
+
+        let results
+        if (window.electronAPI && window.electronAPI.bioinformatics) {
+          results = await window.electronAPI.bioinformatics.performMLSTAnalysis(genomeFiles, options)
+          ElMessage.success(`批量MLST分析完成，共分析 ${results.genomes.length} 个基因组`)
+        } else {
+          results = await simulateMLSTAnalysis(genomeFiles, options)
+          ElMessage.success(`批量MLST分析完成（模拟），共分析 ${results.genomes.length} 个基因组`)
+        }
+
+        // 添加批量结果
+        mlstResults.value.unshift({
+          id: Date.now(),
+          name: `Batch_MLST_${new Date().toLocaleString()}`,
+          genome_name: `${results.genomes.length} genomes`,
+          scheme: mlstForm.scheme,
+          sequence_type: 'Multiple',
+          status: 'completed',
+          created_at: new Date().toLocaleString(),
+          results: results
+        })
+
+      } catch (error) {
+        console.error('批量MLST分析失败:', error)
+        ElMessage.error('批量MLST分析失败: ' + error.message)
+      } finally {
+        loading.value = false
+      }
+    }
+
+    // 模拟MLST分析（浏览器环境）
+    const simulateMLSTAnalysis = async (genomeFiles, options) => {
+      // 模拟分析延迟
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      const results = {
+        analysisType: 'mlst',
+        timestamp: new Date().toISOString(),
+        genomes: [],
+        summary: {
+          totalGenomes: genomeFiles.length,
+          typedGenomes: 0,
+          novelAlleles: 0,
+          novelSTs: 0
+        }
+      }
+
+      for (const genomeFile of genomeFiles) {
+        const genomeResult = {
+          genomeFile: genomeFile.split('/').pop(),
+          species: options.species,
+          sequenceType: Math.floor(Math.random() * 500) + 1,
+          isNovelST: Math.random() < 0.05,
+          alleles: {
+            adk: Math.floor(Math.random() * 100) + 1,
+            fumC: Math.floor(Math.random() * 100) + 1,
+            gyrB: Math.floor(Math.random() * 100) + 1,
+            icd: Math.floor(Math.random() * 100) + 1,
+            mdh: Math.floor(Math.random() * 100) + 1,
+            purA: Math.floor(Math.random() * 100) + 1,
+            recA: Math.floor(Math.random() * 100) + 1
+          },
+          novelAlleles: Math.floor(Math.random() * 3),
+          confidence: 95 + Math.random() * 5
+        }
+
+        results.genomes.push(genomeResult)
+        results.summary.typedGenomes++
+        results.summary.novelAlleles += genomeResult.novelAlleles
+        if (genomeResult.isNovelST) {
+          results.summary.novelSTs++
+        }
+      }
+
+      return results
     }
 
     const viewDatabase = () => {
@@ -294,6 +434,7 @@ export default {
       genomes,
       mlstResults,
       schemes,
+      selectedGenomes,
       mlstForm,
       getStatusType,
       getStatusText,

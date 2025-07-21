@@ -222,6 +222,8 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         scientific_name TEXT,
+        abbreviation TEXT,
+        ncbi_txid TEXT,
         description TEXT,
         status TEXT DEFAULT 'active',
         sort_order INTEGER DEFAULT 0,
@@ -229,6 +231,19 @@ class DatabaseService {
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     `)
+
+    // 为现有的species_config表添加新字段（如果不存在）
+    try {
+      this.db.run('ALTER TABLE species_config ADD COLUMN abbreviation TEXT')
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run('ALTER TABLE species_config ADD COLUMN ncbi_txid TEXT')
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
 
     // 地区配置表
     this.db.run(`

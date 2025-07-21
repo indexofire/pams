@@ -6,7 +6,273 @@
     </div>
 
     <div class="content-area">
-      <el-tabs v-model="activeTab" type="card">
+      <!-- 实验相关设置区块 -->
+      <div class="settings-section">
+        <div class="section-header">
+          <h2>实验相关设置</h2>
+          <p>管理实验相关的配置信息</p>
+        </div>
+        <el-tabs v-model="experimentTab" type="card" class="experiment-tabs">
+          <!-- 菌种管理 -->
+          <el-tab-pane label="菌种管理" name="species">
+            <div class="species-management">
+              <div class="toolbar">
+                <el-button type="primary" @click="addSpecies">
+                  <el-icon><Plus /></el-icon>
+                  添加菌种
+                </el-button>
+              </div>
+
+              <el-table
+                :data="speciesOptions"
+                border
+                style="width: 100%"
+                :height="400"
+                :table-layout="'fixed'"
+              >
+                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="name" label="菌种名称" min-width="120" />
+                <el-table-column prop="scientific_name" label="学名" width="180">
+                  <template #default="scope">
+                    <em>{{ scope.row.scientific_name }}</em>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="abbreviation" label="缩写" width="80" />
+                <el-table-column prop="ncbi_txid" label="NCBI TXID" width="100">
+                  <template #default="scope">
+                    <span v-if="scope.row.ncbi_txid">
+                      <a :href="`https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=${scope.row.ncbi_txid}`"
+                         target="_blank"
+                         style="color: #409eff; text-decoration: none;">
+                        {{ scope.row.ncbi_txid }}
+                      </a>
+                    </span>
+                    <span v-else style="color: #909399;">-</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="description" label="描述" min-width="150" />
+                <el-table-column prop="status" label="状态" width="100">
+                  <template #default="scope">
+                    <el-tag
+                      :type="scope.row.status === 'active' ? 'success' : 'danger'"
+                      size="small"
+                    >
+                      {{ scope.row.status === 'active' ? '启用' : '禁用' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="200">
+                  <template #default="scope">
+                    <el-button size="small" @click="editSpecies(scope.row)">编辑</el-button>
+                    <el-button
+                      size="small"
+                      :type="scope.row.status === 'active' ? 'warning' : 'success'"
+                      @click="toggleSpeciesStatus(scope.row)"
+                    >
+                      {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                    </el-button>
+                    <el-button
+                      size="small"
+                      type="danger"
+                      @click="deleteSpecies(scope.row)"
+                    >
+                      删除
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
+
+          <!-- 地区管理 -->
+          <el-tab-pane label="地区管理" name="regions">
+            <div class="region-management">
+              <div class="toolbar">
+                <el-button type="primary" @click="addRegion">
+                  <el-icon><Plus /></el-icon>
+                  添加地区
+                </el-button>
+              </div>
+
+              <el-table
+                :data="regionOptions"
+                border
+                style="width: 100%"
+                :height="400"
+                :table-layout="'fixed'"
+              >
+                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="name" label="地区名称" min-width="150" />
+                <el-table-column prop="code" label="地区代码" width="120" />
+                <el-table-column prop="level" label="级别" width="100">
+                  <template #default="scope">
+                    <el-tag
+                      :type="scope.row.level === 'province' ? 'danger' : scope.row.level === 'city' ? 'warning' : 'primary'"
+                      size="small"
+                    >
+                      {{ scope.row.level === 'province' ? '省/直辖市' : scope.row.level === 'city' ? '市' : '区/县' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="status" label="状态" width="100">
+                  <template #default="scope">
+                    <el-tag
+                      :type="scope.row.status === 'active' ? 'success' : 'danger'"
+                      size="small"
+                    >
+                      {{ scope.row.status === 'active' ? '启用' : '禁用' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="200">
+                  <template #default="scope">
+                    <el-button size="small" @click="editRegion(scope.row)">编辑</el-button>
+                    <el-button
+                      size="small"
+                      :type="scope.row.status === 'active' ? 'warning' : 'success'"
+                      @click="toggleRegionStatus(scope.row)"
+                    >
+                      {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                    </el-button>
+                    <el-button
+                      size="small"
+                      type="danger"
+                      @click="deleteRegion(scope.row)"
+                    >
+                      删除
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
+
+          <!-- 样本来源管理 -->
+          <el-tab-pane label="样本来源管理" name="sources">
+            <div class="source-management">
+              <div class="toolbar">
+                <el-button type="primary" @click="addSource">
+                  <el-icon><Plus /></el-icon>
+                  添加样本来源
+                </el-button>
+              </div>
+
+              <el-table
+                :data="sourceOptions"
+                border
+                style="width: 100%"
+                :height="400"
+                :table-layout="'fixed'"
+              >
+                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="name" label="来源名称" min-width="150" />
+                <el-table-column prop="category" label="类别" width="120">
+                  <template #default="scope">
+                    <el-tag
+                      :type="scope.row.category === 'clinical' ? 'danger' : scope.row.category === 'environmental' ? 'warning' : 'primary'"
+                      size="small"
+                    >
+                      {{ scope.row.category === 'clinical' ? '临床' : scope.row.category === 'environmental' ? '环境' : '其他' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="description" label="描述" min-width="200" />
+                <el-table-column prop="status" label="状态" width="100">
+                  <template #default="scope">
+                    <el-tag
+                      :type="scope.row.status === 'active' ? 'success' : 'danger'"
+                      size="small"
+                    >
+                      {{ scope.row.status === 'active' ? '启用' : '禁用' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="200">
+                  <template #default="scope">
+                    <el-button size="small" @click="editSource(scope.row)">编辑</el-button>
+                    <el-button
+                      size="small"
+                      :type="scope.row.status === 'active' ? 'warning' : 'success'"
+                      @click="toggleSourceStatus(scope.row)"
+                    >
+                      {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                    </el-button>
+                    <el-button
+                      size="small"
+                      type="danger"
+                      @click="deleteSource(scope.row)"
+                    >
+                      删除
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
+
+          <!-- 实验类型管理 -->
+          <el-tab-pane label="实验类型管理" name="experiments">
+            <div class="experiment-management">
+              <div class="toolbar">
+                <el-button type="primary" @click="addExperiment">
+                  <el-icon><Plus /></el-icon>
+                  添加实验类型
+                </el-button>
+              </div>
+
+              <el-table
+                :data="experimentTypes"
+                border
+                style="width: 100%"
+                :height="400"
+                :table-layout="'fixed'"
+              >
+                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="name" label="实验类型" min-width="150" />
+                <el-table-column prop="description" label="描述" min-width="200" />
+                <el-table-column prop="protocol" label="实验协议" min-width="200" />
+                <el-table-column prop="status" label="状态" width="100">
+                  <template #default="scope">
+                    <el-tag
+                      :type="scope.row.status === 'active' ? 'success' : 'danger'"
+                      size="small"
+                    >
+                      {{ scope.row.status === 'active' ? '启用' : '禁用' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="200">
+                  <template #default="scope">
+                    <el-button size="small" @click="editExperiment(scope.row)">编辑</el-button>
+                    <el-button
+                      size="small"
+                      :type="scope.row.status === 'active' ? 'warning' : 'success'"
+                      @click="toggleExperimentStatus(scope.row)"
+                    >
+                      {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                    </el-button>
+                    <el-button
+                      size="small"
+                      type="danger"
+                      @click="deleteExperiment(scope.row)"
+                    >
+                      删除
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+
+      <!-- 系统相关设置区块 -->
+      <div class="settings-section">
+        <div class="section-header">
+          <h2>系统相关设置</h2>
+          <p>管理系统配置和用户权限</p>
+        </div>
+        <el-tabs v-model="systemTab" type="card" class="system-tabs">
         <!-- 用户管理 -->
         <el-tab-pane label="用户管理" name="users">
           <div class="user-management">
@@ -58,236 +324,7 @@
           </div>
         </el-tab-pane>
 
-        <!-- 菌种管理 -->
-        <el-tab-pane label="菌种管理" name="species">
-          <div class="species-management">
-            <div class="toolbar">
-              <el-button type="primary" @click="addSpecies">
-                <el-icon><Plus /></el-icon>
-                添加菌种
-              </el-button>
-            </div>
-
-            <el-table
-              :data="speciesOptions"
-              border
-              style="width: 100%"
-              :height="400"
-              :table-layout="'fixed'"
-            >
-              <el-table-column prop="id" label="ID" width="80" />
-              <el-table-column prop="name" label="菌种名称" />
-              <el-table-column prop="scientific_name" label="学名" width="200">
-                <template #default="scope">
-                  <em>{{ scope.row.scientific_name }}</em>
-                </template>
-              </el-table-column>
-              <el-table-column prop="description" label="描述" />
-              <el-table-column prop="status" label="状态" width="100">
-                <template #default="scope">
-                  <el-tag
-                    :type="scope.row.status === 'active' ? 'success' : 'danger'"
-                    size="small"
-                  >
-                    {{ scope.row.status === 'active' ? '启用' : '禁用' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="200">
-                <template #default="scope">
-                  <el-button size="small" @click="editSpecies(scope.row)">编辑</el-button>
-                  <el-button
-                    size="small"
-                    :type="scope.row.status === 'active' ? 'warning' : 'success'"
-                    @click="toggleSpeciesStatus(scope.row)"
-                  >
-                    {{ scope.row.status === 'active' ? '禁用' : '启用' }}
-                  </el-button>
-                  <el-button
-                    size="small"
-                    type="danger"
-                    @click="deleteSpecies(scope.row)"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </el-tab-pane>
-
-        <!-- 地区管理 -->
-        <el-tab-pane label="地区管理" name="regions">
-          <div class="region-management">
-            <div class="toolbar">
-              <el-button type="primary" @click="addRegion">
-                <el-icon><Plus /></el-icon>
-                添加地区
-              </el-button>
-            </div>
-
-            <el-table
-              :data="regionOptions"
-              border
-              style="width: 100%"
-              :height="400"
-              :table-layout="'fixed'"
-            >
-              <el-table-column prop="id" label="ID" width="80" />
-              <el-table-column prop="name" label="地区名称" min-width="150" />
-              <el-table-column prop="code" label="地区代码" width="120" />
-              <el-table-column prop="level" label="级别" width="100">
-                <template #default="scope">
-                  <el-tag size="small">
-                    {{ scope.row.level === 'province' ? '省/市' : scope.row.level === 'city' ? '市' : '区/县' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="status" label="状态" width="100">
-                <template #default="scope">
-                  <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'" size="small">
-                    {{ scope.row.status === 'active' ? '启用' : '禁用' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="200">
-                <template #default="scope">
-                  <el-button size="small" @click="editRegion(scope.row)">编辑</el-button>
-                  <el-button
-                    size="small"
-                    :type="scope.row.status === 'active' ? 'warning' : 'success'"
-                    @click="toggleRegionStatus(scope.row)"
-                  >
-                    {{ scope.row.status === 'active' ? '禁用' : '启用' }}
-                  </el-button>
-                  <el-button
-                    size="small"
-                    type="danger"
-                    @click="deleteRegion(scope.row)"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </el-tab-pane>
-
-        <!-- 样本来源管理 -->
-        <el-tab-pane label="样本来源" name="sources">
-          <div class="source-management">
-            <div class="toolbar">
-              <el-button type="primary" @click="addSource">
-                <el-icon><Plus /></el-icon>
-                添加样本来源
-              </el-button>
-            </div>
-
-            <el-table
-              :data="sourceOptions"
-              border
-              style="width: 100%"
-              :height="400"
-              :table-layout="'fixed'"
-            >
-              <el-table-column prop="id" label="ID" width="80" />
-              <el-table-column prop="name" label="来源名称" />
-              <el-table-column prop="category" label="类别" width="120">
-                <template #default="scope">
-                  <el-tag
-                    :type="scope.row.category === 'clinical' ? 'primary' : scope.row.category === 'food' ? 'success' : 'warning'"
-                    size="small"
-                  >
-                    {{ scope.row.category === 'clinical' ? '临床' : scope.row.category === 'food' ? '食品' : '环境' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="description" label="描述" />
-              <el-table-column prop="status" label="状态" width="100">
-                <template #default="scope">
-                  <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'" size="small">
-                    {{ scope.row.status === 'active' ? '启用' : '禁用' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="200">
-                <template #default="scope">
-                  <el-button size="small" @click="editSource(scope.row)">编辑</el-button>
-                  <el-button
-                    size="small"
-                    :type="scope.row.status === 'active' ? 'warning' : 'success'"
-                    @click="toggleSourceStatus(scope.row)"
-                  >
-                    {{ scope.row.status === 'active' ? '禁用' : '启用' }}
-                  </el-button>
-                  <el-button
-                    size="small"
-                    type="danger"
-                    @click="deleteSource(scope.row)"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </el-tab-pane>
-
-        <!-- 实验管理 -->
-        <el-tab-pane label="实验管理" name="experiments">
-          <div class="experiment-management">
-            <div class="toolbar">
-              <el-button type="primary" @click="addExperiment">
-                <el-icon><Plus /></el-icon>
-                添加实验类型
-              </el-button>
-            </div>
-
-            <el-table
-              :data="experimentTypes"
-              border
-              style="width: 100%"
-              :height="400"
-              :table-layout="'fixed'"
-            >
-              <el-table-column prop="id" label="ID" width="80" />
-              <el-table-column prop="name" label="实验类型" />
-              <el-table-column prop="description" label="描述" />
-              <el-table-column prop="protocol" label="实验协议" />
-              <el-table-column prop="status" label="状态" width="100">
-                <template #default="scope">
-                  <el-tag
-                    :type="scope.row.status === 'active' ? 'success' : 'danger'"
-                    size="small"
-                  >
-                    {{ scope.row.status === 'active' ? '启用' : '禁用' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="200">
-                <template #default="scope">
-                  <el-button size="small" @click="editExperiment(scope.row)">编辑</el-button>
-                  <el-button
-                    size="small"
-                    :type="scope.row.status === 'active' ? 'warning' : 'success'"
-                    @click="toggleExperimentStatus(scope.row)"
-                  >
-                    {{ scope.row.status === 'active' ? '禁用' : '启用' }}
-                  </el-button>
-                  <el-button
-                    size="small"
-                    type="danger"
-                    @click="deleteExperiment(scope.row)"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </el-tab-pane>
-
-        <!-- 基本设置 -->
+          <!-- 基本设置 -->
         <el-tab-pane label="基本设置" name="basic">
           <el-form :model="basicForm" label-width="120px">
             <el-form-item label="系统名称">
@@ -390,8 +427,10 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
-      </el-tabs>
+        </el-tabs>
+      </div>
     </div>
+  </div>
 
     <!-- 用户编辑对话框 -->
     <el-dialog v-model="userDialogVisible" title="用户管理" width="600px">
@@ -417,13 +456,54 @@
     </el-dialog>
 
     <!-- 菌种编辑对话框 -->
-    <el-dialog v-model="speciesDialogVisible" title="菌种管理" width="600px">
-      <el-form :model="speciesForm" label-width="80px">
-        <el-form-item label="菌种名称">
+    <el-dialog v-model="speciesDialogVisible" title="菌种管理" width="700px">
+      <el-form :model="speciesForm" label-width="100px">
+        <el-form-item label="菌种名称" required>
           <el-input v-model="speciesForm.name" placeholder="请输入菌种名称" />
         </el-form-item>
-        <el-form-item label="学名">
-          <el-input v-model="speciesForm.scientific_name" placeholder="请输入学名" />
+        <el-form-item label="学名" required>
+          <el-input
+            v-model="speciesForm.scientific_name"
+            placeholder="请输入学名，如：Escherichia coli"
+            @blur="onScientificNameChange"
+          />
+        </el-form-item>
+        <el-form-item label="缩写">
+          <el-input
+            v-model="speciesForm.abbreviation"
+            placeholder="自动生成或手动输入"
+            style="width: 200px;"
+          >
+            <template #append>
+              <el-button @click="generateAbbreviation" :loading="abbreviationLoading">
+                自动生成
+              </el-button>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="NCBI TXID">
+          <el-input
+            v-model="speciesForm.ncbi_txid"
+            placeholder="从NCBI获取或手动输入"
+            style="width: 200px;"
+          >
+            <template #append>
+              <el-button @click="searchNCBITaxonomy" :loading="ncbiLoading">
+                从NCBI获取
+              </el-button>
+            </template>
+          </el-input>
+          <div v-if="ncbiSearchResult" class="ncbi-result" style="margin-top: 8px;">
+            <el-alert
+              :type="ncbiSearchResult.success ? 'success' : 'error'"
+              :title="ncbiSearchResult.success ? 'NCBI信息获取成功' : 'NCBI信息获取失败'"
+              :description="ncbiSearchResult.success ?
+                `TXID: ${ncbiSearchResult.txid}, 学名: ${ncbiSearchResult.scientificName}` :
+                ncbiSearchResult.error"
+              show-icon
+              :closable="false"
+            />
+          </div>
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="speciesForm.description" type="textarea" :rows="3" placeholder="请输入描述" />
@@ -437,7 +517,7 @@
       </el-form>
       <template #footer>
         <el-button @click="speciesDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveSpecies">确定</el-button>
+        <el-button type="primary" @click="saveSpecies" :loading="saveLoading">确定</el-button>
       </template>
     </el-dialog>
 
@@ -523,7 +603,6 @@
         <el-button type="primary" @click="saveExperiment">确定</el-button>
       </template>
     </el-dialog>
-  </div>
 </template>
 
 <script>
@@ -540,7 +619,8 @@ export default {
   },
   setup () {
     const store = useStore()
-    const activeTab = ref('users')
+    const experimentTab = ref('species')
+    const systemTab = ref('users')
 
     // 用户管理相关
     const users = ref([])
@@ -565,9 +645,17 @@ export default {
       id: null,
       name: '',
       scientific_name: '',
+      abbreviation: '',
+      ncbi_txid: '',
       description: '',
       status: 'active'
     })
+
+    // NCBI相关状态
+    const ncbiLoading = ref(false)
+    const abbreviationLoading = ref(false)
+    const saveLoading = ref(false)
+    const ncbiSearchResult = ref(null)
 
     // 地区管理相关
     const regionOptions = ref([
@@ -759,16 +847,98 @@ export default {
 
     // 菌种管理方法
     const addSpecies = () => {
-      Object.assign(speciesForm, { id: null, name: '', scientific_name: '', description: '', status: 'active' })
+      Object.assign(speciesForm, {
+        id: null,
+        name: '',
+        scientific_name: '',
+        abbreviation: '',
+        ncbi_txid: '',
+        description: '',
+        status: 'active'
+      })
+      ncbiSearchResult.value = null
       speciesDialogVisible.value = true
     }
 
     const editSpecies = (species) => {
       Object.assign(speciesForm, species)
+      ncbiSearchResult.value = null
       speciesDialogVisible.value = true
     }
 
+    // NCBI相关方法
+    const generateAbbreviation = async () => {
+      if (!speciesForm.scientific_name) {
+        ElMessage.warning('请先输入学名')
+        return
+      }
+
+      abbreviationLoading.value = true
+      try {
+        if (window.electronAPI && window.electronAPI.ncbi) {
+          const abbreviation = await window.electronAPI.ncbi.generateAbbreviation(speciesForm.scientific_name)
+          speciesForm.abbreviation = abbreviation
+          ElMessage.success('缩写生成成功')
+        } else {
+          // 浏览器环境下的简单生成逻辑
+          const parts = speciesForm.scientific_name.trim().split(/\s+/)
+          if (parts.length >= 2) {
+            const genus = parts[0].charAt(0).toUpperCase()
+            const species = parts[1].substring(0, 3).toLowerCase()
+            speciesForm.abbreviation = genus + species
+            ElMessage.success('缩写生成成功')
+          }
+        }
+      } catch (error) {
+        console.error('生成缩写失败:', error)
+        ElMessage.error('生成缩写失败: ' + error.message)
+      } finally {
+        abbreviationLoading.value = false
+      }
+    }
+
+    const searchNCBITaxonomy = async () => {
+      if (!speciesForm.scientific_name) {
+        ElMessage.warning('请先输入学名')
+        return
+      }
+
+      ncbiLoading.value = true
+      ncbiSearchResult.value = null
+
+      try {
+        if (window.electronAPI && window.electronAPI.ncbi) {
+          const result = await window.electronAPI.ncbi.searchTaxonomyId(speciesForm.scientific_name)
+          ncbiSearchResult.value = result
+
+          if (result.success) {
+            speciesForm.ncbi_txid = result.txid
+            ElMessage.success('NCBI信息获取成功')
+          } else {
+            ElMessage.error('NCBI信息获取失败: ' + result.error)
+          }
+        } else {
+          ElMessage.warning('NCBI功能仅在Electron环境下可用')
+        }
+      } catch (error) {
+        console.error('搜索NCBI失败:', error)
+        ElMessage.error('搜索NCBI失败: ' + error.message)
+        ncbiSearchResult.value = {
+          success: false,
+          error: error.message
+        }
+      } finally {
+        ncbiLoading.value = false
+      }
+    }
+
+    const onScientificNameChange = () => {
+      // 当学名改变时，清除之前的NCBI搜索结果
+      ncbiSearchResult.value = null
+    }
+
     const saveSpecies = async () => {
+      saveLoading.value = true
       try {
         if (window.electronAPI && window.electronAPI.systemConfig) {
           // 使用后端API保存菌种配置
@@ -801,6 +971,8 @@ export default {
               id: Date.now(),
               name: speciesForm.name,
               scientific_name: speciesForm.scientific_name,
+              abbreviation: speciesForm.abbreviation,
+              ncbi_txid: speciesForm.ncbi_txid,
               description: speciesForm.description,
               status: speciesForm.status
             }
@@ -815,6 +987,8 @@ export default {
       } catch (error) {
         console.error('保存菌种失败:', error)
         ElMessage.error('保存菌种失败: ' + error.message)
+      } finally {
+        saveLoading.value = false
       }
     }
 
@@ -1221,7 +1395,10 @@ export default {
       }
 
       // 监听标签页切换
-      watch(activeTab, () => {
+      watch(experimentTab, () => {
+        handleResizeObserverError()
+      })
+      watch(systemTab, () => {
         handleResizeObserverError()
       })
 
@@ -1315,13 +1492,18 @@ export default {
     }
 
     return {
-      activeTab,
+      experimentTab,
+      systemTab,
       users,
       userDialogVisible,
       userForm,
       speciesOptions,
       speciesDialogVisible,
       speciesForm,
+      ncbiLoading,
+      abbreviationLoading,
+      saveLoading,
+      ncbiSearchResult,
       experimentTypes,
       experimentDialogVisible,
       experimentForm,
@@ -1339,6 +1521,9 @@ export default {
       saveSpecies,
       deleteSpecies,
       toggleSpeciesStatus,
+      generateAbbreviation,
+      searchNCBITaxonomy,
+      onScientificNameChange,
       // 地区管理
       regionOptions,
       regionDialogVisible,
@@ -1404,6 +1589,40 @@ export default {
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.settings-section {
+  margin-bottom: 30px;
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #e4e7ed;
+}
+
+.section-header {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #409eff;
+}
+
+.section-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: #303133;
+  font-weight: 600;
+}
+
+.section-header p {
+  margin: 0;
+  color: #909399;
+  font-size: 14px;
+}
+
+.experiment-tabs,
+.system-tabs {
+  background: white;
+  border-radius: 6px;
+  padding: 15px;
 }
 
 .toolbar {

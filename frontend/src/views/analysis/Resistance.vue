@@ -166,6 +166,7 @@ export default {
     const loading = ref(false)
     const genomes = ref([])
     const resistanceResults = ref([])
+    const selectedGenomes = ref([])
 
     const resistanceForm = reactive({
       genomeId: '',
@@ -255,12 +256,149 @@ export default {
       }
     }
 
-    const startAnalysis = () => {
-      console.log('开始耐药基因分析')
+    const startAnalysis = async () => {
+      if (!resistanceForm.genomeId) {
+        ElMessage.warning('请选择要分析的基因组')
+        return
+      }
+
+      try {
+        loading.value = true
+        const selectedGenome = genomes.value.find(g => g.id === resistanceForm.genomeId)
+        if (!selectedGenome) {
+          throw new Error('未找到选择的基因组')
+        }
+
+        const genomeFiles = [selectedGenome.file_path]
+        const options = {
+          database: resistanceForm.database,
+          threshold: resistanceForm.threshold,
+          minCoverage: resistanceForm.minCoverage
+        }
+
+        let results
+        if (window.electronAPI && window.electronAPI.bioinformatics) {
+          results = await window.electronAPI.bioinformatics.performResistanceAnalysis(genomeFiles, options)
+          ElMessage.success('耐药基因分析完成')
+        } else {
+          results = await simulateResistanceAnalysis(genomeFiles, options)
+          ElMessage.success('耐药基因分析完成（模拟）')
+        }
+
+        // 添加到结果列表
+        resistanceResults.value.unshift({
+          id: Date.now(),
+          name: `Resistance_${selectedGenome.name}_${new Date().toLocaleString()}`,
+          genome_name: selectedGenome.name,
+          database: resistanceForm.database,
+          detected_genes: results.genomes[0]?.detectedGenes?.length || 0,
+          resistance_score: results.genomes[0]?.resistanceScore || 0,
+          status: 'completed',
+          created_at: new Date().toLocaleString(),
+          results: results
+        })
+
+      } catch (error) {
+        console.error('耐药基因分析失败:', error)
+        ElMessage.error('耐药基因分析失败: ' + error.message)
+      } finally {
+        loading.value = false
+      }
     }
 
-    const batchAnalysis = () => {
-      console.log('批量耐药基因分析')
+    const batchAnalysis = async () => {
+      if (selectedGenomes.value.length === 0) {
+        ElMessage.warning('请选择要分析的基因组')
+        return
+      }
+
+      try {
+        loading.value = true
+        const genomeFiles = selectedGenomes.value.map(id => {
+          const genome = genomes.value.find(g => g.id === id)
+          return genome?.file_path
+        }).filter(Boolean)
+
+        const options = {
+          database: resistanceForm.database,
+          threshold: resistanceForm.threshold,
+          minCoverage: resistanceForm.minCoverage
+        }
+
+        let results
+        if (window.electronAPI && window.electronAPI.bioinformatics) {
+          results = await window.electronAPI.bioinformatics.performResistanceAnalysis(genomeFiles, options)
+          ElMessage.success(`批量耐药基因分析完成，共分析 ${results.genomes.length} 个基因组`)
+        } else {
+          results = await simulateResistanceAnalysis(genomeFiles, options)
+          ElMessage.success(`批量耐药基因分析完成（模拟），共分析 ${results.genomes.length} 个基因组`)
+        }
+
+        // 添加批量结果
+        resistanceResults.value.unshift({
+          id: Date.now(),
+          name: `Batch_Resistance_${new Date().toLocaleString()}`,
+          genome_name: `${results.genomes.length} genomes`,
+          database: resistanceForm.database,
+          detected_genes: results.summary.totalGenes,
+          status: 'completed',
+          created_at: new Date().toLocaleString(),
+          results: results
+        })
+
+      } catch (error) {
+        console.error('批量耐药基因分析失败:', error)
+        ElMessage.error('批量耐药基因分析失败: ' + error.message)
+      } finally {
+        loading.value = false
+      }
+    }
+
+    // 模拟耐药基因分析（浏览器环境）
+    const simulateResistanceAnalysis = async (genomeFiles, options) => {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      const results = {
+        analysisType: 'resistance',
+        timestamp: new Date().toISOString(),
+        genomes: [],
+        summary: {
+          totalGenomes: genomeFiles.length,
+          totalGenes: 0,
+          resistanceClasses: {},
+          antibioticResistance: {}
+        }
+      }
+
+      for (const genomeFile of genomeFiles) {
+        const detectedGenes = []
+        const geneCount = Math.floor(Math.random() * 8) + 1
+
+        for (let i = 0; i < geneCount; i++) {
+          const genes = ['blaTEM', 'blaCTX-M', 'aac(3)-IV', 'tetA', 'sul1']
+          const gene = genes[Math.floor(Math.random() * genes.length)]
+          detectedGenes.push({
+            name: gene,
+            class: gene.startsWith('bla') ? 'Beta-lactam' : 'Other',
+            mechanism: 'Various',
+            antibiotics: ['Ampicillin'],
+            identity: 90 + Math.random() * 10,
+            coverage: 80 + Math.random() * 20
+          })
+        }
+
+        const genomeResult = {
+          genomeFile: genomeFile.split('/').pop(),
+          database: options.database,
+          detectedGenes: detectedGenes,
+          resistanceScore: Math.floor(Math.random() * 10) + 1
+        }
+
+        results.genomes.push(genomeResult)
+        results.summary.totalGenes += detectedGenes.length
+      }
+
+      return results
     }
 
     const viewDatabase = () => {
@@ -303,6 +441,7 @@ export default {
       loading,
       genomes,
       resistanceResults,
+      selectedGenomes,
       resistanceForm,
       getStatusType,
       getStatusText,

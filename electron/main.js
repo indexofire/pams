@@ -12,6 +12,8 @@ const GenomeService = require('../src/services/GenomeService')
 const AnalysisService = require('../src/services/AnalysisService')
 const UserService = require('../src/services/UserService')
 const SystemConfigService = require('../src/services/SystemConfigService')
+const NCBIService = require('../src/services/NCBIService')
+const BioinformaticsService = require('../src/services/BioinformaticsService')
 
 let mainWindow
 let dbService
@@ -551,6 +553,58 @@ function registerIpcHandlers() {
   ipcMain.handle('systemConfig:deleteSampleSource', async (event, id) => {
     const systemConfigService = new SystemConfigService(dbService)
     return await systemConfigService.deleteSampleSource(id)
+  })
+
+  // NCBI相关
+  ipcMain.handle('ncbi:searchTaxonomyId', async (event, scientificName) => {
+    const ncbiService = new NCBIService()
+    return await ncbiService.searchTaxonomyId(scientificName)
+  })
+
+  ipcMain.handle('ncbi:getTaxonomyDetails', async (event, txid) => {
+    const ncbiService = new NCBIService()
+    return await ncbiService.getTaxonomyDetails(txid)
+  })
+
+  ipcMain.handle('ncbi:validateTaxonomyId', async (event, txid) => {
+    const ncbiService = new NCBIService()
+    return await ncbiService.validateTaxonomyId(txid)
+  })
+
+  ipcMain.handle('ncbi:generateAbbreviation', async (event, scientificName) => {
+    const ncbiService = new NCBIService()
+    return ncbiService.generateAbbreviation(scientificName)
+  })
+
+  ipcMain.handle('ncbi:batchSearchTaxonomyIds', async (event, scientificNames) => {
+    const ncbiService = new NCBIService()
+    return await ncbiService.batchSearchTaxonomyIds(scientificNames)
+  })
+
+  // 生物信息学分析相关
+  ipcMain.handle('bioinformatics:performMLSTAnalysis', async (event, genomeFiles, options) => {
+    const bioinformaticsService = new BioinformaticsService(dbService)
+    return await bioinformaticsService.performMLSTAnalysis(genomeFiles, options)
+  })
+
+  ipcMain.handle('bioinformatics:performSerotypingAnalysis', async (event, genomeFiles, options) => {
+    const bioinformaticsService = new BioinformaticsService(dbService)
+    return await bioinformaticsService.performSerotypingAnalysis(genomeFiles, options)
+  })
+
+  ipcMain.handle('bioinformatics:performVirulenceAnalysis', async (event, genomeFiles, options) => {
+    const bioinformaticsService = new BioinformaticsService(dbService)
+    return await bioinformaticsService.performVirulenceAnalysis(genomeFiles, options)
+  })
+
+  ipcMain.handle('bioinformatics:performResistanceAnalysis', async (event, genomeFiles, options) => {
+    const bioinformaticsService = new BioinformaticsService(dbService)
+    return await bioinformaticsService.performResistanceAnalysis(genomeFiles, options)
+  })
+
+  ipcMain.handle('bioinformatics:generateAnalysisReport', async (event, results) => {
+    const bioinformaticsService = new BioinformaticsService(dbService)
+    return bioinformaticsService.generateAnalysisReport(results)
   })
 }
 

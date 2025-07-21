@@ -45,24 +45,34 @@ class SystemConfigService {
       if (speciesData.id) {
         // 更新现有菌种
         const stmt = this.db.db.prepare(`
-          UPDATE species_config 
-          SET name = ?, scientific_name = ?, description = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+          UPDATE species_config
+          SET name = ?, scientific_name = ?, abbreviation = ?, ncbi_txid = ?, description = ?, status = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `)
-        stmt.bind([speciesData.name, speciesData.scientific_name, speciesData.description, speciesData.status, speciesData.id])
-        stmt.step()
-        stmt.free()
-        
-        return { ...speciesData, updated_at: new Date().toISOString() }
-      } else {
-        // 创建新菌种
-        const stmt = this.db.db.prepare(`
-          INSERT INTO species_config (name, scientific_name, description, status, sort_order)
-          VALUES (?, ?, ?, ?, ?)
         `)
         stmt.bind([
           speciesData.name,
           speciesData.scientific_name,
+          speciesData.abbreviation || null,
+          speciesData.ncbi_txid || null,
+          speciesData.description,
+          speciesData.status,
+          speciesData.id
+        ])
+        stmt.step()
+        stmt.free()
+
+        return { ...speciesData, updated_at: new Date().toISOString() }
+      } else {
+        // 创建新菌种
+        const stmt = this.db.db.prepare(`
+          INSERT INTO species_config (name, scientific_name, abbreviation, ncbi_txid, description, status, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `)
+        stmt.bind([
+          speciesData.name,
+          speciesData.scientific_name,
+          speciesData.abbreviation || null,
+          speciesData.ncbi_txid || null,
           speciesData.description,
           speciesData.status || 'active',
           speciesData.sort_order || 999
