@@ -265,24 +265,63 @@ class DatabaseService {
   }
 
   async createDefaultData() {
-    // 检查是否已存在管理员用户
-    const stmt = this.db.prepare('SELECT id FROM users WHERE username = ?')
-    const adminExists = stmt.get(['admin'])
+    try {
+      // 检查是否已存在管理员用户
+      const checkStmt = this.db.prepare('SELECT id, password FROM users WHERE username = ?')
+      checkStmt.bind(['admin'])
+      let adminExists = null
+      if (checkStmt.step()) {
+        adminExists = checkStmt.getAsObject()
+      }
+      checkStmt.free()
 
-    if (!adminExists) {
-      const hashedPassword = await bcrypt.hash('admin123', 10)
+      if (!adminExists) {
+        const hashedPassword = await bcrypt.hash('admin123', 10)
 
-      const insertStmt = this.db.prepare(`
-        INSERT INTO users (username, email, password, role)
-        VALUES (?, ?, ?, ?)
-      `)
+        const insertStmt = this.db.prepare(`
+          INSERT INTO users (username, email, password, role)
+          VALUES (?, ?, ?, ?)
+        `)
 
-      insertStmt.run(['admin', 'admin@pams.local', hashedPassword, 'admin'])
+        insertStmt.bind(['admin', 'admin@pams.local', hashedPassword, 'admin'])
+        insertStmt.step()
+        insertStmt.free()
 
-      console.log('默认管理员账户已创建: admin/admin123')
+        console.log('默认管理员账户已创建: admin/admin123')
 
-      // 保存数据库
-      await this.saveDatabase()
+        // 保存数据库
+        await this.saveDatabase()
+      } else if (!adminExists.password) {
+        // 如果管理员用户存在但没有密码，更新密码
+        console.log('检测到管理员用户缺少密码，正在更新...')
+        const hashedPassword = await bcrypt.hash('admin123', 10)
+
+        const updateStmt = this.db.prepare(`
+          UPDATE users SET password = ? WHERE username = ?
+        `)
+
+        updateStmt.bind([hashedPassword, 'admin'])
+        updateStmt.step()
+        updateStmt.free()
+        console.log('管理员密码已更新')
+
+        // 保存数据库
+        await this.saveDatabase()
+      } else {
+        console.log('管理员用户已存在，密码正常')
+      }
+
+      // 验证用户是否正确创建
+      const verifyStmt = this.db.prepare('SELECT id, username, password FROM users WHERE username = ?')
+      verifyStmt.bind(['admin'])
+      let verifyUser = null
+      if (verifyStmt.step()) {
+        verifyUser = verifyStmt.getAsObject()
+      }
+      verifyStmt.free()
+      console.log('验证管理员用户:', verifyUser ? { id: verifyUser.id, username: verifyUser.username, hasPassword: !!verifyUser.password } : 'null')
+    } catch (error) {
+      console.error('创建默认数据失败:', error)
     }
 
     // 创建默认系统配置
@@ -309,33 +348,76 @@ class DatabaseService {
 
   // 用户相关方法
   getUsers() {
-    const stmt = this.db.prepare('SELECT id, username, email, role, isActive, lastLogin, createdAt FROM users')
-    return stmt.all()
+    try {
+      const stmt = this.db.prepare('SELECT id, username, email, role, isActive, lastLogin, createdAt FROM users')
+      const results = []
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
+    } catch (error) {
+      console.error('获取用户列表失败:', error)
+      return []
+    }
   }
 
   getUserById(id) {
-    const stmt = this.db.prepare('SELECT id, username, email, role, isActive, lastLogin, createdAt FROM users WHERE id = ?')
-    return stmt.get([id])
+    try {
+      const stmt = this.db.prepare('SELECT id, username, email, role, isActive, lastLogin, createdAt FROM users WHERE id = ?')
+      stmt.bind([id])
+      let result = null
+      if (stmt.step()) {
+        result = stmt.getAsObject()
+      }
+      stmt.free()
+      return result
+    } catch (error) {
+      console.error('获取用户详情失败:', error)
+      return null
+    }
   }
 
   getUserByUsername(username) {
-    const stmt = this.db.prepare('SELECT * FROM users WHERE username = ?')
-    return stmt.get([username])
+    try {
+      const stmt = this.db.prepare('SELECT * FROM users WHERE username = ?')
+      stmt.bind([username])
+      let result = null
+      if (stmt.step()) {
+        result = stmt.getAsObject()
+      }
+      stmt.free()
+      return result
+    } catch (error) {
+      console.error('查询用户失败:', error)
+      return null
+    }
   }
 
   async createUser(userData) {
-    const stmt = this.db.prepare(`
-      INSERT INTO users (username, email, password, role)
-      VALUES (?, ?, ?, ?)
-    `)
-    stmt.run([userData.username, userData.email, userData.password, userData.role || 'user'])
-    
-    // 获取插入的ID
-    const idStmt = this.db.prepare('SELECT last_insert_rowid() as id')
-    const result = idStmt.get()
-    
-    await this.saveDatabase()
-    return { id: result.id, ...userData }
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO users (username, email, password, role)
+        VALUES (?, ?, ?, ?)
+      `)
+      stmt.bind([userData.username, userData.email, userData.password, userData.role || 'user'])
+      stmt.step()
+      stmt.free()
+
+      // 获取插入的ID
+      const idStmt = this.db.prepare('SELECT last_insert_rowid() as id')
+      let result = null
+      if (idStmt.step()) {
+        result = idStmt.getAsObject()
+      }
+      idStmt.free()
+
+      await this.saveDatabase()
+      return { id: result.id, ...userData }
+    } catch (error) {
+      console.error('创建用户失败:', error)
+      throw error
+    }
   }
 
   async updateUser(id, userData) {
@@ -374,16 +456,20 @@ class DatabaseService {
       UPDATE users SET ${fields.join(', ')}
       WHERE id = ?
     `)
-    stmt.run(values)
-    
+    stmt.bind(values)
+    stmt.step()
+    stmt.free()
+
     await this.saveDatabase()
     return this.getUserById(id)
   }
 
   async deleteUser(id) {
     const stmt = this.db.prepare('DELETE FROM users WHERE id = ?')
-    stmt.run([id])
-    
+    stmt.bind([id])
+    stmt.step()
+    stmt.free()
+
     await this.saveDatabase()
     return { success: true }
   }
@@ -519,48 +605,89 @@ class DatabaseService {
   }
 
   getStrainCount() {
-    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM strains')
-    const result = stmt.get()
-    return result.count
+    try {
+      const stmt = this.db.prepare('SELECT COUNT(*) as count FROM strains')
+      let result = null
+      if (stmt.step()) {
+        result = stmt.getAsObject()
+      }
+      stmt.free()
+      return result ? result.count : 0
+    } catch (error) {
+      console.error('获取菌株数量失败:', error)
+      return 0
+    }
   }
 
   // 基因组相关方法
   getAllGenomes() {
-    const stmt = this.db.prepare(`
-      SELECT g.*, s.strain_id, s.species
-      FROM genomes g
-      LEFT JOIN strains s ON g.strainId = s.id
-      ORDER BY g.createdAt DESC
-    `)
-    return stmt.all()
+    try {
+      const stmt = this.db.prepare(`
+        SELECT g.*, s.strain_id, s.species
+        FROM genomes g
+        LEFT JOIN strains s ON g.strainId = s.id
+        ORDER BY g.createdAt DESC
+      `)
+      const results = []
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
+    } catch (error) {
+      console.error('获取基因组列表失败:', error)
+      return []
+    }
   }
 
   getGenomeById(id) {
-    const stmt = this.db.prepare('SELECT * FROM genomes WHERE id = ?')
-    return stmt.get([id])
+    try {
+      const stmt = this.db.prepare('SELECT * FROM genomes WHERE id = ?')
+      stmt.bind([id])
+      let result = null
+      if (stmt.step()) {
+        result = stmt.getAsObject()
+      }
+      stmt.free()
+      return result
+    } catch (error) {
+      console.error('获取基因组详情失败:', error)
+      return null
+    }
   }
 
   async createGenome(genomeData) {
-    const stmt = this.db.prepare(`
-      INSERT INTO genomes (
-        filename, filepath, fileSize, fileHash, sequencingPlatform,
-        sequencingDate, assemblyMethod, strainId
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    
-    stmt.run([
-      genomeData.filename, genomeData.filepath, genomeData.fileSize,
-      genomeData.fileHash, genomeData.sequencingPlatform,
-      genomeData.sequencingDate, genomeData.assemblyMethod,
-      genomeData.strainId
-    ])
-    
-    // 获取插入的ID
-    const idStmt = this.db.prepare('SELECT last_insert_rowid() as id')
-    const result = idStmt.get()
-    
-    await this.saveDatabase()
-    return { id: result.id, ...genomeData }
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO genomes (
+          filename, filepath, fileSize, fileHash, sequencingPlatform,
+          sequencingDate, assemblyMethod, strainId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+
+      stmt.bind([
+        genomeData.filename, genomeData.filepath, genomeData.fileSize,
+        genomeData.fileHash, genomeData.sequencingPlatform,
+        genomeData.sequencingDate, genomeData.assemblyMethod,
+        genomeData.strainId
+      ])
+      stmt.step()
+      stmt.free()
+
+      // 获取插入的ID
+      const idStmt = this.db.prepare('SELECT last_insert_rowid() as id')
+      let result = null
+      if (idStmt.step()) {
+        result = idStmt.getAsObject()
+      }
+      idStmt.free()
+
+      await this.saveDatabase()
+      return { id: result.id, ...genomeData }
+    } catch (error) {
+      console.error('创建基因组失败:', error)
+      throw error
+    }
   }
 
   async updateGenome(id, genomeData) {
@@ -582,9 +709,18 @@ class DatabaseService {
   }
 
   getGenomeCount() {
-    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM genomes')
-    const result = stmt.get()
-    return result.count
+    try {
+      const stmt = this.db.prepare('SELECT COUNT(*) as count FROM genomes')
+      let result = null
+      if (stmt.step()) {
+        result = stmt.getAsObject()
+      }
+      stmt.free()
+      return result ? result.count : 0
+    } catch (error) {
+      console.error('获取基因组数量失败:', error)
+      return 0
+    }
   }
 
   // 分析任务相关方法
@@ -599,7 +735,12 @@ class DatabaseService {
         GROUP BY t.id
         ORDER BY t.createdAt DESC
       `)
-      return stmt.all()
+      const results = []
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
     } catch (error) {
       console.error('getAllTasks SQL error:', error)
       return []
@@ -607,23 +748,34 @@ class DatabaseService {
   }
 
   async createTask(taskData) {
-    const stmt = this.db.prepare(`
-      INSERT INTO analysis_tasks (name, type, parameters, createdBy)
-      VALUES (?, ?, ?, ?)
-    `)
-    
-    stmt.run([
-      taskData.name, taskData.type,
-      JSON.stringify(taskData.parameters),
-      taskData.createdBy
-    ])
-    
-    // 获取插入的ID
-    const idStmt = this.db.prepare('SELECT last_insert_rowid() as id')
-    const result = idStmt.get()
-    
-    await this.saveDatabase()
-    return { id: result.id, ...taskData }
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO analysis_tasks (name, type, parameters, createdBy)
+        VALUES (?, ?, ?, ?)
+      `)
+
+      stmt.bind([
+        taskData.name, taskData.type,
+        JSON.stringify(taskData.parameters),
+        taskData.createdBy
+      ])
+      stmt.step()
+      stmt.free()
+
+      // 获取插入的ID
+      const idStmt = this.db.prepare('SELECT last_insert_rowid() as id')
+      let result = null
+      if (idStmt.step()) {
+        result = idStmt.getAsObject()
+      }
+      idStmt.free()
+
+      await this.saveDatabase()
+      return { id: result.id, ...taskData }
+    } catch (error) {
+      console.error('创建任务失败:', error)
+      throw error
+    }
   }
 
   async updateTaskStatus(id, status, progress, results, errorMessage) {
@@ -640,13 +792,23 @@ class DatabaseService {
   }
 
   getTaskStats() {
-    const stmt = this.db.prepare(`
-      SELECT
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN status IN ('pending', 'running') THEN 1 ELSE 0 END) as pending
-      FROM analysis_tasks
-    `)
-    return stmt.get()
+    try {
+      const stmt = this.db.prepare(`
+        SELECT
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+          SUM(CASE WHEN status IN ('pending', 'running') THEN 1 ELSE 0 END) as pending
+        FROM analysis_tasks
+      `)
+      let result = null
+      if (stmt.step()) {
+        result = stmt.getAsObject()
+      }
+      stmt.free()
+      return result || { completed: 0, pending: 0 }
+    } catch (error) {
+      console.error('获取任务统计失败:', error)
+      return { completed: 0, pending: 0 }
+    }
   }
 
   // 系统配置相关方法
@@ -662,12 +824,26 @@ class DatabaseService {
     ]
 
     for (const config of defaultConfigs) {
-      const existing = this.db.prepare('SELECT * FROM system_config WHERE config_key = ?').get(config.config_key)
-      if (!existing) {
-        this.db.prepare(`
-          INSERT INTO system_config (config_key, config_value, config_type, description)
-          VALUES (?, ?, ?, ?)
-        `).run(config.config_key, config.config_value, config.config_type || 'string', config.description)
+      try {
+        const checkStmt = this.db.prepare('SELECT * FROM system_config WHERE config_key = ?')
+        checkStmt.bind([config.config_key])
+        let existing = null
+        if (checkStmt.step()) {
+          existing = checkStmt.getAsObject()
+        }
+        checkStmt.free()
+
+        if (!existing) {
+          const insertStmt = this.db.prepare(`
+            INSERT INTO system_config (config_key, config_value, config_type, description)
+            VALUES (?, ?, ?, ?)
+          `)
+          insertStmt.bind([config.config_key, config.config_value, config.config_type || 'string', config.description])
+          insertStmt.step()
+          insertStmt.free()
+        }
+      } catch (error) {
+        console.error('创建系统配置失败:', error)
       }
     }
   }
@@ -682,12 +858,26 @@ class DatabaseService {
     ]
 
     for (const species of defaultSpecies) {
-      const existing = this.db.prepare('SELECT * FROM species_config WHERE name = ?').get(species.name)
-      if (!existing) {
-        this.db.prepare(`
-          INSERT INTO species_config (name, scientific_name, description, sort_order)
-          VALUES (?, ?, ?, ?)
-        `).run(species.name, species.scientific_name, species.description, species.sort_order)
+      try {
+        const checkStmt = this.db.prepare('SELECT * FROM species_config WHERE name = ?')
+        checkStmt.bind([species.name])
+        let existing = null
+        if (checkStmt.step()) {
+          existing = checkStmt.getAsObject()
+        }
+        checkStmt.free()
+
+        if (!existing) {
+          const insertStmt = this.db.prepare(`
+            INSERT INTO species_config (name, scientific_name, description, sort_order)
+            VALUES (?, ?, ?, ?)
+          `)
+          insertStmt.bind([species.name, species.scientific_name, species.description, species.sort_order])
+          insertStmt.step()
+          insertStmt.free()
+        }
+      } catch (error) {
+        console.error('创建菌种配置失败:', error)
       }
     }
   }
@@ -702,12 +892,26 @@ class DatabaseService {
     ]
 
     for (const region of defaultRegions) {
-      const existing = this.db.prepare('SELECT * FROM regions_config WHERE name = ? AND level = ?').get(region.name, region.level)
-      if (!existing) {
-        this.db.prepare(`
-          INSERT INTO regions_config (name, code, level, sort_order)
-          VALUES (?, ?, ?, ?)
-        `).run(region.name, region.code, region.level, region.sort_order)
+      try {
+        const checkStmt = this.db.prepare('SELECT * FROM regions_config WHERE name = ? AND level = ?')
+        checkStmt.bind([region.name, region.level])
+        let existing = null
+        if (checkStmt.step()) {
+          existing = checkStmt.getAsObject()
+        }
+        checkStmt.free()
+
+        if (!existing) {
+          const insertStmt = this.db.prepare(`
+            INSERT INTO regions_config (name, code, level, sort_order)
+            VALUES (?, ?, ?, ?)
+          `)
+          insertStmt.bind([region.name, region.code, region.level, region.sort_order])
+          insertStmt.step()
+          insertStmt.free()
+        }
+      } catch (error) {
+        console.error('创建地区配置失败:', error)
       }
     }
   }
@@ -722,38 +926,95 @@ class DatabaseService {
     ]
 
     for (const source of defaultSources) {
-      const existing = this.db.prepare('SELECT * FROM sample_sources_config WHERE name = ?').get(source.name)
-      if (!existing) {
-        this.db.prepare(`
-          INSERT INTO sample_sources_config (name, category, description, sort_order)
-          VALUES (?, ?, ?, ?)
-        `).run(source.name, source.category, source.description, source.sort_order)
+      try {
+        const checkStmt = this.db.prepare('SELECT * FROM sample_sources_config WHERE name = ?')
+        checkStmt.bind([source.name])
+        let existing = null
+        if (checkStmt.step()) {
+          existing = checkStmt.getAsObject()
+        }
+        checkStmt.free()
+
+        if (!existing) {
+          const insertStmt = this.db.prepare(`
+            INSERT INTO sample_sources_config (name, category, description, sort_order)
+            VALUES (?, ?, ?, ?)
+          `)
+          insertStmt.bind([source.name, source.category, source.description, source.sort_order])
+          insertStmt.step()
+          insertStmt.free()
+        }
+      } catch (error) {
+        console.error('创建样本来源配置失败:', error)
       }
     }
   }
 
   // 获取系统配置
   getSystemConfig() {
-    const stmt = this.db.prepare('SELECT * FROM system_config ORDER BY config_key')
-    return stmt.all()
+    try {
+      const stmt = this.db.prepare('SELECT * FROM system_config ORDER BY config_key')
+      const results = []
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
+    } catch (error) {
+      console.error('获取系统配置失败:', error)
+      return []
+    }
   }
 
   // 获取菌种配置
   getSpeciesConfig() {
-    const stmt = this.db.prepare('SELECT * FROM species_config WHERE status = ? ORDER BY sort_order, name')
-    return stmt.all('active')
+    try {
+      const stmt = this.db.prepare('SELECT * FROM species_config WHERE status = ? ORDER BY sort_order, name')
+      stmt.bind(['active'])
+      const results = []
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
+    } catch (error) {
+      console.error('获取菌种配置失败:', error)
+      return []
+    }
   }
 
   // 获取地区配置
   getRegionsConfig() {
-    const stmt = this.db.prepare('SELECT * FROM regions_config WHERE status = ? ORDER BY sort_order, name')
-    return stmt.all('active')
+    try {
+      const stmt = this.db.prepare('SELECT * FROM regions_config WHERE status = ? ORDER BY sort_order, name')
+      stmt.bind(['active'])
+      const results = []
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
+    } catch (error) {
+      console.error('获取地区配置失败:', error)
+      return []
+    }
   }
 
   // 获取样本来源配置
   getSampleSourcesConfig() {
-    const stmt = this.db.prepare('SELECT * FROM sample_sources_config WHERE status = ? ORDER BY sort_order, name')
-    return stmt.all('active')
+    try {
+      const stmt = this.db.prepare('SELECT * FROM sample_sources_config WHERE status = ? ORDER BY sort_order, name')
+      stmt.bind(['active'])
+      const results = []
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
+    } catch (error) {
+      console.error('获取样本来源配置失败:', error)
+      return []
+    }
   }
 
   async close() {

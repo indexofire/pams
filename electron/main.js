@@ -235,8 +235,14 @@ function registerIpcHandlers() {
 
   // 认证相关
   ipcMain.handle('auth:login', async (event, username, password) => {
-    const userService = new UserService(dbService)
-    return await userService.login(username, password)
+    try {
+      console.log('收到登录请求:', { username, password: password ? '***' : 'undefined' })
+      const userService = new UserService(dbService)
+      return await userService.login(username, password)
+    } catch (error) {
+      console.error('登录处理失败:', error)
+      throw error
+    }
   })
 
   ipcMain.handle('auth:register', async (event, userData) => {

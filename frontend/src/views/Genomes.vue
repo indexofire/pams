@@ -453,7 +453,7 @@ export default {
     }
 
     // 文件变化处理
-    const handleFileChange = (file, fileList) => {
+    const handleFileChange = (file, uploadFileList) => {
       // 验证文件格式
       const allowedExtensions = ['.fasta', '.fa', '.fna', '.gz']
       const fileName = file.name.toLowerCase()
@@ -461,6 +461,11 @@ export default {
 
       if (!isValidFormat) {
         ElMessage.error(`不支持的文件格式: ${file.name}`)
+        // 从文件列表中移除无效文件
+        const index = uploadFileList.findIndex(f => f.uid === file.uid)
+        if (index > -1) {
+          uploadFileList.splice(index, 1)
+        }
         return false
       }
 
@@ -468,8 +473,16 @@ export default {
       const maxSize = 500 * 1024 * 1024
       if (file.size > maxSize) {
         ElMessage.error(`文件过大: ${file.name}，最大支持500MB`)
+        // 从文件列表中移除过大文件
+        const index = uploadFileList.findIndex(f => f.uid === file.uid)
+        if (index > -1) {
+          uploadFileList.splice(index, 1)
+        }
         return false
       }
+
+      // 更新fileList引用
+      fileList.value = uploadFileList
 
       // 添加自定义属性
       file.associatedStrain = null
@@ -482,8 +495,9 @@ export default {
     }
 
     // 文件移除处理
-    const handleFileRemove = (file, fileList) => {
-      // 文件移除时的处理逻辑
+    const handleFileRemove = (file, uploadFileList) => {
+      // 更新fileList引用
+      fileList.value = uploadFileList
     }
 
     // 上传前验证

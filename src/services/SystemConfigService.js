@@ -49,7 +49,9 @@ class SystemConfigService {
           SET name = ?, scientific_name = ?, description = ?, status = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `)
-        stmt.run(speciesData.name, speciesData.scientific_name, speciesData.description, speciesData.status, speciesData.id)
+        stmt.bind([speciesData.name, speciesData.scientific_name, speciesData.description, speciesData.status, speciesData.id])
+        stmt.step()
+        stmt.free()
         
         return { ...speciesData, updated_at: new Date().toISOString() }
       } else {
@@ -58,16 +60,26 @@ class SystemConfigService {
           INSERT INTO species_config (name, scientific_name, description, status, sort_order)
           VALUES (?, ?, ?, ?, ?)
         `)
-        const result = stmt.run(
-          speciesData.name, 
-          speciesData.scientific_name, 
-          speciesData.description, 
+        stmt.bind([
+          speciesData.name,
+          speciesData.scientific_name,
+          speciesData.description,
           speciesData.status || 'active',
           speciesData.sort_order || 999
-        )
-        
+        ])
+        stmt.step()
+        stmt.free()
+
+        // 获取插入的ID
+        const idStmt = this.db.db.prepare('SELECT last_insert_rowid() as id')
+        let result = null
+        if (idStmt.step()) {
+          result = idStmt.getAsObject()
+        }
+        idStmt.free()
+
         return {
-          id: result.lastInsertRowid,
+          id: result.id,
           ...speciesData,
           status: speciesData.status || 'active',
           sort_order: speciesData.sort_order || 999,
@@ -87,7 +99,9 @@ class SystemConfigService {
   async deleteSpecies(id) {
     try {
       const stmt = this.db.db.prepare('UPDATE species_config SET status = ? WHERE id = ?')
-      stmt.run('inactive', id)
+      stmt.bind(['inactive', id])
+      stmt.step()
+      stmt.free()
       return true
     } catch (error) {
       console.error('删除菌种配置失败:', error)
@@ -119,15 +133,17 @@ class SystemConfigService {
           SET name = ?, code = ?, level = ?, parent_id = ?, description = ?, status = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `)
-        stmt.run(
-          regionData.name, 
-          regionData.code, 
-          regionData.level, 
-          regionData.parent_id, 
-          regionData.description, 
-          regionData.status, 
+        stmt.bind([
+          regionData.name,
+          regionData.code,
+          regionData.level,
+          regionData.parent_id,
+          regionData.description,
+          regionData.status,
           regionData.id
-        )
+        ])
+        stmt.step()
+        stmt.free()
         
         return { ...regionData, updated_at: new Date().toISOString() }
       } else {
@@ -136,18 +152,28 @@ class SystemConfigService {
           INSERT INTO regions_config (name, code, level, parent_id, description, status, sort_order)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `)
-        const result = stmt.run(
-          regionData.name, 
-          regionData.code, 
-          regionData.level || 'city', 
-          regionData.parent_id, 
-          regionData.description, 
+        stmt.bind([
+          regionData.name,
+          regionData.code,
+          regionData.level || 'city',
+          regionData.parent_id,
+          regionData.description,
           regionData.status || 'active',
           regionData.sort_order || 999
-        )
-        
+        ])
+        stmt.step()
+        stmt.free()
+
+        // 获取插入的ID
+        const idStmt = this.db.db.prepare('SELECT last_insert_rowid() as id')
+        let result = null
+        if (idStmt.step()) {
+          result = idStmt.getAsObject()
+        }
+        idStmt.free()
+
         return {
-          id: result.lastInsertRowid,
+          id: result.id,
           ...regionData,
           level: regionData.level || 'city',
           status: regionData.status || 'active',
@@ -168,7 +194,9 @@ class SystemConfigService {
   async deleteRegion(id) {
     try {
       const stmt = this.db.db.prepare('UPDATE regions_config SET status = ? WHERE id = ?')
-      stmt.run('inactive', id)
+      stmt.bind(['inactive', id])
+      stmt.step()
+      stmt.free()
       return true
     } catch (error) {
       console.error('删除地区配置失败:', error)
@@ -200,7 +228,9 @@ class SystemConfigService {
           SET name = ?, category = ?, description = ?, status = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `)
-        stmt.run(sourceData.name, sourceData.category, sourceData.description, sourceData.status, sourceData.id)
+        stmt.bind([sourceData.name, sourceData.category, sourceData.description, sourceData.status, sourceData.id])
+        stmt.step()
+        stmt.free()
         
         return { ...sourceData, updated_at: new Date().toISOString() }
       } else {
@@ -209,16 +239,26 @@ class SystemConfigService {
           INSERT INTO sample_sources_config (name, category, description, status, sort_order)
           VALUES (?, ?, ?, ?, ?)
         `)
-        const result = stmt.run(
-          sourceData.name, 
-          sourceData.category, 
-          sourceData.description, 
+        stmt.bind([
+          sourceData.name,
+          sourceData.category,
+          sourceData.description,
           sourceData.status || 'active',
           sourceData.sort_order || 999
-        )
+        ])
+        stmt.step()
+        stmt.free()
+
+        // 获取插入的ID
+        const idStmt = this.db.db.prepare('SELECT last_insert_rowid() as id')
+        let result = null
+        if (idStmt.step()) {
+          result = idStmt.getAsObject()
+        }
+        idStmt.free()
         
         return {
-          id: result.lastInsertRowid,
+          id: result.id,
           ...sourceData,
           status: sourceData.status || 'active',
           sort_order: sourceData.sort_order || 999,
@@ -238,7 +278,9 @@ class SystemConfigService {
   async deleteSampleSource(id) {
     try {
       const stmt = this.db.db.prepare('UPDATE sample_sources_config SET status = ? WHERE id = ?')
-      stmt.run('inactive', id)
+      stmt.bind(['inactive', id])
+      stmt.step()
+      stmt.free()
       return true
     } catch (error) {
       console.error('删除样本来源配置失败:', error)
@@ -256,7 +298,9 @@ class SystemConfigService {
         SET config_value = ?, updated_at = CURRENT_TIMESTAMP
         WHERE config_key = ?
       `)
-      stmt.run(configValue, configKey)
+      stmt.bind([configValue, configKey])
+      stmt.step()
+      stmt.free()
       return true
     } catch (error) {
       console.error('更新系统配置失败:', error)

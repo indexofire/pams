@@ -21,7 +21,13 @@
               </el-button>
             </div>
 
-            <el-table :data="users" border>
+            <el-table
+              :data="users"
+              border
+              style="width: 100%"
+              :height="400"
+              :table-layout="'fixed'"
+            >
               <el-table-column prop="id" label="ID" width="80" />
               <el-table-column prop="username" label="用户名" />
               <el-table-column prop="role" label="角色" width="120">
@@ -62,7 +68,13 @@
               </el-button>
             </div>
 
-            <el-table :data="speciesOptions" border>
+            <el-table
+              :data="speciesOptions"
+              border
+              style="width: 100%"
+              :height="400"
+              :table-layout="'fixed'"
+            >
               <el-table-column prop="id" label="ID" width="80" />
               <el-table-column prop="name" label="菌种名称" />
               <el-table-column prop="scientific_name" label="学名" width="200">
@@ -114,9 +126,15 @@
               </el-button>
             </div>
 
-            <el-table :data="regionOptions" border>
+            <el-table
+              :data="regionOptions"
+              border
+              style="width: 100%"
+              :height="400"
+              :table-layout="'fixed'"
+            >
               <el-table-column prop="id" label="ID" width="80" />
-              <el-table-column prop="name" label="地区名称" />
+              <el-table-column prop="name" label="地区名称" min-width="150" />
               <el-table-column prop="code" label="地区代码" width="120" />
               <el-table-column prop="level" label="级别" width="100">
                 <template #default="scope">
@@ -165,7 +183,13 @@
               </el-button>
             </div>
 
-            <el-table :data="sourceOptions" border>
+            <el-table
+              :data="sourceOptions"
+              border
+              style="width: 100%"
+              :height="400"
+              :table-layout="'fixed'"
+            >
               <el-table-column prop="id" label="ID" width="80" />
               <el-table-column prop="name" label="来源名称" />
               <el-table-column prop="category" label="类别" width="120">
@@ -219,7 +243,13 @@
               </el-button>
             </div>
 
-            <el-table :data="experimentTypes" border>
+            <el-table
+              :data="experimentTypes"
+              border
+              style="width: 100%"
+              :height="400"
+              :table-layout="'fixed'"
+            >
               <el-table-column prop="id" label="ID" width="80" />
               <el-table-column prop="name" label="实验类型" />
               <el-table-column prop="description" label="描述" />
@@ -497,7 +527,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, onErrorCaptured } from 'vue'
+import { ref, reactive, onMounted, onErrorCaptured, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
 import { useStore } from 'vuex'
@@ -738,30 +768,54 @@ export default {
       speciesDialogVisible.value = true
     }
 
-    const saveSpecies = () => {
-      if (speciesForm.id) {
-        // 更新菌种
-        const index = speciesOptions.value.findIndex(s => s.id === speciesForm.id)
-        if (index !== -1) {
-          speciesOptions.value[index] = { ...speciesForm }
-        }
-        ElMessage.success('菌种更新成功')
-      } else {
-        // 添加菌种
-        const newSpecies = {
-          id: Date.now(),
-          name: speciesForm.name,
-          scientific_name: speciesForm.scientific_name,
-          description: speciesForm.description,
-          status: speciesForm.status
-        }
-        speciesOptions.value.push(newSpecies)
-        ElMessage.success('菌种添加成功')
-      }
+    const saveSpecies = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // 使用后端API保存菌种配置
+          const savedSpecies = await window.electronAPI.systemConfig.saveSpecies(speciesForm)
 
-      // 同步到store
-      syncSystemConfigToStore()
-      speciesDialogVisible.value = false
+          if (speciesForm.id) {
+            // 更新菌种
+            const index = speciesOptions.value.findIndex(s => s.id === speciesForm.id)
+            if (index !== -1) {
+              speciesOptions.value[index] = savedSpecies
+            }
+            ElMessage.success('菌种更新成功')
+          } else {
+            // 添加菌种
+            speciesOptions.value.push(savedSpecies)
+            ElMessage.success('菌种添加成功')
+          }
+        } else {
+          // 开发环境模拟保存
+          if (speciesForm.id) {
+            // 更新菌种
+            const index = speciesOptions.value.findIndex(s => s.id === speciesForm.id)
+            if (index !== -1) {
+              speciesOptions.value[index] = { ...speciesForm }
+            }
+            ElMessage.success('菌种更新成功')
+          } else {
+            // 添加菌种
+            const newSpecies = {
+              id: Date.now(),
+              name: speciesForm.name,
+              scientific_name: speciesForm.scientific_name,
+              description: speciesForm.description,
+              status: speciesForm.status
+            }
+            speciesOptions.value.push(newSpecies)
+            ElMessage.success('菌种添加成功')
+          }
+        }
+
+        // 同步到store
+        syncSystemConfigToStore()
+        speciesDialogVisible.value = false
+      } catch (error) {
+        console.error('保存菌种失败:', error)
+        ElMessage.error('保存菌种失败: ' + error.message)
+      }
     }
 
     const deleteSpecies = (species) => {
@@ -794,28 +848,52 @@ export default {
       regionDialogVisible.value = true
     }
 
-    const saveRegion = () => {
-      if (regionForm.id) {
-        // 更新地区
-        const index = regionOptions.value.findIndex(r => r.id === regionForm.id)
-        if (index !== -1) {
-          regionOptions.value[index] = { ...regionForm }
+    const saveRegion = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // 使用后端API保存地区配置
+          const savedRegion = await window.electronAPI.systemConfig.saveRegion(regionForm)
+
+          if (regionForm.id) {
+            // 更新地区
+            const index = regionOptions.value.findIndex(r => r.id === regionForm.id)
+            if (index !== -1) {
+              regionOptions.value[index] = savedRegion
+            }
+            ElMessage.success('地区更新成功')
+          } else {
+            // 添加地区
+            regionOptions.value.push(savedRegion)
+            ElMessage.success('地区添加成功')
+          }
+        } else {
+          // 开发环境模拟保存
+          if (regionForm.id) {
+            // 更新地区
+            const index = regionOptions.value.findIndex(r => r.id === regionForm.id)
+            if (index !== -1) {
+              regionOptions.value[index] = { ...regionForm }
+            }
+            ElMessage.success('地区更新成功')
+          } else {
+            // 添加地区
+            const newRegion = {
+              id: Date.now(),
+              name: regionForm.name,
+              code: regionForm.code,
+              level: regionForm.level,
+              status: regionForm.status
+            }
+            regionOptions.value.push(newRegion)
+            ElMessage.success('地区添加成功')
+          }
         }
-        ElMessage.success('地区更新成功')
-      } else {
-        // 添加地区
-        const newRegion = {
-          id: Date.now(),
-          name: regionForm.name,
-          code: regionForm.code,
-          level: regionForm.level,
-          status: regionForm.status
-        }
-        regionOptions.value.push(newRegion)
-        ElMessage.success('地区添加成功')
+        syncSystemConfigToStore()
+        regionDialogVisible.value = false
+      } catch (error) {
+        console.error('保存地区失败:', error)
+        ElMessage.error('保存地区失败: ' + error.message)
       }
-      syncSystemConfigToStore()
-      regionDialogVisible.value = false
     }
 
     const deleteRegion = (region) => {
@@ -848,28 +926,52 @@ export default {
       sourceDialogVisible.value = true
     }
 
-    const saveSource = () => {
-      if (sourceForm.id) {
-        // 更新样本来源
-        const index = sourceOptions.value.findIndex(s => s.id === sourceForm.id)
-        if (index !== -1) {
-          sourceOptions.value[index] = { ...sourceForm }
+    const saveSource = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // 使用后端API保存样本来源配置
+          const savedSource = await window.electronAPI.systemConfig.saveSampleSource(sourceForm)
+
+          if (sourceForm.id) {
+            // 更新样本来源
+            const index = sourceOptions.value.findIndex(s => s.id === sourceForm.id)
+            if (index !== -1) {
+              sourceOptions.value[index] = savedSource
+            }
+            ElMessage.success('样本来源更新成功')
+          } else {
+            // 添加样本来源
+            sourceOptions.value.push(savedSource)
+            ElMessage.success('样本来源添加成功')
+          }
+        } else {
+          // 开发环境模拟保存
+          if (sourceForm.id) {
+            // 更新样本来源
+            const index = sourceOptions.value.findIndex(s => s.id === sourceForm.id)
+            if (index !== -1) {
+              sourceOptions.value[index] = { ...sourceForm }
+            }
+            ElMessage.success('样本来源更新成功')
+          } else {
+            // 添加样本来源
+            const newSource = {
+              id: Date.now(),
+              name: sourceForm.name,
+              category: sourceForm.category,
+              description: sourceForm.description,
+              status: sourceForm.status
+            }
+            sourceOptions.value.push(newSource)
+            ElMessage.success('样本来源添加成功')
+          }
         }
-        ElMessage.success('样本来源更新成功')
-      } else {
-        // 添加样本来源
-        const newSource = {
-          id: Date.now(),
-          name: sourceForm.name,
-          category: sourceForm.category,
-          description: sourceForm.description,
-          status: sourceForm.status
-        }
-        sourceOptions.value.push(newSource)
-        ElMessage.success('样本来源添加成功')
+        syncSystemConfigToStore()
+        sourceDialogVisible.value = false
+      } catch (error) {
+        console.error('保存样本来源失败:', error)
+        ElMessage.error('保存样本来源失败: ' + error.message)
       }
-      syncSystemConfigToStore()
-      sourceDialogVisible.value = false
     }
 
     const deleteSource = (source) => {
@@ -1104,11 +1206,33 @@ export default {
 
     // 页面加载时获取用户列表
     onMounted(async () => {
+      // 处理ResizeObserver错误
+      const handleResizeObserverError = () => {
+        // 延迟执行，确保DOM已经渲染
+        nextTick(() => {
+          // 强制重新计算表格布局
+          const tables = document.querySelectorAll('.el-table')
+          tables.forEach(table => {
+            if (table.__vue__) {
+              table.__vue__.doLayout()
+            }
+          })
+        })
+      }
+
+      // 监听标签页切换
+      watch(activeTab, () => {
+        handleResizeObserverError()
+      })
+
       // 加载用户数据
       loadUsers()
 
       try {
-        // 加载系统配置
+        // 优先从后端加载配置数据
+        await loadConfigFromBackend()
+
+        // 加载系统配置到store
         await store.dispatch('fetchSystemConfig')
         // 从store加载配置，如果有数据则覆盖默认数据
         loadSystemConfigFromStore()
@@ -1129,6 +1253,28 @@ export default {
       }
       return true
     })
+
+    // 从后端加载配置数据
+    const loadConfigFromBackend = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // 加载菌种配置
+          const species = await window.electronAPI.systemConfig.getSpecies()
+          speciesOptions.value = species || []
+
+          // 加载地区配置
+          const regions = await window.electronAPI.systemConfig.getRegions()
+          regionOptions.value = regions || []
+
+          // 加载样本来源配置
+          const sources = await window.electronAPI.systemConfig.getSampleSources()
+          sourceOptions.value = sources || []
+        }
+      } catch (error) {
+        console.error('加载配置数据失败:', error)
+        ElMessage.error('加载配置数据失败')
+      }
+    }
 
     // 从store加载系统配置
     const loadSystemConfigFromStore = () => {
@@ -1272,6 +1418,8 @@ export default {
 
 .user-management,
 .species-management,
+.region-management,
+.source-management,
 .experiment-management {
   .el-table {
     margin-top: 20px;

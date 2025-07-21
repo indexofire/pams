@@ -3,15 +3,6 @@ import App from './App.vue'
 import router from './router'
 import store from './store'
 
-// 简单有效的ResizeObserver错误拦截
-const originalError = console.error
-console.error = (...args) => {
-  if (args[0] && String(args[0]).includes('ResizeObserver loop completed')) {
-    return
-  }
-  originalError.apply(console, args)
-}
-
 // Element Plus
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
@@ -38,6 +29,68 @@ import {
   ToolboxComponent,
   DataZoomComponent
 } from 'echarts/components'
+
+// 全面的ResizeObserver错误拦截
+const originalError = console.error
+console.error = (...args) => {
+  // 只拦截ResizeObserver相关错误，其他错误正常显示
+  const errorMessage = String(args[0] || '')
+  if (errorMessage.includes('ResizeObserver loop completed') ||
+      errorMessage.includes('ResizeObserver loop limit exceeded')) {
+    return // 静默忽略ResizeObserver错误
+  }
+  originalError.apply(console, args)
+}
+
+// 拦截全局错误事件
+window.addEventListener('error', (e) => {
+  if (e.message && (
+    e.message.includes('ResizeObserver loop completed') ||
+    e.message.includes('ResizeObserver loop limit exceeded')
+  )) {
+    e.stopImmediatePropagation()
+    e.preventDefault()
+    return false
+  }
+})
+
+// 拦截未处理的Promise错误
+window.addEventListener('unhandledrejection', (e) => {
+  if (e.reason && (
+    String(e.reason).includes('ResizeObserver loop completed') ||
+    String(e.reason).includes('ResizeObserver loop limit exceeded')
+  )) {
+    e.preventDefault()
+    return false
+  }
+})
+
+// 拦截webpack-dev-server的错误覆盖层
+if (process.env.NODE_ENV === 'development') {
+  const originalCreateElement = document.createElement
+  document.createElement = function (tagName) {
+    const element = originalCreateElement.call(this, tagName)
+    if (tagName === 'div' && element.id === 'webpack-dev-server-client-overlay') {
+      // 监听覆盖层内容变化
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList') {
+            const overlay = document.getElementById('webpack-dev-server-client-overlay')
+            if (overlay && overlay.textContent) {
+              const content = overlay.textContent
+              if (content.includes('ResizeObserver loop completed') ||
+                  content.includes('ResizeObserver loop limit exceeded')) {
+                overlay.style.display = 'none'
+              }
+            }
+          }
+        })
+      })
+      observer.observe(element, { childList: true, subtree: true })
+    }
+    return element
+  }
+}
 
 // 注册ECharts组件
 use([

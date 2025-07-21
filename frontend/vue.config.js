@@ -13,12 +13,10 @@ module.exports = defineConfig({
       overlay: {
         errors: (error) => {
           // 过滤掉ResizeObserver错误
-          const ignoreErrors = [
-            'ResizeObserver loop limit exceeded',
-            'ResizeObserver loop completed with undelivered notifications'
-          ]
-          return !ignoreErrors.some(ignoreError =>
-            error.message && error.message.includes(ignoreError)
+          const errorMessage = String(error.message || error || '')
+          return !(
+            errorMessage.includes('ResizeObserver loop completed') ||
+            errorMessage.includes('ResizeObserver loop limit exceeded')
           )
         },
         warnings: false

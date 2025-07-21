@@ -164,6 +164,7 @@ class UserService {
 
       let user = this.db.getUserByUsername(username)
       console.log('查询用户结果:', user)
+      console.log('用户密码字段:', user ? user.password : 'user is null')
 
       // 如果数据库中没有用户，创建默认管理员用户
       if (!user && username === 'admin') {
