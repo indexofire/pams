@@ -84,7 +84,14 @@ class GenomeService {
         gc_content: fileStats.gcContent,
         upload_date: new Date().toISOString(),
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        // 添加新的测序和组装信息字段
+        assembly_software: metadata.assemblySoftware || null,
+        assembly_version: metadata.assemblyVersion || null,
+        sequencing_platform: metadata.sequencingPlatform || null,
+        sequencing_mode: metadata.sequencingMode || null,
+        sequencing_depth: metadata.sequencingDepth || null,
+        n50_value: metadata.n50Value || null
       }
 
       // 保存到数据库

@@ -12,6 +12,9 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
+// 国际化
+import i18n from './i18n'
+
 // ECharts
 import ECharts from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -132,6 +135,7 @@ Object.keys(permissionDirectives).forEach(key => {
 app.use(store)
 app.use(router)
 app.use(ElementPlus)
+app.use(i18n)
 
 // 设置路由权限守卫
 createPermissionGuard(router)

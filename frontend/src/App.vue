@@ -8,7 +8,7 @@
       <el-aside width="200px" class="sidebar">
         <div class="logo">
           <h2>PAMS</h2>
-          <p>细菌基因组管理</p>
+          <p>{{ $t('login.title') }}</p>
         </div>
         <el-menu
           :default-active="$route.path"
@@ -20,11 +20,11 @@
         >
           <el-menu-item index="/dashboard">
             <el-icon><House /></el-icon>
-            <span>仪表板</span>
+            <span>{{ $t('nav.dashboard') }}</span>
           </el-menu-item>
           <el-menu-item index="/strains">
             <el-icon><Grid /></el-icon>
-            <span>菌株管理</span>
+            <span>{{ $t('nav.strains') }}</span>
           </el-menu-item>
           <el-menu-item index="/strain-analysis">
             <el-icon><TrendCharts /></el-icon>
@@ -32,17 +32,17 @@
           </el-menu-item>
           <el-menu-item index="/genomes">
             <el-icon><Document /></el-icon>
-            <span>基因组数据</span>
+            <span>{{ $t('nav.genomes') }}</span>
           </el-menu-item>
           <el-sub-menu index="analysis">
             <template #title>
               <el-icon><DataAnalysis /></el-icon>
-              <span>生信分析</span>
+              <span>{{ $t('nav.analysis') }}</span>
             </template>
             <el-menu-item index="/analysis/annotation">基因组注释</el-menu-item>
-            <el-menu-item index="/analysis/mlst">MLST分型</el-menu-item>
-            <el-menu-item index="/analysis/resistance">耐药基因</el-menu-item>
-            <el-menu-item index="/analysis/virulence">毒力基因</el-menu-item>
+            <el-menu-item index="/analysis/mlst">{{ $t('nav.mlst') }}</el-menu-item>
+            <el-menu-item index="/analysis/resistance">{{ $t('nav.resistance') }}</el-menu-item>
+            <el-menu-item index="/analysis/virulence">{{ $t('nav.virulence') }}</el-menu-item>
             <el-menu-item index="/analysis/phylogeny">系统发育</el-menu-item>
           </el-sub-menu>
           <el-menu-item index="/reports">
@@ -52,10 +52,10 @@
           <el-sub-menu index="admin" v-if="isAdmin">
             <template #title>
               <el-icon><Setting /></el-icon>
-              <span>系统管理</span>
+              <span>{{ $t('settings.title') }}</span>
             </template>
-            <el-menu-item index="/system-settings">系统设置</el-menu-item>
-            <el-menu-item index="/role-management">角色权限管理</el-menu-item>
+            <el-menu-item index="/system-settings">{{ $t('settings.title') }}</el-menu-item>
+            <el-menu-item index="/role-management">{{ $t('settings.permissionManagement') }}</el-menu-item>
             <el-menu-item index="/security-audit">安全审计</el-menu-item>
           </el-sub-menu>
         </el-menu>
@@ -77,6 +77,7 @@
               <el-badge :value="12" class="notification-badge">
                 <el-icon size="20"><Bell /></el-icon>
               </el-badge>
+              <LanguageSwitcher class="language-switcher" />
               <el-dropdown>
                 <span class="user-info">
                   <el-icon><User /></el-icon>
@@ -87,8 +88,8 @@
                 </span>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item @click="goToSettings">个人设置</el-dropdown-item>
-                    <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
+                    <el-dropdown-item @click="goToSettings">{{ $t('common.settings') }}</el-dropdown-item>
+                    <el-dropdown-item divided @click="handleLogout">{{ $t('nav.logout') }}</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -110,9 +111,13 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { ElMessage } from 'element-plus'
+import LanguageSwitcher from './components/LanguageSwitcher.vue'
 
 export default {
   name: 'App',
+  components: {
+    LanguageSwitcher
+  },
   setup () {
     const route = useRoute()
     const router = useRouter()
@@ -218,6 +223,10 @@ body {
 
       .notification-badge {
         cursor: pointer;
+      }
+
+      .language-switcher {
+        margin-right: 10px;
       }
 
       .user-info {

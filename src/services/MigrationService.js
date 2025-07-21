@@ -166,6 +166,68 @@ class MigrationService {
           // SQLite默认不启用外键约束，这里只是记录
           console.log('外键约束已在表创建时定义')
         }
+      },
+      {
+        version: '1.0.5',
+        name: 'add_genome_sequencing_info',
+        description: '为基因组表添加组装软件、测序平台等信息字段',
+        up: () => {
+          try {
+            // 添加组装软件名称字段
+            this.db.db.run('ALTER TABLE genomes ADD COLUMN assembly_software TEXT')
+          } catch (e) {
+            if (!e.message.includes('duplicate column name')) {
+              console.warn('添加assembly_software字段失败:', e.message)
+            }
+          }
+
+          try {
+            // 添加组装软件版本字段
+            this.db.db.run('ALTER TABLE genomes ADD COLUMN assembly_version TEXT')
+          } catch (e) {
+            if (!e.message.includes('duplicate column name')) {
+              console.warn('添加assembly_version字段失败:', e.message)
+            }
+          }
+
+          try {
+            // 添加测序平台字段
+            this.db.db.run('ALTER TABLE genomes ADD COLUMN sequencing_platform TEXT')
+          } catch (e) {
+            if (!e.message.includes('duplicate column name')) {
+              console.warn('添加sequencing_platform字段失败:', e.message)
+            }
+          }
+
+          try {
+            // 添加测序模式字段
+            this.db.db.run('ALTER TABLE genomes ADD COLUMN sequencing_mode TEXT')
+          } catch (e) {
+            if (!e.message.includes('duplicate column name')) {
+              console.warn('添加sequencing_mode字段失败:', e.message)
+            }
+          }
+
+          try {
+            // 添加测序深度字段
+            this.db.db.run('ALTER TABLE genomes ADD COLUMN sequencing_depth REAL')
+          } catch (e) {
+            if (!e.message.includes('duplicate column name')) {
+              console.warn('添加sequencing_depth字段失败:', e.message)
+            }
+          }
+
+          try {
+            // 添加N50值字段
+            this.db.db.run('ALTER TABLE genomes ADD COLUMN n50_value INTEGER')
+          } catch (e) {
+            if (!e.message.includes('duplicate column name')) {
+              console.warn('添加n50_value字段失败:', e.message)
+            }
+          }
+
+          console.log('基因组测序信息字段添加完成')
+        }
       }
     ]
 

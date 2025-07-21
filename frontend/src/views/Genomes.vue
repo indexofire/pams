@@ -101,6 +101,22 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
+          <el-table-column label="测序平台" width="120">
+            <template #default="scope">
+              <span>{{ scope.row.sequencingPlatform || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="组装软件" width="120">
+            <template #default="scope">
+              <span v-if="scope.row.assemblySoftware">
+                {{ scope.row.assemblySoftware }}
+                <span v-if="scope.row.assemblyVersion" class="version-text">
+                  ({{ scope.row.assemblyVersion }})
+                </span>
+              </span>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column label="质量" width="80">
             <template #default="scope">
               <el-tag
@@ -215,6 +231,90 @@
                 自动关联
               </el-button>
             </div>
+
+            <!-- 测序和组装信息 -->
+            <div class="sequencing-info-section">
+              <h5>测序和组装信息</h5>
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="测序平台">
+                    <el-select
+                      v-model="file.sequencingPlatform"
+                      placeholder="选择测序平台"
+                      clearable
+                      style="width: 100%"
+                    >
+                      <el-option label="Illumina" value="Illumina" />
+                      <el-option label="PacBio" value="PacBio" />
+                      <el-option label="Oxford Nanopore" value="Oxford Nanopore" />
+                      <el-option label="Ion Torrent" value="Ion Torrent" />
+                      <el-option label="BGI" value="BGI" />
+                      <el-option label="其他" value="Other" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="测序模式">
+                    <el-select
+                      v-model="file.sequencingMode"
+                      placeholder="选择测序模式"
+                      clearable
+                      style="width: 100%"
+                    >
+                      <el-option label="单端测序" value="Single-end" />
+                      <el-option label="双端测序" value="Paired-end" />
+                      <el-option label="长读长测序" value="Long-read" />
+                      <el-option label="混合测序" value="Hybrid" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="组装软件">
+                    <el-input
+                      v-model="file.assemblySoftware"
+                      placeholder="如: SPAdes, Canu, Flye"
+                      clearable
+                    />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="软件版本">
+                    <el-input
+                      v-model="file.assemblyVersion"
+                      placeholder="如: v3.15.4"
+                      clearable
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="测序深度">
+                    <el-input-number
+                      v-model="file.sequencingDepth"
+                      :min="0"
+                      :precision="1"
+                      placeholder="测序深度 (X)"
+                      style="width: 100%"
+                    />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="N50值">
+                    <el-input-number
+                      v-model="file.n50Value"
+                      :min="0"
+                      placeholder="N50值 (bp)"
+                      style="width: 100%"
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </div>
           </div>
         </div>
       </div>
@@ -255,6 +355,11 @@
               <el-descriptions-item label="N含量">{{ selectedGenome.analysis.summary.nPercentage }}%</el-descriptions-item>
               <el-descriptions-item label="Contigs数量">{{ selectedGenome.analysis.summary.contigs }}</el-descriptions-item>
               <el-descriptions-item label="N50值">{{ formatSize(selectedGenome.analysis.summary.n50) }}</el-descriptions-item>
+              <el-descriptions-item label="测序平台">{{ selectedGenome.sequencingPlatform || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="测序模式">{{ selectedGenome.sequencingMode || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="测序深度">{{ selectedGenome.sequencingDepth ? selectedGenome.sequencingDepth + 'X' : '-' }}</el-descriptions-item>
+              <el-descriptions-item label="组装软件">{{ selectedGenome.assemblySoftware || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="软件版本">{{ selectedGenome.assemblyVersion || '-' }}</el-descriptions-item>
             </el-descriptions>
           </el-tab-pane>
 
@@ -578,6 +683,14 @@ export default {
       file.associatedStrain = null
       file.uploadStatus = 'pending'
 
+      // 添加测序和组装信息字段
+      file.sequencingPlatform = null
+      file.sequencingMode = null
+      file.assemblySoftware = null
+      file.assemblyVersion = null
+      file.sequencingDepth = null
+      file.n50Value = null
+
       // 自动尝试关联菌株
       setTimeout(() => {
         autoAssociateStrain(file)
@@ -756,7 +869,14 @@ export default {
               status: 'uploaded',
               // 添加序列分析结果
               analysis: analysisResults,
-              qualityReport
+              qualityReport,
+              // 添加测序和组装信息
+              sequencingPlatform: file.sequencingPlatform,
+              sequencingMode: file.sequencingMode,
+              assemblySoftware: file.assemblySoftware,
+              assemblyVersion: file.assemblyVersion,
+              sequencingDepth: file.sequencingDepth,
+              n50Value: file.n50Value
             }
 
             if (window.electronAPI && window.electronAPI.genomes) {
@@ -1025,5 +1145,24 @@ export default {
 
 .association-controls .el-form-item {
   margin-bottom: 0;
+}
+
+.sequencing-info-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+
+  h5 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-weight: 600;
+  }
+}
+
+.version-text {
+  color: #6c757d;
+  font-size: 12px;
 }
 </style>

@@ -1,0 +1,262 @@
+export default {
+  // 通用
+  common: {
+    confirm: '确定',
+    cancel: '取消',
+    save: '保存',
+    delete: '删除',
+    edit: '编辑',
+    add: '添加',
+    create: '创建',
+    update: '更新',
+    search: '搜索',
+    reset: '重置',
+    submit: '提交',
+    back: '返回',
+    next: '下一步',
+    previous: '上一步',
+    loading: '加载中...',
+    success: '成功',
+    error: '错误',
+    warning: '警告',
+    info: '信息',
+    yes: '是',
+    no: '否',
+    all: '全部',
+    none: '无',
+    select: '选择',
+    upload: '上传',
+    download: '下载',
+    export: '导出',
+    import: '导入',
+    refresh: '刷新',
+    close: '关闭',
+    view: '查看',
+    details: '详情',
+    settings: '设置',
+    help: '帮助',
+    about: '关于'
+  },
+
+  // 导航菜单
+  nav: {
+    dashboard: '仪表板',
+    strains: '菌株管理',
+    genomes: '基因组管理',
+    analysis: '生物信息学分析',
+    mlst: 'MLST分析',
+    serotyping: '血清分型',
+    virulence: '毒力基因',
+    resistance: '耐药基因',
+    settings: '系统设置',
+    logout: '退出登录'
+  },
+
+  // 登录页面
+  login: {
+    title: 'PAMS 病原微生物分析管理系统',
+    username: '用户名',
+    password: '密码',
+    login: '登录',
+    loginSuccess: '登录成功',
+    loginFailed: '登录失败',
+    usernameRequired: '请输入用户名',
+    passwordRequired: '请输入密码',
+    invalidCredentials: '用户名或密码错误'
+  },
+
+  // 菌株管理
+  strains: {
+    title: '菌株管理',
+    strainId: '菌株编号',
+    strainName: '菌株名称',
+    species: '菌种',
+    region: '地区',
+    sampleSource: '样本来源',
+    experimentType: '实验类型',
+    isolationDate: '分离日期',
+    description: '描述',
+    createStrain: '新建菌株',
+    editStrain: '编辑菌株',
+    deleteStrain: '删除菌株',
+    batchDelete: '批量删除',
+    strainIdRequired: '请输入菌株编号',
+    strainNameRequired: '请输入菌株名称',
+    speciesRequired: '请选择菌种',
+    regionRequired: '请选择地区',
+    sampleSourceRequired: '请选择样本来源',
+    createSuccess: '菌株创建成功',
+    updateSuccess: '菌株更新成功',
+    deleteSuccess: '菌株删除成功',
+    deleteFailed: '菌株删除失败',
+    strainIdExists: '菌株编号已存在',
+    confirmDelete: '确定要删除选中的菌株吗？',
+    confirmBatchDelete: '确定要删除选中的 {count} 个菌株吗？'
+  },
+
+  // 基因组管理
+  genomes: {
+    title: '基因组管理',
+    fileName: '文件名',
+    fileSize: '文件大小',
+    uploadDate: '上传日期',
+    associatedStrain: '关联菌株',
+    sequenceCount: '序列数',
+    totalLength: '总长度',
+    gcContent: 'GC含量',
+    n50: 'N50',
+    sequencingPlatform: '测序平台',
+    sequencingMode: '测序模式',
+    assemblySoftware: '组装软件',
+    assemblyVersion: '软件版本',
+    sequencingDepth: '测序深度',
+    n50Value: 'N50值',
+    uploadGenome: '上传基因组',
+    selectFiles: '选择文件',
+    startUpload: '开始上传',
+    uploadSuccess: '上传成功',
+    uploadFailed: '上传失败',
+    analysisResults: '分析结果',
+    basicInfo: '基本信息',
+    qualityReport: '质量报告',
+    sequencingInfo: '测序和组装信息',
+    autoAssociate: '自动关联',
+    selectStrain: '选择关联的菌株',
+    selectPlatform: '选择测序平台',
+    selectMode: '选择测序模式',
+    softwarePlaceholder: '如: SPAdes, Canu, Flye',
+    versionPlaceholder: '如: v3.15.4',
+    depthUnit: '测序深度 (X)',
+    n50Unit: 'N50值 (bp)'
+  },
+
+  // 生物信息学分析
+  analysis: {
+    title: '生物信息学分析',
+    mlst: {
+      title: 'MLST分析',
+      description: '多位点序列分型分析',
+      selectGenomes: '选择基因组',
+      analysisOptions: '分析选项',
+      startAnalysis: '开始分析',
+      results: '分析结果',
+      sequenceType: '序列类型',
+      scheme: '分型方案',
+      alleles: '等位基因',
+      confidence: '置信度'
+    },
+    serotyping: {
+      title: '血清分型分析',
+      description: '血清型预测分析',
+      serotype: '血清型',
+      antigens: '抗原',
+      method: '分析方法'
+    },
+    virulence: {
+      title: '毒力基因检测',
+      description: '毒力基因识别和注释',
+      geneName: '基因名称',
+      geneFamily: '基因家族',
+      identity: '同源性',
+      coverage: '覆盖度'
+    },
+    resistance: {
+      title: '耐药基因检测',
+      description: '耐药基因识别',
+      resistanceClass: '耐药类别',
+      antibiotic: '抗生素',
+      mechanism: '耐药机制'
+    }
+  },
+
+  // 系统设置
+  settings: {
+    title: '系统设置',
+    experimentSettings: '实验相关设置',
+    systemSettings: '系统相关设置',
+    speciesManagement: '菌种管理',
+    regionManagement: '地区管理',
+    sampleSourceManagement: '样本来源管理',
+    experimentTypeManagement: '实验类型管理',
+    databaseManagement: '数据库管理',
+    permissionManagement: '权限管理',
+    roleManagement: '角色管理',
+    permissionList: '权限列表',
+    userRoles: '用户角色',
+    createRole: '创建角色',
+    editRole: '编辑角色',
+    roleName: '角色名称',
+    roleIdentifier: '角色标识',
+    roleDescription: '角色描述',
+    permissionSettings: '权限设置',
+    systemRole: '系统角色',
+    userCount: '用户数',
+    permissionCount: '权限数',
+    healthCheck: '健康检查',
+    optimizeDatabase: '优化数据库',
+    migrationHistory: '迁移历史',
+    databaseStatus: '数据库状态',
+    tableIntegrity: '表完整性',
+    indexStatus: '索引状态',
+    databaseSize: '数据库大小'
+  },
+
+  // 表单验证
+  validation: {
+    required: '此字段为必填项',
+    minLength: '最少输入 {min} 个字符',
+    maxLength: '最多输入 {max} 个字符',
+    email: '请输入有效的邮箱地址',
+    phone: '请输入有效的手机号码',
+    url: '请输入有效的URL地址',
+    number: '请输入有效的数字',
+    integer: '请输入有效的整数',
+    positive: '请输入正数',
+    range: '请输入 {min} 到 {max} 之间的数值'
+  },
+
+  // 消息提示
+  messages: {
+    saveSuccess: '保存成功',
+    saveFailed: '保存失败',
+    deleteSuccess: '删除成功',
+    deleteFailed: '删除失败',
+    updateSuccess: '更新成功',
+    updateFailed: '更新失败',
+    createSuccess: '创建成功',
+    createFailed: '创建失败',
+    uploadSuccess: '上传成功',
+    uploadFailed: '上传失败',
+    loadFailed: '加载失败',
+    networkError: '网络错误',
+    serverError: '服务器错误',
+    permissionDenied: '权限不足',
+    operationSuccess: '操作成功',
+    operationFailed: '操作失败',
+    confirmOperation: '确定要执行此操作吗？',
+    unsavedChanges: '有未保存的更改，确定要离开吗？'
+  },
+
+  // 分页
+  pagination: {
+    total: '共 {total} 条',
+    page: '第 {current} 页',
+    pageSize: '每页 {size} 条',
+    goto: '跳至',
+    prev: '上一页',
+    next: '下一页'
+  },
+
+  // 日期时间
+  datetime: {
+    today: '今天',
+    yesterday: '昨天',
+    tomorrow: '明天',
+    thisWeek: '本周',
+    lastWeek: '上周',
+    thisMonth: '本月',
+    lastMonth: '上月',
+    thisYear: '今年',
+    lastYear: '去年'
+  }
+}

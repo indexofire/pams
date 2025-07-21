@@ -709,15 +709,31 @@ class DatabaseService {
       const stmt = this.db.prepare(`
         INSERT INTO genomes (
           filename, filepath, fileSize, fileHash, sequencingPlatform,
-          sequencingDate, assemblyMethod, strainId
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          sequencingDate, assemblyMethod, strainId, totalLength, contigCount,
+          n50, gcContent, coverage, assembly_software, assembly_version,
+          sequencing_mode, sequencing_depth, n50_value
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
 
       stmt.bind([
-        genomeData.filename, genomeData.filepath, genomeData.fileSize,
-        genomeData.fileHash, genomeData.sequencingPlatform,
-        genomeData.sequencingDate, genomeData.assemblyMethod,
-        genomeData.strainId
+        genomeData.filename || genomeData.file_name,
+        genomeData.filepath || genomeData.file_path,
+        genomeData.fileSize || genomeData.file_size,
+        genomeData.fileHash || genomeData.file_hash,
+        genomeData.sequencingPlatform || genomeData.sequencing_platform,
+        genomeData.sequencingDate || genomeData.upload_date,
+        genomeData.assemblyMethod || genomeData.assembly_software,
+        genomeData.strainId || genomeData.strain_id,
+        genomeData.totalLength || genomeData.total_length,
+        genomeData.contigCount || genomeData.sequence_count,
+        genomeData.n50,
+        genomeData.gcContent || genomeData.gc_content,
+        genomeData.coverage,
+        genomeData.assembly_software,
+        genomeData.assembly_version,
+        genomeData.sequencing_mode,
+        genomeData.sequencing_depth,
+        genomeData.n50_value
       ])
       stmt.step()
       stmt.free()

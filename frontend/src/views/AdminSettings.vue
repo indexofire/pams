@@ -381,8 +381,11 @@
                       </el-tag>
                     </template>
                   </el-table-column>
-                  <el-table-column label="操作" width="200">
+                  <el-table-column label="操作" width="250">
                     <template #default="scope">
+                      <el-button size="small" @click="editRole(scope.row)">
+                        编辑
+                      </el-button>
                       <el-button size="small" @click="editRolePermissions(scope.row)">
                         权限设置
                       </el-button>
@@ -613,6 +616,145 @@
         <el-button type="primary" @click="saveExperimentType">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 创建角色对话框 -->
+    <el-dialog
+      v-model="createRoleDialogVisible"
+      title="创建角色"
+      width="500px"
+      @close="resetCreateRoleForm"
+    >
+      <el-form
+        ref="createRoleFormRef"
+        :model="createRoleForm"
+        :rules="createRoleRules"
+        label-width="100px"
+      >
+        <el-form-item label="角色名称" prop="display_name">
+          <el-input
+            v-model="createRoleForm.display_name"
+            placeholder="请输入角色显示名称"
+          />
+        </el-form-item>
+        <el-form-item label="角色标识" prop="name">
+          <el-input
+            v-model="createRoleForm.name"
+            placeholder="请输入角色标识（英文）"
+          />
+        </el-form-item>
+        <el-form-item label="角色描述" prop="description">
+          <el-input
+            v-model="createRoleForm.description"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入角色描述"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="createRoleDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleCreateRole" :loading="createRoleLoading">
+            确定
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑角色对话框 -->
+    <el-dialog
+      v-model="editRoleDialogVisible"
+      title="编辑角色"
+      width="500px"
+      @close="resetEditRoleForm"
+    >
+      <el-form
+        ref="editRoleFormRef"
+        :model="editRoleForm"
+        :rules="editRoleRules"
+        label-width="100px"
+      >
+        <el-form-item label="角色名称" prop="display_name">
+          <el-input
+            v-model="editRoleForm.display_name"
+            placeholder="请输入角色显示名称"
+          />
+        </el-form-item>
+        <el-form-item label="角色标识" prop="name">
+          <el-input
+            v-model="editRoleForm.name"
+            placeholder="请输入角色标识（英文）"
+            :disabled="editRoleForm.is_system"
+          />
+          <div v-if="editRoleForm.is_system" style="font-size: 12px; color: #999; margin-top: 4px;">
+            系统角色的标识不能修改
+          </div>
+        </el-form-item>
+        <el-form-item label="角色描述" prop="description">
+          <el-input
+            v-model="editRoleForm.description"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入角色描述"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="editRoleDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleEditRole" :loading="editRoleLoading">
+            确定
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑角色权限对话框 -->
+    <el-dialog
+      v-model="editRolePermissionsDialogVisible"
+      title="编辑角色权限"
+      width="800px"
+      @close="resetEditRolePermissionsForm"
+    >
+      <div v-if="currentEditingRole">
+        <h4>角色：{{ currentEditingRole.display_name }}</h4>
+        <el-divider />
+
+        <div class="permissions-tree">
+          <div v-for="module in groupedPermissionsForEdit" :key="module.name" class="permission-module">
+            <div class="module-header">
+              <el-checkbox
+                :model-value="isModuleAllSelected(module.name)"
+                :indeterminate="isModuleIndeterminate(module.name)"
+                @change="handleModuleSelectAll(module.name, $event)"
+              >
+                {{ getModuleDisplayName(module.name) }}
+              </el-checkbox>
+            </div>
+            <div class="module-permissions">
+              <el-checkbox-group v-model="selectedPermissions">
+                <el-checkbox
+                  v-for="permission in module.permissions"
+                  :key="permission.id"
+                  :label="permission.id"
+                  class="permission-item"
+                >
+                  {{ permission.display_name }}
+                </el-checkbox>
+              </el-checkbox-group>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="editRolePermissionsDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSaveRolePermissions" :loading="savePermissionsLoading">
+            保存
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -738,6 +880,63 @@ export default {
       return Object.keys(grouped).flatMap(module =>
         grouped[module].map(perm => ({ ...perm, module }))
       )
+    })
+
+    // 创建角色相关
+    const createRoleDialogVisible = ref(false)
+    const createRoleLoading = ref(false)
+    const createRoleForm = reactive({
+      name: '',
+      display_name: '',
+      description: ''
+    })
+    const createRoleRules = {
+      display_name: [
+        { required: true, message: '请输入角色名称', trigger: 'blur' }
+      ],
+      name: [
+        { required: true, message: '请输入角色标识', trigger: 'blur' },
+        { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: '角色标识只能包含字母、数字和下划线，且以字母开头', trigger: 'blur' }
+      ]
+    }
+
+    // 编辑角色相关
+    const editRoleDialogVisible = ref(false)
+    const editRoleLoading = ref(false)
+    const editRoleForm = reactive({
+      id: null,
+      name: '',
+      display_name: '',
+      description: '',
+      is_system: false
+    })
+    const editRoleRules = {
+      display_name: [
+        { required: true, message: '请输入角色名称', trigger: 'blur' }
+      ],
+      name: [
+        { required: true, message: '请输入角色标识', trigger: 'blur' },
+        { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: '角色标识只能包含字母、数字和下划线，且以字母开头', trigger: 'blur' }
+      ]
+    }
+
+    // 编辑角色权限相关
+    const editRolePermissionsDialogVisible = ref(false)
+    const savePermissionsLoading = ref(false)
+    const currentEditingRole = ref(null)
+    const selectedPermissions = ref([])
+    const groupedPermissionsForEdit = computed(() => {
+      const grouped = {}
+      permissions.value.forEach(perm => {
+        if (!grouped[perm.module]) {
+          grouped[perm.module] = {
+            name: perm.module,
+            permissions: []
+          }
+        }
+        grouped[perm.module].permissions.push(perm)
+      })
+      return Object.values(grouped)
     })
 
     // 系统配置
@@ -1702,11 +1901,178 @@ export default {
     }
 
     const showCreateRoleDialog = () => {
-      ElMessage.info('创建角色功能开发中...')
+      createRoleDialogVisible.value = true
     }
 
-    const editRolePermissions = (role) => {
-      ElMessage.info(`编辑角色 ${role.display_name} 的权限功能开发中...`)
+    const resetCreateRoleForm = () => {
+      createRoleForm.name = ''
+      createRoleForm.display_name = ''
+      createRoleForm.description = ''
+    }
+
+    const handleCreateRole = async () => {
+      try {
+        createRoleLoading.value = true
+
+        // 这里应该调用后端API创建角色
+        if (window.electronAPI && window.electronAPI.permissions) {
+          // 实际的API调用
+          ElMessage.info('创建角色API开发中...')
+        } else {
+          // 浏览器环境模拟
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          ElMessage.success('角色创建成功')
+          createRoleDialogVisible.value = false
+          resetCreateRoleForm()
+          await loadRoles()
+        }
+      } catch (error) {
+        console.error('创建角色失败:', error)
+        ElMessage.error('创建角色失败')
+      } finally {
+        createRoleLoading.value = false
+      }
+    }
+
+    const editRole = (role) => {
+      editRoleForm.id = role.id
+      editRoleForm.name = role.name
+      editRoleForm.display_name = role.display_name
+      editRoleForm.description = role.description || ''
+      editRoleForm.is_system = role.is_system
+      editRoleDialogVisible.value = true
+    }
+
+    const resetEditRoleForm = () => {
+      editRoleForm.id = null
+      editRoleForm.name = ''
+      editRoleForm.display_name = ''
+      editRoleForm.description = ''
+      editRoleForm.is_system = false
+    }
+
+    const handleEditRole = async () => {
+      try {
+        editRoleLoading.value = true
+
+        if (window.electronAPI && window.electronAPI.permissions) {
+          // 实际的API调用
+          ElMessage.info('编辑角色API开发中...')
+        } else {
+          // 浏览器环境模拟
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          ElMessage.success('角色编辑成功')
+          editRoleDialogVisible.value = false
+          resetEditRoleForm()
+          await loadRoles()
+        }
+      } catch (error) {
+        console.error('编辑角色失败:', error)
+        ElMessage.error('编辑角色失败')
+      } finally {
+        editRoleLoading.value = false
+      }
+    }
+
+    const editRolePermissions = async (role) => {
+      try {
+        currentEditingRole.value = role
+
+        // 加载角色当前的权限
+        if (window.electronAPI && window.electronAPI.permissions) {
+          const rolePermissions = await window.electronAPI.permissions.getRolePermissions(role.id)
+          selectedPermissions.value = rolePermissions.map(p => p.id)
+        } else {
+          // 浏览器环境模拟
+          selectedPermissions.value = [1, 3, 5] // 模拟已选择的权限ID
+        }
+
+        editRolePermissionsDialogVisible.value = true
+      } catch (error) {
+        console.error('加载角色权限失败:', error)
+        ElMessage.error('加载角色权限失败')
+      }
+    }
+
+    const resetEditRolePermissionsForm = () => {
+      currentEditingRole.value = null
+      selectedPermissions.value = []
+    }
+
+    const handleSaveRolePermissions = async () => {
+      try {
+        savePermissionsLoading.value = true
+
+        if (window.electronAPI && window.electronAPI.permissions) {
+          // 实际的API调用
+          ElMessage.info('保存角色权限API开发中...')
+        } else {
+          // 浏览器环境模拟
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          ElMessage.success('角色权限保存成功')
+          editRolePermissionsDialogVisible.value = false
+          resetEditRolePermissionsForm()
+          await loadRoles()
+        }
+      } catch (error) {
+        console.error('保存角色权限失败:', error)
+        ElMessage.error('保存角色权限失败')
+      } finally {
+        savePermissionsLoading.value = false
+      }
+    }
+
+    // 权限模块相关方法
+    const getModuleDisplayName = (moduleName) => {
+      const moduleNames = {
+        'users': '用户管理',
+        'strains': '菌株管理',
+        'genomes': '基因组管理',
+        'analysis': '生物信息学分析',
+        'settings': '系统设置',
+        'audit': '审计日志',
+        'database': '数据库管理'
+      }
+      return moduleNames[moduleName] || moduleName
+    }
+
+    const isModuleAllSelected = (moduleName) => {
+      const modulePermissions = groupedPermissionsForEdit.value.find(m => m.name === moduleName)
+      if (!modulePermissions) return false
+
+      const modulePermissionIds = modulePermissions.permissions.map(p => p.id)
+      return modulePermissionIds.every(id => selectedPermissions.value.includes(id))
+    }
+
+    const isModuleIndeterminate = (moduleName) => {
+      const modulePermissions = groupedPermissionsForEdit.value.find(m => m.name === moduleName)
+      if (!modulePermissions) return false
+
+      const modulePermissionIds = modulePermissions.permissions.map(p => p.id)
+      const selectedCount = modulePermissionIds.filter(id => selectedPermissions.value.includes(id)).length
+
+      return selectedCount > 0 && selectedCount < modulePermissionIds.length
+    }
+
+    const handleModuleSelectAll = (moduleName, checked) => {
+      const modulePermissions = groupedPermissionsForEdit.value.find(m => m.name === moduleName)
+      if (!modulePermissions) return
+
+      const modulePermissionIds = modulePermissions.permissions.map(p => p.id)
+
+      if (checked) {
+        // 添加模块所有权限
+        modulePermissionIds.forEach(id => {
+          if (!selectedPermissions.value.includes(id)) {
+            selectedPermissions.value.push(id)
+          }
+        })
+      } else {
+        // 移除模块所有权限
+        selectedPermissions.value = selectedPermissions.value.filter(id =>
+          !modulePermissionIds.includes(id)
+        )
+      }
     }
 
     const deleteRole = async (role) => {
@@ -1846,6 +2212,33 @@ export default {
       showCreateRoleDialog,
       editRolePermissions,
       deleteRole,
+      // 创建角色
+      createRoleDialogVisible,
+      createRoleLoading,
+      createRoleForm,
+      createRoleRules,
+      resetCreateRoleForm,
+      handleCreateRole,
+      // 编辑角色
+      editRole,
+      editRoleDialogVisible,
+      editRoleLoading,
+      editRoleForm,
+      editRoleRules,
+      resetEditRoleForm,
+      handleEditRole,
+      // 编辑角色权限
+      editRolePermissionsDialogVisible,
+      savePermissionsLoading,
+      currentEditingRole,
+      selectedPermissions,
+      groupedPermissionsForEdit,
+      resetEditRolePermissionsForm,
+      handleSaveRolePermissions,
+      getModuleDisplayName,
+      isModuleAllSelected,
+      isModuleIndeterminate,
+      handleModuleSelectAll,
       getLevelText
     }
   }
@@ -1991,6 +2384,37 @@ export default {
   .el-tabs--card {
     .el-tabs__header {
       margin-bottom: 20px;
+    }
+  }
+}
+
+.permissions-tree {
+  .permission-module {
+    margin-bottom: 20px;
+    border: 1px solid #e4e7ed;
+    border-radius: 6px;
+
+    .module-header {
+      padding: 12px 16px;
+      background: #f5f7fa;
+      border-bottom: 1px solid #e4e7ed;
+      font-weight: 600;
+      color: #303133;
+    }
+
+    .module-permissions {
+      padding: 16px;
+
+      .el-checkbox-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+      }
+
+      .permission-item {
+        margin-right: 0;
+        margin-bottom: 0;
+      }
     }
   }
 }
