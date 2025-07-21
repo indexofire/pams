@@ -811,7 +811,20 @@ export default {
     })
 
     const canManageRoles = computed(() => {
-      return hasPermission('users.manage_roles') || isAdmin.value
+      const hasManageRoles = hasPermission('users.manage_roles')
+      const isAdminUser = isAdmin.value
+      const result = hasManageRoles || isAdminUser
+
+      console.log('🔍 [AdminSettings] 权限检查详情:')
+      console.log('  - users.manage_roles权限:', hasManageRoles)
+      console.log('  - 是否管理员:', isAdminUser)
+      console.log('  - 最终结果:', result)
+      console.log('  - 当前用户:', store.getters['auth/user'])
+      console.log('  - 权限列表:', store.getters['permission/userPermissions'])
+      console.log('  - 用户角色:', store.getters['permission/userRole'])
+      console.log('  - permission store state:', store.state.permission)
+
+      return result
     })
 
     const canManageSettings = computed(() => {

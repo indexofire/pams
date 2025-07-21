@@ -51,8 +51,10 @@
             size="large"
             style="width: 100%"
           >
-            <el-option label="普通用户" value="user" />
-            <el-option label="高级用户" value="advanced" />
+            <el-option label="查看者" value="viewer" />
+            <el-option label="技术员" value="technician" />
+            <el-option label="分析师" value="analyst" />
+            <el-option label="实验室管理员" value="lab_manager" />
           </el-select>
         </el-form-item>
 
@@ -95,7 +97,7 @@ export default {
       username: '',
       password: '',
       confirmPassword: '',
-      role: 'user'
+      role: 'viewer'
     })
 
     const validatePassword = (rule, value, callback) => {

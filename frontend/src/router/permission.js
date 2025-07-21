@@ -204,9 +204,11 @@ export function createPermissionGuard (router) {
   router.beforeEach(async (to, from, next) => {
     // 确保权限数据已加载
     const userPermissions = store.getters['permission/userPermissions']
+    const userRole = store.getters['permission/userRole']
     const isAuthenticated = store.getters['auth/isAuthenticated']
 
-    if (isAuthenticated && userPermissions.length === 0) {
+    // 如果已认证但权限数据为空或角色为空，重新加载权限
+    if (isAuthenticated && (userPermissions.length === 0 || !userRole)) {
       try {
         await store.dispatch('permission/loadUserPermissions')
       } catch (error) {

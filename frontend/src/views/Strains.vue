@@ -1782,8 +1782,12 @@ export default {
     })
 
     // 权限控制
-    const canUpload = computed(() => store.getters['auth/canUpload'])
-    const isAdmin = computed(() => store.getters['auth/isAdmin'])
+    const canUpload = computed(() => {
+      return store.getters['permission/hasPermission']('strains.create') ||
+             store.getters['permission/hasPermission']('strains.edit') ||
+             store.getters['permission/isAdmin']
+    })
+    const isAdmin = computed(() => store.getters['permission/isAdmin'])
 
     return {
       loading,

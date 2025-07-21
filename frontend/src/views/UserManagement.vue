@@ -37,9 +37,11 @@
               clearable
             >
               <el-option label="全部" value="" />
-              <el-option label="管理员" value="admin" />
-              <el-option label="高级用户" value="advanced" />
-              <el-option label="普通用户" value="user" />
+              <el-option label="系统管理员" value="admin" />
+              <el-option label="实验室管理员" value="lab_manager" />
+              <el-option label="分析师" value="analyst" />
+              <el-option label="技术员" value="technician" />
+              <el-option label="查看者" value="viewer" />
             </el-select>
           </el-form-item>
           <el-form-item>
@@ -160,9 +162,11 @@
             placeholder="请选择角色"
             style="width: 100%"
           >
-            <el-option label="管理员" value="admin" />
-            <el-option label="高级用户" value="advanced" />
-            <el-option label="普通用户" value="user" />
+            <el-option label="系统管理员" value="admin" />
+            <el-option label="实验室管理员" value="lab_manager" />
+            <el-option label="分析师" value="analyst" />
+            <el-option label="技术员" value="technician" />
+            <el-option label="查看者" value="viewer" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态" prop="status">
@@ -361,6 +365,11 @@ export default {
     const getRoleTagType = (role) => {
       const typeMap = {
         admin: 'danger',
+        lab_manager: 'warning',
+        analyst: 'primary',
+        technician: 'success',
+        viewer: 'info',
+        // 兼容旧角色
         advanced: 'warning',
         user: 'info'
       }
@@ -369,7 +378,12 @@ export default {
 
     const getRoleText = (role) => {
       const textMap = {
-        admin: '管理员',
+        admin: '系统管理员',
+        lab_manager: '实验室管理员',
+        analyst: '分析师',
+        technician: '技术员',
+        viewer: '查看者',
+        // 兼容旧角色
         advanced: '高级用户',
         user: '普通用户'
       }

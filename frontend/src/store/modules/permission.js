@@ -45,9 +45,10 @@ const mutations = {
 
 const actions = {
   // 加载用户权限
-  async loadUserPermissions ({ commit, rootState }) {
+  async loadUserPermissions ({ commit, state, rootState }) {
     try {
-      const currentUser = rootState.user.currentUser
+      const currentUser = rootState.auth.user
+
       if (!currentUser) {
         commit('CLEAR_PERMISSIONS')
         return
@@ -62,11 +63,13 @@ const actions = {
         commit('SET_USER_ROLE', currentUser.role)
         commit('SET_ACCESSIBLE_MENUS', menus)
       } else {
-        // 浏览器环境 - 模拟权限数据
-        const mockPermissions = getMockPermissions(currentUser.role)
+        // 浏览器环境 - 使用用户已有的权限数据
+        const userPermissions = Array.isArray(currentUser.permissions)
+          ? [...currentUser.permissions]
+          : []
         const mockMenus = getMockMenus(currentUser.role)
 
-        commit('SET_PERMISSIONS', mockPermissions)
+        commit('SET_PERMISSIONS', userPermissions)
         commit('SET_USER_ROLE', currentUser.role)
         commit('SET_ACCESSIBLE_MENUS', mockMenus)
       }

@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
-import store from '../store'
+// store 导入已移至 permission.js 中统一管理
 
 const routes = [
   {
@@ -122,22 +122,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
-  const isAuthenticated = store.getters['auth/isAuthenticated']
-  const userRole = store.getters['auth/userRole']
-
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    // 需要登录的页面，但用户未登录
-    next('/login')
-  } else if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
-    // 已登录用户访问登录或注册页面，重定向到仪表板
-    next('/dashboard')
-  } else if (to.meta.requiresRole && userRole !== to.meta.requiresRole) {
-    // 需要特定角色的页面，但用户角色不匹配
-    next('/dashboard')
-  } else {
-    next()
-  }
-})
+// 路由守卫已移至 permission.js 中统一管理
+// router.beforeEach 在 main.js 中通过 createPermissionGuard 设置
 
 export default router

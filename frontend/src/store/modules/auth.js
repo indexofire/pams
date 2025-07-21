@@ -43,7 +43,8 @@ const actions = {
 
       commit('SET_USER', user)
       commit('SET_TOKEN', user.token)
-      commit('SET_PERMISSIONS', user.permissions || [])
+      // 不在这里设置权限，让permission store来管理
+      // commit('SET_PERMISSIONS', user.permissions || [])
 
       // 加载用户权限
       await this.dispatch('permission/loadUserPermissions')
@@ -118,7 +119,11 @@ const actions = {
         const user = JSON.parse(savedUser)
         commit('SET_USER', user)
         commit('SET_TOKEN', savedToken)
-        commit('SET_PERMISSIONS', user.permissions || [])
+        // 不在这里设置权限，让permission store来管理
+        // commit('SET_PERMISSIONS', user.permissions || [])
+
+        // 加载用户权限
+        await this.dispatch('permission/loadUserPermissions')
         return true
       }
 
@@ -205,14 +210,14 @@ const actions = {
 const getters = {
   isAuthenticated: state => state.isAuthenticated,
   user: state => state.user,
-  userRole: state => state.user?.role || 'user',
+  userRole: state => state.user?.role || 'viewer',
   permissions: state => state.permissions,
   hasPermission: (state) => (permission) => {
     return state.permissions.includes(permission)
   },
   isAdmin: state => state.user?.role === 'admin',
-  isAdvanced: state => state.user?.role === 'advanced' || state.user?.role === 'admin',
-  canUpload: state => state.user?.role === 'advanced' || state.user?.role === 'admin'
+  isAdvanced: state => state.user?.role === 'lab_manager' || state.user?.role === 'admin',
+  canUpload: state => state.user?.role === 'lab_manager' || state.user?.role === 'admin'
 }
 
 // 模拟登录函数（开发阶段使用）
@@ -223,35 +228,61 @@ async function simulateLogin (username, password) {
   // 从localStorage获取注册用户
   const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]')
 
-  // 默认用户数据
+  // 默认用户数据 - 使用与后端相同的权限系统
   const defaultUsers = [
     {
       id: 1,
       username: 'admin',
       password: 'admin123',
       role: 'admin',
-      permissions: ['read', 'write', 'delete', 'admin']
+      permissions: [
+        'users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles',
+        'strains.view', 'strains.create', 'strains.edit', 'strains.delete', 'strains.import', 'strains.export',
+        'genomes.view', 'genomes.upload', 'genomes.download', 'genomes.delete', 'genomes.analyze',
+        'analysis.mlst', 'analysis.resistance', 'analysis.virulence', 'analysis.serotyping',
+        'analysis.view_results', 'analysis.export_results',
+        'settings.view', 'settings.edit', 'settings.species_manage', 'settings.region_manage', 'settings.source_manage',
+        'system.backup', 'system.restore', 'system.logs', 'system.maintenance',
+        'reports.view', 'reports.generate', 'reports.export'
+      ]
     },
     {
       id: 2,
       username: 'advanced',
       password: 'advanced123',
-      role: 'advanced',
-      permissions: ['read', 'write']
+      role: 'lab_manager',
+      permissions: [
+        'users.view', 'users.create', 'users.edit',
+        'strains.view', 'strains.create', 'strains.edit', 'strains.delete', 'strains.import', 'strains.export',
+        'genomes.view', 'genomes.upload', 'genomes.download', 'genomes.delete', 'genomes.analyze',
+        'analysis.mlst', 'analysis.resistance', 'analysis.virulence', 'analysis.serotyping',
+        'analysis.view_results', 'analysis.export_results',
+        'settings.view', 'settings.species_manage', 'settings.region_manage', 'settings.source_manage',
+        'reports.view', 'reports.generate', 'reports.export'
+      ]
     },
     {
       id: 3,
       username: 'user',
       password: 'user123',
-      role: 'user',
-      permissions: ['read']
+      role: 'viewer',
+      permissions: [
+        'strains.view',
+        'genomes.view',
+        'analysis.view_results',
+        'settings.view',
+        'reports.view'
+      ]
     }
   ]
 
-  // 合并默认用户和注册用户
-  const allUsers = [...defaultUsers, ...registeredUsers]
+  // 首先检查默认用户，然后检查注册用户（确保默认用户优先级更高）
+  let user = defaultUsers.find(u => u.username === username && u.password === password)
 
-  const user = allUsers.find(u => u.username === username && u.password === password)
+  if (!user) {
+    // 如果默认用户中没有找到，再从注册用户中查找
+    user = registeredUsers.find(u => u.username === username && u.password === password)
+  }
 
   if (!user) {
     throw new Error('用户名或密码错误')
@@ -283,13 +314,57 @@ async function simulateRegister (username, password, role) {
     throw new Error('用户名已存在')
   }
 
-  // 创建新用户
+  // 创建新用户 - 使用与后端相同的权限系统
+  const rolePermissions = {
+    admin: [
+      'users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage_roles',
+      'strains.view', 'strains.create', 'strains.edit', 'strains.delete', 'strains.import', 'strains.export',
+      'genomes.view', 'genomes.upload', 'genomes.download', 'genomes.delete', 'genomes.analyze',
+      'analysis.mlst', 'analysis.resistance', 'analysis.virulence', 'analysis.serotyping',
+      'analysis.view_results', 'analysis.export_results',
+      'settings.view', 'settings.edit', 'settings.species_manage', 'settings.region_manage', 'settings.source_manage',
+      'system.backup', 'system.restore', 'system.logs', 'system.maintenance',
+      'reports.view', 'reports.generate', 'reports.export'
+    ],
+    lab_manager: [
+      'users.view', 'users.create', 'users.edit',
+      'strains.view', 'strains.create', 'strains.edit', 'strains.delete', 'strains.import', 'strains.export',
+      'genomes.view', 'genomes.upload', 'genomes.download', 'genomes.delete', 'genomes.analyze',
+      'analysis.mlst', 'analysis.resistance', 'analysis.virulence', 'analysis.serotyping',
+      'analysis.view_results', 'analysis.export_results',
+      'settings.view', 'settings.species_manage', 'settings.region_manage', 'settings.source_manage',
+      'reports.view', 'reports.generate', 'reports.export'
+    ],
+    analyst: [
+      'strains.view', 'strains.create', 'strains.edit',
+      'genomes.view', 'genomes.upload', 'genomes.download', 'genomes.analyze',
+      'analysis.mlst', 'analysis.resistance', 'analysis.virulence', 'analysis.serotyping',
+      'analysis.view_results', 'analysis.export_results',
+      'settings.view',
+      'reports.view', 'reports.generate', 'reports.export'
+    ],
+    technician: [
+      'strains.view', 'strains.create', 'strains.edit',
+      'genomes.view', 'genomes.upload',
+      'analysis.view_results',
+      'settings.view',
+      'reports.view'
+    ],
+    viewer: [
+      'strains.view',
+      'genomes.view',
+      'analysis.view_results',
+      'settings.view',
+      'reports.view'
+    ]
+  }
+
   const newUser = {
     id: Date.now(),
     username,
     password,
     role,
-    permissions: role === 'admin' ? ['read', 'write', 'delete', 'admin'] : role === 'advanced' ? ['read', 'write'] : ['read']
+    permissions: rolePermissions[role] || rolePermissions.viewer
   }
 
   // 将新用户添加到注册用户列表

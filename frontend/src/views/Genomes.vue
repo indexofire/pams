@@ -21,7 +21,7 @@
         </el-button>
 
         <!-- 浏览器环境显示存储使用情况 -->
-        <div v-if="!window.electronAPI && storageUsage" class="storage-info">
+        <div v-if="!isElectronEnv && storageUsage" class="storage-info">
           <el-tag type="info" size="small">
             存储使用: {{ storageUsage.percentage }}% ({{ formatSize(storageUsage.used) }} / {{ formatSize(storageUsage.available) }})
           </el-tag>
@@ -1027,7 +1027,9 @@ export default {
       analysisDialogVisible,
       selectedGenome,
       activeAnalysisTab,
-      exportAnalysisReport
+      exportAnalysisReport,
+      // 环境检测
+      isElectronEnv: !!(window.electronAPI && window.electronAPI.genomes)
     }
   }
 }
