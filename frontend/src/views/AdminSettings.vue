@@ -362,10 +362,21 @@
               <el-tab-pane label="角色管理" name="roles">
                 <div class="roles-header">
                   <h4>角色管理</h4>
-                  <el-button type="primary" @click="showCreateRoleDialog">
+                  <el-button
+                    v-if="canManageRoles"
+                    type="primary"
+                    @click="showCreateRoleDialog"
+                  >
                     <el-icon><Plus /></el-icon>
                     新建角色
                   </el-button>
+                  <el-alert
+                    v-else
+                    title="您没有管理角色的权限"
+                    type="warning"
+                    :closable="false"
+                    style="margin-left: auto; width: auto;"
+                  />
                 </div>
 
                 <el-table :data="roles" border>
@@ -383,13 +394,22 @@
                   </el-table-column>
                   <el-table-column label="操作" width="250">
                     <template #default="scope">
-                      <el-button size="small" @click="editRole(scope.row)">
+                      <el-button
+                        v-if="canManageRoles"
+                        size="small"
+                        @click="editRole(scope.row)"
+                      >
                         编辑
                       </el-button>
-                      <el-button size="small" @click="editRolePermissions(scope.row)">
+                      <el-button
+                        v-if="canManageRoles"
+                        size="small"
+                        @click="editRolePermissions(scope.row)"
+                      >
                         权限设置
                       </el-button>
                       <el-button
+                        v-if="canManageRoles"
                         size="small"
                         type="danger"
                         @click="deleteRole(scope.row)"
@@ -397,6 +417,9 @@
                       >
                         删除
                       </el-button>
+                      <span v-if="!canManageRoles" class="no-permission-text">
+                        无权限操作
+                      </span>
                     </template>
                   </el-table-column>
                 </el-table>
@@ -777,6 +800,23 @@ export default {
   setup () {
     const store = useStore()
     const activeTab = ref('species')
+
+    // 权限检查
+    const hasPermission = (permission) => {
+      return store.getters['permission/hasPermission'](permission)
+    }
+
+    const isAdmin = computed(() => {
+      return store.getters['permission/isAdmin']
+    })
+
+    const canManageRoles = computed(() => {
+      return hasPermission('users.manage_roles') || isAdmin.value
+    })
+
+    const canManageSettings = computed(() => {
+      return hasPermission('settings.edit') || isAdmin.value
+    })
 
     // 菌种相关
     const speciesOptions = ref([])
@@ -2151,6 +2191,12 @@ export default {
     })
 
     return {
+      // 权限检查
+      hasPermission,
+      isAdmin,
+      canManageRoles,
+      canManageSettings,
+      // 其他数据
       activeTab,
       speciesOptions,
       speciesDialogVisible,
@@ -2439,5 +2485,11 @@ export default {
       }
     }
   }
+}
+
+.no-permission-text {
+  color: #999;
+  font-size: 12px;
+  font-style: italic;
 }
 </style>

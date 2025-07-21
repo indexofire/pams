@@ -59,16 +59,42 @@ class MigrationService {
   }
 
   /**
+   * 获取已执行的迁移版本列表
+   */
+  getExecutedMigrations() {
+    try {
+      const stmt = this.db.db.prepare(`
+        SELECT version FROM migrations
+        ORDER BY executed_at ASC
+      `)
+
+      const executedVersions = []
+      while (stmt.step()) {
+        const row = stmt.getAsObject()
+        executedVersions.push(row.version)
+      }
+      stmt.free()
+
+      return executedVersions
+    } catch (error) {
+      console.error('获取已执行迁移失败:', error)
+      return []
+    }
+  }
+
+  /**
    * 执行数据库迁移
    */
   async runMigrations() {
     try {
       const currentVersion = this.getCurrentVersion()
       console.log(`当前数据库版本: ${currentVersion}`)
-      
+
       const migrations = this.getMigrations()
-      const pendingMigrations = migrations.filter(migration => 
-        this.compareVersions(migration.version, currentVersion) > 0
+      const executedMigrations = this.getExecutedMigrations()
+
+      const pendingMigrations = migrations.filter(migration =>
+        !executedMigrations.includes(migration.version)
       )
 
       if (pendingMigrations.length === 0) {
@@ -250,12 +276,14 @@ class MigrationService {
         
         // 记录迁移
         const stmt = this.db.db.prepare(`
-          INSERT INTO migrations (version, name, checksum)
-          VALUES (?, ?, ?)
+          INSERT OR REPLACE INTO migrations (version, name, checksum, executed_at)
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
         `)
-        
+
         const checksum = this.calculateChecksum(migration)
-        stmt.run(migration.version, migration.name, checksum)
+        stmt.bind([migration.version, migration.name, checksum])
+        stmt.step()
+        stmt.free()
         
         // 提交事务
         this.db.db.run('COMMIT')

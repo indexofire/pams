@@ -216,8 +216,6 @@ class UserService {
       const sanitizedUsername = usernameValidation.sanitized
 
       let user = this.db.getUserByUsername(sanitizedUsername)
-      console.log('查询用户结果:', user)
-      console.log('用户密码字段:', user ? user.password : 'user is null')
 
       // 检查账户是否被锁定
       if (user && this.isAccountLocked(user)) {
@@ -227,7 +225,6 @@ class UserService {
 
       // 如果数据库中没有用户，创建默认管理员用户
       if (!user && sanitizedUsername === 'admin') {
-        console.log('创建默认管理员用户')
         const hashedPassword = await bcrypt.hash('admin123', 10)
         const adminUser = {
           username: 'admin',
@@ -240,9 +237,7 @@ class UserService {
 
         try {
           const userId = await this.db.createUser(adminUser)
-          console.log('创建用户ID:', userId)
           user = this.db.getUserByUsername(username) // 重新查询用户
-          console.log('重新查询用户结果:', user)
         } catch (createError) {
           console.error('创建默认用户失败:', createError)
           throw new Error('系统初始化失败')

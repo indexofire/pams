@@ -354,19 +354,7 @@ class DatabaseService {
 
         // 保存数据库
         await this.saveDatabase()
-      } else {
-        console.log('管理员用户已存在，密码正常')
       }
-
-      // 验证用户是否正确创建
-      const verifyStmt = this.db.prepare('SELECT id, username, password FROM users WHERE username = ?')
-      verifyStmt.bind(['admin'])
-      let verifyUser = null
-      if (verifyStmt.step()) {
-        verifyUser = verifyStmt.getAsObject()
-      }
-      verifyStmt.free()
-      console.log('验证管理员用户:', verifyUser ? { id: verifyUser.id, username: verifyUser.username, hasPassword: !!verifyUser.password } : 'null')
     } catch (error) {
       console.error('创建默认数据失败:', error)
     }
