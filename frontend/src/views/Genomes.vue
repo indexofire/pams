@@ -19,6 +19,16 @@
           <el-icon><Refresh /></el-icon>
           同步数据
         </el-button>
+
+        <!-- 浏览器环境显示存储使用情况 -->
+        <div v-if="!window.electronAPI && storageUsage" class="storage-info">
+          <el-tag type="info" size="small">
+            存储使用: {{ storageUsage.percentage }}% ({{ formatSize(storageUsage.used) }} / {{ formatSize(storageUsage.available) }})
+          </el-tag>
+          <el-button v-if="storageUsage.percentage > 80" size="small" type="warning" @click="clearBrowserStorage">
+            清理存储
+          </el-button>
+        </div>
       </div>
 
       <div class="filter-section">
@@ -302,6 +312,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Upload, Download, Refresh, UploadFilled, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { analyzeFastaSequence, validateFastaFormat, formatAnalysisResults, generateQualityReport } from '@/utils/genomeAnalysis'
+import browserStorage from '@/utils/browserStorage'
 // import { useStore } from 'vuex' // 暂时不使用，但保留以备将来使用
 
 export default {
@@ -327,6 +338,9 @@ export default {
     const uploadAction = '#' // 不使用自动上传
     const acceptedFormats = '.fasta,.fa,.fna,.gz'
 
+    // 存储使用情况
+    const storageUsage = ref(null)
+
     // 分析对话框相关数据
     const analysisDialogVisible = ref(false)
     const selectedGenome = ref(null)
@@ -347,26 +361,37 @@ export default {
     const loadGenomes = async () => {
       loading.value = true
       try {
-        // TODO: 实现从后端加载基因组数据的逻辑
-        // const response = await api.getGenomes(pagination, filterForm)
-        // genomes.value = response.data
-        // pagination.total = response.total
-
-        // 临时模拟数据
-        genomes.value = [
-          {
-            id: 1,
-            name: 'E.coli-001-genome',
-            species: 'E.coli',
-            data_type: 'complete',
-            genome_size: '4.6 Mb',
-            gc_content: '50.8%',
-            upload_date: '2023-01-15'
+        if (window.electronAPI && window.electronAPI.genomes) {
+          // 使用Electron API加载基因组数据
+          const allGenomes = await window.electronAPI.genomes.getAll()
+          genomes.value = allGenomes || []
+          pagination.total = genomes.value.length
+        } else {
+          // 浏览器环境：使用IndexedDB存储
+          try {
+            const allGenomes = await browserStorage.getAllGenomes()
+            genomes.value = allGenomes || []
+            pagination.total = genomes.value.length
+          } catch (error) {
+            console.warn('从IndexedDB加载基因组数据失败，使用模拟数据:', error)
+            // 如果IndexedDB失败，使用模拟数据
+            genomes.value = [
+              {
+                id: 1,
+                name: 'E.coli-001-genome',
+                species: 'E.coli',
+                data_type: 'complete',
+                genome_size: '4.6 Mb',
+                gc_content: '50.8%',
+                upload_date: '2023-01-15'
+              }
+            ]
+            pagination.total = 1
           }
-        ]
-        pagination.total = 1
+        }
       } catch (error) {
         console.error('加载基因组数据失败:', error)
+        ElMessage.error('加载基因组数据失败')
       } finally {
         loading.value = false
       }
@@ -416,9 +441,34 @@ export default {
       console.log('下载基因组:', genome)
     }
 
-    const deleteGenome = (genome) => {
-      // TODO: 实现删除基因组的逻辑
-      console.log('删除基因组:', genome)
+    const deleteGenome = async (genome) => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除基因组 "${genome.name}" 吗？此操作不可撤销。`,
+          '确认删除',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        if (window.electronAPI && window.electronAPI.genomes) {
+          // 使用Electron API删除
+          await window.electronAPI.genomes.delete(genome.id)
+        } else {
+          // 浏览器环境：使用IndexedDB删除
+          await browserStorage.deleteGenome(genome.id)
+        }
+
+        ElMessage.success('基因组删除成功')
+        await loadGenomes() // 重新加载列表
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除基因组失败:', error)
+          ElMessage.error('删除基因组失败')
+        }
+      }
     }
 
     const handleSizeChange = (size) => {
@@ -449,6 +499,46 @@ export default {
       } catch (error) {
         console.error('加载菌株列表失败:', error)
         ElMessage.error('加载菌株列表失败')
+      }
+    }
+
+    // 加载存储使用情况
+    const loadStorageUsage = async () => {
+      if (!window.electronAPI) {
+        try {
+          const usage = await browserStorage.getStorageUsage()
+          storageUsage.value = usage
+        } catch (error) {
+          console.warn('获取存储使用情况失败:', error)
+        }
+      }
+    }
+
+    // 清理浏览器存储
+    const clearBrowserStorage = async () => {
+      try {
+        await ElMessageBox.confirm(
+          '确定要清理所有浏览器存储的数据吗？这将删除所有基因组、菌株和分析结果数据。',
+          '确认清理',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        await browserStorage.clearStorage()
+        ElMessage.success('存储清理成功')
+
+        // 重新加载数据
+        await loadGenomes()
+        await loadAvailableStrains()
+        await loadStorageUsage()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('清理存储失败:', error)
+          ElMessage.error('清理存储失败')
+        }
       }
     }
 
@@ -673,11 +763,13 @@ export default {
               // 使用Electron API保存
               await window.electronAPI.genomes.create(genomeData)
             } else {
-              // 开发环境保存到localStorage
-              const savedGenomes = localStorage.getItem('pams_genomes')
-              const genomes = savedGenomes ? JSON.parse(savedGenomes) : []
-              genomes.push(genomeData)
-              localStorage.setItem('pams_genomes', JSON.stringify(genomes))
+              // 浏览器环境：使用IndexedDB存储
+              try {
+                await browserStorage.saveGenome(genomeData)
+              } catch (error) {
+                console.error('保存到IndexedDB失败:', error)
+                throw new Error('保存基因组数据失败: ' + error.message)
+              }
             }
 
             resolve()
@@ -767,6 +859,8 @@ export default {
 
     onMounted(() => {
       loadGenomes()
+      loadAvailableStrains()
+      loadStorageUsage()
     })
 
     return {
@@ -806,6 +900,9 @@ export default {
       formatDate,
       getQualityTagType,
       getQualityLabel,
+      // 存储相关
+      storageUsage,
+      clearBrowserStorage,
       // 分析对话框相关
       analysisDialogVisible,
       selectedGenome,
@@ -844,10 +941,19 @@ export default {
 
 .toolbar {
   margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .toolbar .el-button {
   margin-right: 10px;
+}
+
+.storage-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .filter-section {

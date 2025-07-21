@@ -7,7 +7,11 @@
 
     <div class="content-area">
       <div class="toolbar">
-        <el-button type="primary" @click="addUser">
+        <el-button
+          v-permission="'users.create'"
+          type="primary"
+          @click="addUser"
+        >
           <el-icon><Plus /></el-icon>
           添加用户
         </el-button>
@@ -79,12 +83,14 @@
           <el-table-column label="操作" width="200">
             <template #default="scope">
               <el-button
+                v-permission="'users.edit'"
                 size="small"
                 @click="editUser(scope.row)"
               >
                 编辑
               </el-button>
               <el-button
+                v-permission="'users.edit'"
                 size="small"
                 :type="scope.row.status === 'active' ? 'warning' : 'success'"
                 @click="toggleUserStatus(scope.row)"
@@ -92,6 +98,7 @@
                 {{ scope.row.status === 'active' ? '禁用' : '启用' }}
               </el-button>
               <el-button
+                v-permission="'users.delete'"
                 size="small"
                 type="danger"
                 @click="deleteUser(scope.row)"

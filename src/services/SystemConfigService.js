@@ -38,6 +38,18 @@ class SystemConfigService {
   }
 
   /**
+   * 获取菌种列表（简化方法）
+   */
+  async getSpecies() {
+    try {
+      return this.db.getSpeciesConfig()
+    } catch (error) {
+      console.error('获取菌种列表失败:', error)
+      throw new Error('获取菌种列表失败')
+    }
+  }
+
+  /**
    * 保存菌种配置
    */
   async saveSpecies(speciesData) {
@@ -299,12 +311,105 @@ class SystemConfigService {
   }
 
   /**
+   * 获取实验类型配置
+   */
+  async getExperimentTypesConfig() {
+    try {
+      return this.db.getExperimentTypesConfig()
+    } catch (error) {
+      console.error('获取实验类型配置失败:', error)
+      throw new Error('获取实验类型配置失败')
+    }
+  }
+
+  /**
+   * 保存实验类型配置
+   */
+  async saveExperimentType(typeData) {
+    try {
+      if (typeData.id) {
+        // 更新现有实验类型
+        const stmt = this.db.db.prepare(`
+          UPDATE experiment_types_config
+          SET name = ?, code = ?, description = ?, category = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `)
+        stmt.bind([
+          typeData.name,
+          typeData.code,
+          typeData.description,
+          typeData.category,
+          typeData.status,
+          typeData.id
+        ])
+        stmt.step()
+        stmt.free()
+
+        return { ...typeData, updated_at: new Date().toISOString() }
+      } else {
+        // 创建新实验类型
+        const stmt = this.db.db.prepare(`
+          INSERT INTO experiment_types_config (name, code, description, category, status, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `)
+        stmt.bind([
+          typeData.name,
+          typeData.code,
+          typeData.description,
+          typeData.category || 'analysis',
+          typeData.status || 'active',
+          typeData.sort_order || 999
+        ])
+        stmt.step()
+        stmt.free()
+
+        // 获取插入的ID
+        const idStmt = this.db.db.prepare('SELECT last_insert_rowid() as id')
+        let result = null
+        if (idStmt.step()) {
+          result = idStmt.getAsObject()
+        }
+        idStmt.free()
+
+        return {
+          id: result.id,
+          ...typeData,
+          category: typeData.category || 'analysis',
+          status: typeData.status || 'active',
+          sort_order: typeData.sort_order || 999,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      }
+    } catch (error) {
+      console.error('保存实验类型配置失败:', error)
+      throw new Error('保存实验类型配置失败: ' + error.message)
+    }
+  }
+
+  /**
+   * 删除实验类型配置
+   */
+  async deleteExperimentType(id) {
+    try {
+      const stmt = this.db.db.prepare('UPDATE experiment_types_config SET status = ? WHERE id = ?')
+      stmt.bind(['inactive', id])
+      stmt.step()
+      stmt.free()
+      return true
+    } catch (error) {
+      console.error('删除实验类型配置失败:', error)
+      throw new Error('删除实验类型配置失败')
+    }
+  }
+
+  /**
    * 更新系统配置
    */
   async updateSystemConfig(configKey, configValue) {
     try {
       const stmt = this.db.db.prepare(`
-        UPDATE system_config 
+        UPDATE system_config
         SET config_value = ?, updated_at = CURRENT_TIMESTAMP
         WHERE config_key = ?
       `)

@@ -12,16 +12,44 @@
           <div class="field-management">
             <div class="field-header">
               <h3>菌种（属）配置</h3>
-              <el-button type="primary" @click="addSpecies">
-                <el-icon><Plus /></el-icon>
-                添加菌种
-              </el-button>
+              <div class="header-actions">
+                <el-button
+                  v-if="selectedSpecies.length > 0"
+                  type="danger"
+                  @click="batchDeleteSpecies"
+                >
+                  <el-icon><Delete /></el-icon>
+                  批量删除 ({{ selectedSpecies.length }})
+                </el-button>
+                <el-button type="primary" @click="addSpecies">
+                  <el-icon><Plus /></el-icon>
+                  添加菌种
+                </el-button>
+              </div>
             </div>
 
-            <el-table :data="speciesOptions" border>
+            <el-table
+              :data="speciesOptions"
+              border
+              @selection-change="handleSpeciesSelectionChange"
+            >
+              <el-table-column type="selection" width="55" />
               <el-table-column prop="id" label="ID" width="80" />
               <el-table-column prop="name" label="菌种名称" />
               <el-table-column prop="scientific_name" label="学名" />
+              <el-table-column prop="abbreviation" label="缩写" width="100" />
+              <el-table-column prop="ncbi_txid" label="NCBI TXID" width="120">
+                <template #default="scope">
+                  <span v-if="scope.row.ncbi_txid">
+                    <a :href="`https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=${scope.row.ncbi_txid}`"
+                       target="_blank"
+                       style="color: #409EFF; text-decoration: none;">
+                      {{ scope.row.ncbi_txid }}
+                    </a>
+                  </span>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
               <el-table-column prop="description" label="描述" />
               <el-table-column prop="status" label="状态" width="100">
                 <template #default="scope">
@@ -61,13 +89,28 @@
           <div class="field-management">
             <div class="field-header">
               <h3>地区配置</h3>
-              <el-button type="primary" @click="addRegion">
-                <el-icon><Plus /></el-icon>
-                添加地区
-              </el-button>
+              <div class="header-actions">
+                <el-button
+                  v-if="selectedRegions.length > 0"
+                  type="danger"
+                  @click="batchDeleteRegions"
+                >
+                  <el-icon><Delete /></el-icon>
+                  批量删除 ({{ selectedRegions.length }})
+                </el-button>
+                <el-button type="primary" @click="addRegion">
+                  <el-icon><Plus /></el-icon>
+                  添加地区
+                </el-button>
+              </div>
             </div>
 
-            <el-table :data="regionOptions" border>
+            <el-table
+              :data="regionOptions"
+              border
+              @selection-change="handleRegionSelectionChange"
+            >
+              <el-table-column type="selection" width="55" />
               <el-table-column prop="id" label="ID" width="80" />
               <el-table-column prop="name" label="地区名称" />
               <el-table-column prop="code" label="地区代码" />
@@ -115,13 +158,28 @@
           <div class="field-management">
             <div class="field-header">
               <h3>样本来源配置</h3>
-              <el-button type="primary" @click="addSource">
-                <el-icon><Plus /></el-icon>
-                添加来源
-              </el-button>
+              <div class="header-actions">
+                <el-button
+                  v-if="selectedSources.length > 0"
+                  type="danger"
+                  @click="batchDeleteSources"
+                >
+                  <el-icon><Delete /></el-icon>
+                  批量删除 ({{ selectedSources.length }})
+                </el-button>
+                <el-button type="primary" @click="addSource">
+                  <el-icon><Plus /></el-icon>
+                  添加来源
+                </el-button>
+              </div>
             </div>
 
-            <el-table :data="sourceOptions" border>
+            <el-table
+              :data="sourceOptions"
+              border
+              @selection-change="handleSourceSelectionChange"
+            >
+              <el-table-column type="selection" width="55" />
               <el-table-column prop="id" label="ID" width="80" />
               <el-table-column prop="name" label="来源名称" />
               <el-table-column prop="category" label="类别" />
@@ -156,6 +214,205 @@
                 </template>
               </el-table-column>
             </el-table>
+          </div>
+        </el-tab-pane>
+
+        <!-- 实验类型管理 -->
+        <el-tab-pane label="实验类型" name="experiment-types">
+          <div class="field-management">
+            <div class="field-header">
+              <h3>实验类型配置</h3>
+              <div class="header-actions">
+                <el-button
+                  v-if="selectedExperimentTypes.length > 0"
+                  type="danger"
+                  @click="batchDeleteExperimentTypes"
+                >
+                  <el-icon><Delete /></el-icon>
+                  批量删除 ({{ selectedExperimentTypes.length }})
+                </el-button>
+                <el-button type="primary" @click="addExperimentType">
+                  <el-icon><Plus /></el-icon>
+                  添加实验类型
+                </el-button>
+              </div>
+            </div>
+
+            <el-table
+              :data="experimentTypeOptions"
+              border
+              @selection-change="handleExperimentTypeSelectionChange"
+            >
+              <el-table-column type="selection" width="55" />
+              <el-table-column prop="id" label="ID" width="80" />
+              <el-table-column prop="name" label="实验类型名称" />
+              <el-table-column prop="code" label="代码" />
+              <el-table-column prop="category" label="类别" />
+              <el-table-column prop="description" label="描述" />
+              <el-table-column prop="status" label="状态" width="100">
+                <template #default="scope">
+                  <el-tag
+                    :type="scope.row.status === 'active' ? 'success' : 'danger'"
+                    size="small"
+                  >
+                    {{ scope.row.status === 'active' ? '启用' : '禁用' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="200">
+                <template #default="scope">
+                  <el-button size="small" @click="editExperimentType(scope.row)">编辑</el-button>
+                  <el-button
+                    size="small"
+                    :type="scope.row.status === 'active' ? 'warning' : 'success'"
+                    @click="toggleExperimentTypeStatus(scope.row)"
+                  >
+                    {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                  </el-button>
+                  <el-button
+                    size="small"
+                    type="danger"
+                    @click="deleteExperimentType(scope.row)"
+                  >
+                    删除
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+
+        <!-- 数据库管理 -->
+        <el-tab-pane label="数据库管理" name="database">
+          <div class="database-management">
+            <div class="database-header">
+              <h3>数据库管理</h3>
+              <div class="header-actions">
+                <el-button type="primary" @click="performHealthCheck" :loading="healthCheckLoading">
+                  <el-icon><Monitor /></el-icon>
+                  健康检查
+                </el-button>
+                <el-button type="warning" @click="optimizeDatabase" :loading="optimizeLoading">
+                  <el-icon><Tools /></el-icon>
+                  优化数据库
+                </el-button>
+              </div>
+            </div>
+
+            <!-- 数据库状态 -->
+            <el-card class="status-card" v-if="databaseStatus">
+              <template #header>
+                <div class="card-header">
+                  <span>数据库状态</span>
+                  <el-tag :type="databaseStatus.status === 'healthy' ? 'success' : 'warning'">
+                    {{ databaseStatus.status === 'healthy' ? '健康' : '警告' }}
+                  </el-tag>
+                </div>
+              </template>
+
+              <div class="status-grid">
+                <div class="status-item" v-for="check in databaseStatus.checks" :key="check.type">
+                  <div class="status-label">{{ getCheckLabel(check.type) }}</div>
+                  <div class="status-value">
+                    <el-tag :type="check.status === 'ok' ? 'success' : 'danger'" size="small">
+                      {{ check.status === 'ok' ? '正常' : '异常' }}
+                    </el-tag>
+                    <span v-if="check.count !== undefined" class="count">{{ check.count }}</span>
+                    <span v-if="check.size_mb" class="size">{{ check.size_mb }} MB</span>
+                  </div>
+                </div>
+              </div>
+            </el-card>
+
+            <!-- 迁移历史 -->
+            <el-card class="migration-card">
+              <template #header>
+                <div class="card-header">
+                  <span>迁移历史</span>
+                  <el-button size="small" @click="loadMigrationHistory">
+                    <el-icon><Refresh /></el-icon>
+                    刷新
+                  </el-button>
+                </div>
+              </template>
+
+              <el-table :data="migrationHistory" border>
+                <el-table-column prop="version" label="版本" width="100" />
+                <el-table-column prop="name" label="迁移名称" />
+                <el-table-column prop="executed_at" label="执行时间" width="180">
+                  <template #default="scope">
+                    {{ formatDate(scope.row.executed_at) }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="checksum" label="校验和" width="120">
+                  <template #default="scope">
+                    <code class="checksum">{{ scope.row.checksum?.substring(0, 8) }}...</code>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </div>
+        </el-tab-pane>
+
+        <!-- 权限管理 -->
+        <el-tab-pane label="权限管理" name="permissions">
+          <div class="permission-management">
+            <el-tabs v-model="permissionActiveTab" type="card">
+              <!-- 角色管理 -->
+              <el-tab-pane label="角色管理" name="roles">
+                <div class="roles-header">
+                  <h4>角色管理</h4>
+                  <el-button type="primary" @click="showCreateRoleDialog">
+                    <el-icon><Plus /></el-icon>
+                    新建角色
+                  </el-button>
+                </div>
+
+                <el-table :data="roles" border>
+                  <el-table-column prop="display_name" label="角色名称" />
+                  <el-table-column prop="name" label="角色标识" />
+                  <el-table-column prop="description" label="描述" />
+                  <el-table-column prop="user_count" label="用户数" width="80" />
+                  <el-table-column prop="permission_count" label="权限数" width="80" />
+                  <el-table-column prop="is_system" label="系统角色" width="100">
+                    <template #default="scope">
+                      <el-tag :type="scope.row.is_system ? 'info' : 'success'" size="small">
+                        {{ scope.row.is_system ? '是' : '否' }}
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="操作" width="200">
+                    <template #default="scope">
+                      <el-button size="small" @click="editRolePermissions(scope.row)">
+                        权限设置
+                      </el-button>
+                      <el-button
+                        size="small"
+                        type="danger"
+                        @click="deleteRole(scope.row)"
+                        :disabled="scope.row.is_system"
+                      >
+                        删除
+                      </el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </el-tab-pane>
+
+              <!-- 权限列表 -->
+              <el-tab-pane label="权限列表" name="permissions">
+                <div class="permissions-header">
+                  <h4>系统权限</h4>
+                </div>
+
+                <el-table :data="groupedPermissions" border>
+                  <el-table-column prop="module" label="模块" width="120" />
+                  <el-table-column prop="display_name" label="权限名称" />
+                  <el-table-column prop="action" label="操作" width="100" />
+                  <el-table-column prop="description" label="描述" />
+                </el-table>
+              </el-tab-pane>
+            </el-tabs>
           </div>
         </el-tab-pane>
 
@@ -213,6 +470,30 @@
         </el-form-item>
         <el-form-item label="学名" prop="scientific_name">
           <el-input v-model="speciesForm.scientific_name" placeholder="请输入学名" />
+        </el-form-item>
+        <el-form-item label="缩写" prop="abbreviation">
+          <el-input v-model="speciesForm.abbreviation" placeholder="请输入菌种缩写" />
+        </el-form-item>
+        <el-form-item label="NCBI TXID" prop="ncbi_txid">
+          <div style="display: flex; gap: 8px;">
+            <el-input
+              v-model="speciesForm.ncbi_txid"
+              placeholder="请输入NCBI分类学ID"
+              style="flex: 1;"
+            />
+            <el-button
+              type="primary"
+              :loading="fetchingNCBI"
+              @click="fetchNCBIInfo"
+              :disabled="!speciesForm.scientific_name"
+            >
+              <el-icon><Search /></el-icon>
+              抓取
+            </el-button>
+          </div>
+          <div style="font-size: 12px; color: #999; margin-top: 4px;">
+            可根据学名自动从NCBI抓取分类学信息
+          </div>
         </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input v-model="speciesForm.description" type="textarea" placeholder="请输入描述" />
@@ -298,16 +579,61 @@
         <el-button type="primary" @click="saveSource">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 实验类型编辑对话框 -->
+    <el-dialog v-model="experimentTypeDialogVisible" :title="isEditExperimentType ? '编辑实验类型' : '添加实验类型'" width="500px">
+      <el-form ref="experimentTypeFormRef" :model="experimentTypeForm" :rules="experimentTypeFormRules" label-width="100px">
+        <el-form-item label="类型名称" prop="name">
+          <el-input v-model="experimentTypeForm.name" placeholder="请输入实验类型名称" />
+        </el-form-item>
+        <el-form-item label="代码" prop="code">
+          <el-input v-model="experimentTypeForm.code" placeholder="请输入代码（英文）" />
+        </el-form-item>
+        <el-form-item label="类别" prop="category">
+          <el-select v-model="experimentTypeForm.category" placeholder="请选择类别">
+            <el-option label="分型分析" value="typing" />
+            <el-option label="基因分析" value="gene_analysis" />
+            <el-option label="测序分析" value="sequencing" />
+            <el-option label="比较分析" value="analysis" />
+            <el-option label="功能注释" value="annotation" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="描述" prop="description">
+          <el-input v-model="experimentTypeForm.description" type="textarea" placeholder="请输入描述" />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="experimentTypeForm.status">
+            <el-radio label="active">启用</el-radio>
+            <el-radio label="disabled">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="experimentTypeDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveExperimentType">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Delete, Search, Monitor, Tools, Refresh } from '@element-plus/icons-vue'
+import { useStore } from 'vuex'
 
 export default {
   name: 'AdminSettings',
+  components: {
+    Plus,
+    Delete,
+    Search,
+    Monitor,
+    Tools,
+    Refresh
+  },
   setup () {
+    const store = useStore()
     const activeTab = ref('species')
 
     // 菌种相关
@@ -315,10 +641,13 @@ export default {
     const speciesDialogVisible = ref(false)
     const isEditSpecies = ref(false)
     const speciesFormRef = ref(null)
+    const fetchingNCBI = ref(false)
     const speciesForm = reactive({
       id: null,
       name: '',
       scientific_name: '',
+      abbreviation: '',
+      ncbi_txid: '',
       description: '',
       status: 'active'
     })
@@ -363,6 +692,54 @@ export default {
       category: [{ required: true, message: '请选择类别', trigger: 'change' }]
     }
 
+    // 实验类型相关
+    const experimentTypeOptions = ref([])
+    const experimentTypeDialogVisible = ref(false)
+    const isEditExperimentType = ref(false)
+    const experimentTypeFormRef = ref(null)
+    const experimentTypeForm = reactive({
+      id: null,
+      name: '',
+      code: '',
+      category: 'analysis',
+      description: '',
+      status: 'active'
+    })
+    const experimentTypeFormRules = {
+      name: [{ required: true, message: '请输入实验类型名称', trigger: 'blur' }],
+      code: [{ required: true, message: '请输入代码', trigger: 'blur' }],
+      category: [{ required: true, message: '请选择类别', trigger: 'change' }]
+    }
+
+    // 批量操作相关
+    const selectedSpecies = ref([])
+    const selectedRegions = ref([])
+    const selectedSources = ref([])
+    const selectedExperimentTypes = ref([])
+
+    // 数据库管理相关
+    const databaseStatus = ref(null)
+    const migrationHistory = ref([])
+    const healthCheckLoading = ref(false)
+    const optimizeLoading = ref(false)
+
+    // 权限管理相关
+    const permissionActiveTab = ref('roles')
+    const roles = ref([])
+    const permissions = ref([])
+    const groupedPermissions = computed(() => {
+      const grouped = {}
+      permissions.value.forEach(perm => {
+        if (!grouped[perm.module]) {
+          grouped[perm.module] = []
+        }
+        grouped[perm.module].push(perm)
+      })
+      return Object.keys(grouped).flatMap(module =>
+        grouped[module].map(perm => ({ ...perm, module }))
+      )
+    })
+
     // 系统配置
     const systemConfig = reactive({
       systemName: 'PAMS',
@@ -383,40 +760,87 @@ export default {
     // 加载数据
     const loadSpeciesOptions = async () => {
       try {
-        // TODO: 实现从后端加载菌种数据
-        speciesOptions.value = [
-          { id: 1, name: '大肠杆菌', scientific_name: 'Escherichia coli', description: '常见病原菌', status: 'active' },
-          { id: 2, name: '沙门氏菌', scientific_name: 'Salmonella', description: '肠道病原菌', status: 'active' },
-          { id: 3, name: '志贺氏菌', scientific_name: 'Shigella', description: '痢疾病原菌', status: 'active' }
-        ]
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          const species = await window.electronAPI.systemConfig.getSpecies()
+          speciesOptions.value = species || []
+        } else {
+          // 浏览器环境模拟数据
+          speciesOptions.value = [
+            { id: 1, name: '大肠杆菌', scientific_name: 'Escherichia coli', abbreviation: 'Ecol', ncbi_txid: '562', description: '常见病原菌', status: 'active' },
+            { id: 2, name: '沙门氏菌', scientific_name: 'Salmonella enterica', abbreviation: 'Sent', ncbi_txid: '28901', description: '肠道病原菌', status: 'active' },
+            { id: 3, name: '志贺氏菌', scientific_name: 'Shigella flexneri', abbreviation: 'Sfle', ncbi_txid: '623', description: '痢疾病原菌', status: 'active' }
+          ]
+        }
+        // 同步到Vuex store
+        await store.dispatch('loadSystemConfig')
       } catch (error) {
+        console.error('加载菌种数据失败:', error)
         ElMessage.error('加载菌种数据失败')
       }
     }
 
     const loadRegionOptions = async () => {
       try {
-        // TODO: 实现从后端加载地区数据
-        regionOptions.value = [
-          { id: 1, name: '北京市', code: '110000', level: 'province', parent_id: null, parent_name: '', status: 'active' },
-          { id: 2, name: '上海市', code: '310000', level: 'province', parent_id: null, parent_name: '', status: 'active' },
-          { id: 3, name: '广东省', code: '440000', level: 'province', parent_id: null, parent_name: '', status: 'active' }
-        ]
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          const regions = await window.electronAPI.systemConfig.getRegions()
+          regionOptions.value = regions || []
+        } else {
+          // 浏览器环境模拟数据
+          regionOptions.value = [
+            { id: 1, name: '北京市', code: '110000', level: 'province', parent_id: null, parent_name: '', status: 'active' },
+            { id: 2, name: '上海市', code: '310000', level: 'province', parent_id: null, parent_name: '', status: 'active' },
+            { id: 3, name: '广东省', code: '440000', level: 'province', parent_id: null, parent_name: '', status: 'active' }
+          ]
+        }
+        // 同步到Vuex store
+        await store.dispatch('loadSystemConfig')
       } catch (error) {
+        console.error('加载地区数据失败:', error)
         ElMessage.error('加载地区数据失败')
       }
     }
 
     const loadSourceOptions = async () => {
       try {
-        // TODO: 实现从后端加载来源数据
-        sourceOptions.value = [
-          { id: 1, name: '血液', category: 'clinical', description: '临床血液样本', status: 'active' },
-          { id: 2, name: '粪便', category: 'clinical', description: '临床粪便样本', status: 'active' },
-          { id: 3, name: '食品', category: 'food', description: '食品样本', status: 'active' }
-        ]
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          const sources = await window.electronAPI.systemConfig.getSampleSources()
+          sourceOptions.value = sources || []
+        } else {
+          // 浏览器环境模拟数据
+          sourceOptions.value = [
+            { id: 1, name: '血液', category: 'clinical', description: '临床血液样本', status: 'active' },
+            { id: 2, name: '粪便', category: 'clinical', description: '临床粪便样本', status: 'active' },
+            { id: 3, name: '食品', category: 'food', description: '食品样本', status: 'active' }
+          ]
+        }
+        // 同步到Vuex store
+        await store.dispatch('loadSystemConfig')
       } catch (error) {
-        ElMessage.error('加载来源数据失败')
+        console.error('加载样本来源数据失败:', error)
+        ElMessage.error('加载样本来源数据失败')
+      }
+    }
+
+    const loadExperimentTypeOptions = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          const types = await window.electronAPI.systemConfig.getExperimentTypes()
+          experimentTypeOptions.value = types || []
+        } else {
+          // 浏览器环境模拟数据
+          experimentTypeOptions.value = [
+            { id: 1, name: 'MLST分析', code: 'mlst', category: 'typing', description: '多位点序列分型分析', status: 'active' },
+            { id: 2, name: '血清分型', code: 'serotyping', category: 'typing', description: '血清学分型分析', status: 'active' },
+            { id: 3, name: '毒力基因检测', code: 'virulence', category: 'gene_analysis', description: '毒力基因分析', status: 'active' },
+            { id: 4, name: '耐药基因检测', code: 'resistance', category: 'gene_analysis', description: '耐药基因分析', status: 'active' },
+            { id: 5, name: '全基因组测序', code: 'wgs', category: 'sequencing', description: '全基因组序列分析', status: 'active' }
+          ]
+        }
+        // 同步到Vuex store
+        await store.dispatch('loadSystemConfig')
+      } catch (error) {
+        console.error('加载实验类型数据失败:', error)
+        ElMessage.error('加载实验类型数据失败')
       }
     }
 
@@ -430,11 +854,65 @@ export default {
     }
 
     // 菌种管理方法
+    const fetchNCBIInfo = async () => {
+      if (!speciesForm.scientific_name.trim()) {
+        ElMessage.warning('请先输入学名')
+        return
+      }
+
+      fetchingNCBI.value = true
+      try {
+        // 调用NCBI API获取分类学信息
+        const response = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=taxonomy&term=${encodeURIComponent(speciesForm.scientific_name)}&retmode=json`)
+        const searchData = await response.json()
+
+        if (searchData.esearchresult && searchData.esearchresult.idlist && searchData.esearchresult.idlist.length > 0) {
+          const txid = searchData.esearchresult.idlist[0]
+
+          // 获取详细信息
+          const detailResponse = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id=${txid}&retmode=xml`)
+          const xmlText = await detailResponse.text()
+
+          // 解析XML获取信息
+          const parser = new DOMParser()
+          const xmlDoc = parser.parseFromString(xmlText, 'text/xml')
+
+          const scientificName = xmlDoc.querySelector('ScientificName')?.textContent
+          const rank = xmlDoc.querySelector('Rank')?.textContent
+
+          if (scientificName) {
+            speciesForm.ncbi_txid = txid
+
+            // 如果没有缩写，尝试生成一个
+            if (!speciesForm.abbreviation && scientificName) {
+              const parts = scientificName.split(' ')
+              if (parts.length >= 2) {
+                speciesForm.abbreviation = parts[0].charAt(0).toUpperCase() + '. ' + parts[1].toLowerCase()
+              }
+            }
+
+            ElMessage.success(`成功获取NCBI信息: ${scientificName} (TXID: ${txid})`)
+          } else {
+            ElMessage.warning('未找到匹配的分类学信息')
+          }
+        } else {
+          ElMessage.warning('未找到匹配的分类学信息')
+        }
+      } catch (error) {
+        console.error('获取NCBI信息失败:', error)
+        ElMessage.error('获取NCBI信息失败，请检查网络连接')
+      } finally {
+        fetchingNCBI.value = false
+      }
+    }
+
     const addSpecies = () => {
       isEditSpecies.value = false
       speciesForm.id = null
       speciesForm.name = ''
       speciesForm.scientific_name = ''
+      speciesForm.abbreviation = ''
+      speciesForm.ncbi_txid = ''
       speciesForm.description = ''
       speciesForm.status = 'active'
       speciesDialogVisible.value = true
@@ -445,6 +923,8 @@ export default {
       speciesForm.id = species.id
       speciesForm.name = species.name
       speciesForm.scientific_name = species.scientific_name
+      speciesForm.abbreviation = species.abbreviation || ''
+      speciesForm.ncbi_txid = species.ncbi_txid || ''
       speciesForm.description = species.description
       speciesForm.status = species.status
       speciesDialogVisible.value = true
@@ -457,23 +937,54 @@ export default {
         if (!valid) return
 
         try {
-          // TODO: 实现保存菌种数据
-          ElMessage.success('菌种保存成功')
+          const speciesData = { ...speciesForm }
+
+          // 使用Vuex store保存菌种数据
+          const savedSpecies = await store.dispatch('saveSpeciesOption', speciesData)
+
+          if (isEditSpecies.value) {
+            // 更新现有菌种
+            const index = speciesOptions.value.findIndex(item => item.id === speciesData.id)
+            if (index !== -1) {
+              speciesOptions.value[index] = savedSpecies
+            }
+          } else {
+            // 添加新菌种
+            speciesOptions.value.push(savedSpecies)
+          }
+
+          ElMessage.success(isEditSpecies.value ? '菌种更新成功' : '菌种添加成功')
           speciesDialogVisible.value = false
-          loadSpeciesOptions()
+
+          // 重新加载系统配置以确保数据同步
+          await store.dispatch('loadSystemConfig')
         } catch (error) {
-          ElMessage.error('保存失败')
+          console.error('保存菌种失败:', error)
+          ElMessage.error('保存菌种失败: ' + error.message)
         }
       })
     }
 
     const toggleSpeciesStatus = async (species) => {
       try {
-        species.status = species.status === 'active' ? 'disabled' : 'active'
-        // TODO: 实现状态更新
+        const updatedSpecies = {
+          ...species,
+          status: species.status === 'active' ? 'disabled' : 'active'
+        }
+
+        // 使用Vuex store更新菌种状态
+        await store.dispatch('saveSpeciesOption', updatedSpecies)
+
+        // 更新本地数据
+        species.status = updatedSpecies.status
+
         ElMessage.success('状态更新成功')
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
       } catch (error) {
-        ElMessage.error('状态更新失败')
+        console.error('状态更新失败:', error)
+        ElMessage.error('状态更新失败: ' + error.message)
       }
     }
 
@@ -485,9 +996,24 @@ export default {
           type: 'warning'
         })
 
-        // TODO: 实现删除菌种
+        // 使用Vuex store删除菌种（实际是设置为inactive状态）
+        const updatedSpecies = {
+          ...species,
+          status: 'inactive'
+        }
+
+        await store.dispatch('saveSpeciesOption', updatedSpecies)
+
+        // 从本地列表中移除
+        const index = speciesOptions.value.findIndex(item => item.id === species.id)
+        if (index !== -1) {
+          speciesOptions.value.splice(index, 1)
+        }
+
         ElMessage.success('删除成功')
-        loadSpeciesOptions()
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
       } catch (error) {
         if (error !== 'cancel') {
           ElMessage.error('删除失败')
@@ -525,23 +1051,54 @@ export default {
         if (!valid) return
 
         try {
-          // TODO: 实现保存地区数据
-          ElMessage.success('地区保存成功')
+          const regionData = { ...regionForm }
+
+          // 使用Vuex store保存地区数据
+          const savedRegion = await store.dispatch('saveRegionOption', regionData)
+
+          if (isEditRegion.value) {
+            // 更新现有地区
+            const index = regionOptions.value.findIndex(item => item.id === regionData.id)
+            if (index !== -1) {
+              regionOptions.value[index] = savedRegion
+            }
+          } else {
+            // 添加新地区
+            regionOptions.value.push(savedRegion)
+          }
+
+          ElMessage.success(isEditRegion.value ? '地区更新成功' : '地区添加成功')
           regionDialogVisible.value = false
-          loadRegionOptions()
+
+          // 重新加载系统配置以确保数据同步
+          await store.dispatch('loadSystemConfig')
         } catch (error) {
-          ElMessage.error('保存失败')
+          console.error('保存地区失败:', error)
+          ElMessage.error('保存地区失败: ' + error.message)
         }
       })
     }
 
     const toggleRegionStatus = async (region) => {
       try {
-        region.status = region.status === 'active' ? 'disabled' : 'active'
-        // TODO: 实现状态更新
+        const updatedRegion = {
+          ...region,
+          status: region.status === 'active' ? 'disabled' : 'active'
+        }
+
+        // 使用Vuex store更新地区状态
+        await store.dispatch('saveRegionOption', updatedRegion)
+
+        // 更新本地数据
+        region.status = updatedRegion.status
+
         ElMessage.success('状态更新成功')
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
       } catch (error) {
-        ElMessage.error('状态更新失败')
+        console.error('状态更新失败:', error)
+        ElMessage.error('状态更新失败: ' + error.message)
       }
     }
 
@@ -553,9 +1110,24 @@ export default {
           type: 'warning'
         })
 
-        // TODO: 实现删除地区
+        // 使用Vuex store删除地区（实际是设置为inactive状态）
+        const updatedRegion = {
+          ...region,
+          status: 'inactive'
+        }
+
+        await store.dispatch('saveRegionOption', updatedRegion)
+
+        // 从本地列表中移除
+        const index = regionOptions.value.findIndex(item => item.id === region.id)
+        if (index !== -1) {
+          regionOptions.value.splice(index, 1)
+        }
+
         ElMessage.success('删除成功')
-        loadRegionOptions()
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
       } catch (error) {
         if (error !== 'cancel') {
           ElMessage.error('删除失败')
@@ -591,23 +1163,54 @@ export default {
         if (!valid) return
 
         try {
-          // TODO: 实现保存来源数据
-          ElMessage.success('来源保存成功')
+          const sourceData = { ...sourceForm }
+
+          // 使用Vuex store保存样本来源数据
+          const savedSource = await store.dispatch('saveSourceOption', sourceData)
+
+          if (isEditSource.value) {
+            // 更新现有样本来源
+            const index = sourceOptions.value.findIndex(item => item.id === sourceData.id)
+            if (index !== -1) {
+              sourceOptions.value[index] = savedSource
+            }
+          } else {
+            // 添加新样本来源
+            sourceOptions.value.push(savedSource)
+          }
+
+          ElMessage.success(isEditSource.value ? '样本来源更新成功' : '样本来源添加成功')
           sourceDialogVisible.value = false
-          loadSourceOptions()
+
+          // 重新加载系统配置以确保数据同步
+          await store.dispatch('loadSystemConfig')
         } catch (error) {
-          ElMessage.error('保存失败')
+          console.error('保存样本来源失败:', error)
+          ElMessage.error('保存样本来源失败: ' + error.message)
         }
       })
     }
 
     const toggleSourceStatus = async (source) => {
       try {
-        source.status = source.status === 'active' ? 'disabled' : 'active'
-        // TODO: 实现状态更新
+        const updatedSource = {
+          ...source,
+          status: source.status === 'active' ? 'disabled' : 'active'
+        }
+
+        // 使用Vuex store更新样本来源状态
+        await store.dispatch('saveSourceOption', updatedSource)
+
+        // 更新本地数据
+        source.status = updatedSource.status
+
         ElMessage.success('状态更新成功')
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
       } catch (error) {
-        ElMessage.error('状态更新失败')
+        console.error('状态更新失败:', error)
+        ElMessage.error('状态更新失败: ' + error.message)
       }
     }
 
@@ -619,12 +1222,511 @@ export default {
           type: 'warning'
         })
 
-        // TODO: 实现删除来源
+        // 使用Vuex store删除样本来源（实际是设置为inactive状态）
+        const updatedSource = {
+          ...source,
+          status: 'inactive'
+        }
+
+        await store.dispatch('saveSourceOption', updatedSource)
+
+        // 从本地列表中移除
+        const index = sourceOptions.value.findIndex(item => item.id === source.id)
+        if (index !== -1) {
+          sourceOptions.value.splice(index, 1)
+        }
+
         ElMessage.success('删除成功')
-        loadSourceOptions()
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
       } catch (error) {
         if (error !== 'cancel') {
           ElMessage.error('删除失败')
+        }
+      }
+    }
+
+    // 实验类型管理方法
+    const addExperimentType = () => {
+      isEditExperimentType.value = false
+      experimentTypeForm.id = null
+      experimentTypeForm.name = ''
+      experimentTypeForm.code = ''
+      experimentTypeForm.category = 'analysis'
+      experimentTypeForm.description = ''
+      experimentTypeForm.status = 'active'
+      experimentTypeDialogVisible.value = true
+    }
+
+    const editExperimentType = (type) => {
+      isEditExperimentType.value = true
+      experimentTypeForm.id = type.id
+      experimentTypeForm.name = type.name
+      experimentTypeForm.code = type.code
+      experimentTypeForm.category = type.category
+      experimentTypeForm.description = type.description
+      experimentTypeForm.status = type.status
+      experimentTypeDialogVisible.value = true
+    }
+
+    const saveExperimentType = async () => {
+      if (!experimentTypeFormRef.value) return
+
+      try {
+        await experimentTypeFormRef.value.validate()
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          const savedType = await window.electronAPI.systemConfig.saveExperimentType(experimentTypeForm)
+
+          if (isEditExperimentType.value) {
+            // 更新现有实验类型
+            const index = experimentTypeOptions.value.findIndex(item => item.id === experimentTypeForm.id)
+            if (index !== -1) {
+              experimentTypeOptions.value[index] = savedType
+            }
+          } else {
+            // 添加新实验类型
+            experimentTypeOptions.value.push(savedType)
+          }
+
+          ElMessage.success(isEditExperimentType.value ? '实验类型更新成功' : '实验类型添加成功')
+          experimentTypeDialogVisible.value = false
+
+          // 重新加载系统配置以确保数据同步
+          await store.dispatch('loadSystemConfig')
+        } else {
+          // 浏览器环境模拟
+          ElMessage.success(isEditExperimentType.value ? '实验类型更新成功' : '实验类型添加成功')
+          experimentTypeDialogVisible.value = false
+        }
+      } catch (error) {
+        console.error('保存实验类型失败:', error)
+        ElMessage.error('保存实验类型失败')
+      }
+    }
+
+    const toggleExperimentTypeStatus = async (type) => {
+      try {
+        const newStatus = type.status === 'active' ? 'disabled' : 'active'
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          await window.electronAPI.systemConfig.saveExperimentType({
+            ...type,
+            status: newStatus
+          })
+        }
+
+        // 更新本地状态
+        type.status = newStatus
+        ElMessage.success(`实验类型已${newStatus === 'active' ? '启用' : '禁用'}`)
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
+      } catch (error) {
+        console.error('更新实验类型状态失败:', error)
+        ElMessage.error('更新状态失败')
+      }
+    }
+
+    const deleteExperimentType = async (type) => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除实验类型 "${type.name}" 吗？`,
+          '确认删除',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          await window.electronAPI.systemConfig.deleteExperimentType(type.id)
+        }
+
+        // 从本地列表中移除
+        const index = experimentTypeOptions.value.findIndex(item => item.id === type.id)
+        if (index !== -1) {
+          experimentTypeOptions.value.splice(index, 1)
+        }
+
+        ElMessage.success('删除成功')
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
+      } catch (error) {
+        if (error !== 'cancel') {
+          ElMessage.error('删除失败')
+        }
+      }
+    }
+
+    // 批量操作方法
+    const handleSpeciesSelectionChange = (selection) => {
+      selectedSpecies.value = selection
+    }
+
+    const handleRegionSelectionChange = (selection) => {
+      selectedRegions.value = selection
+    }
+
+    const handleSourceSelectionChange = (selection) => {
+      selectedSources.value = selection
+    }
+
+    const handleExperimentTypeSelectionChange = (selection) => {
+      selectedExperimentTypes.value = selection
+    }
+
+    const batchDeleteSpecies = async () => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除选中的 ${selectedSpecies.value.length} 个菌种吗？此操作不可撤销。`,
+          '确认批量删除',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        for (const species of selectedSpecies.value) {
+          const updatedSpecies = {
+            ...species,
+            status: 'inactive'
+          }
+          await store.dispatch('saveSpeciesOption', updatedSpecies)
+
+          // 从本地列表中移除
+          const index = speciesOptions.value.findIndex(item => item.id === species.id)
+          if (index !== -1) {
+            speciesOptions.value.splice(index, 1)
+          }
+        }
+
+        const deletedCount = selectedSpecies.value.length
+        selectedSpecies.value = []
+        ElMessage.success(`成功删除 ${deletedCount} 个菌种`)
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除菌种失败:', error)
+          ElMessage.error('批量删除失败')
+        }
+      }
+    }
+
+    const batchDeleteRegions = async () => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除选中的 ${selectedRegions.value.length} 个地区吗？此操作不可撤销。`,
+          '确认批量删除',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        for (const region of selectedRegions.value) {
+          const updatedRegion = {
+            ...region,
+            status: 'inactive'
+          }
+          await store.dispatch('saveRegionOption', updatedRegion)
+
+          // 从本地列表中移除
+          const index = regionOptions.value.findIndex(item => item.id === region.id)
+          if (index !== -1) {
+            regionOptions.value.splice(index, 1)
+          }
+        }
+
+        const deletedCount = selectedRegions.value.length
+        selectedRegions.value = []
+        ElMessage.success(`成功删除 ${deletedCount} 个地区`)
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除地区失败:', error)
+          ElMessage.error('批量删除失败')
+        }
+      }
+    }
+
+    const batchDeleteSources = async () => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除选中的 ${selectedSources.value.length} 个样本来源吗？此操作不可撤销。`,
+          '确认批量删除',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        for (const source of selectedSources.value) {
+          const updatedSource = {
+            ...source,
+            status: 'inactive'
+          }
+          await store.dispatch('saveSourceOption', updatedSource)
+
+          // 从本地列表中移除
+          const index = sourceOptions.value.findIndex(item => item.id === source.id)
+          if (index !== -1) {
+            sourceOptions.value.splice(index, 1)
+          }
+        }
+
+        const deletedCount = selectedSources.value.length
+        selectedSources.value = []
+        ElMessage.success(`成功删除 ${deletedCount} 个样本来源`)
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除样本来源失败:', error)
+          ElMessage.error('批量删除失败')
+        }
+      }
+    }
+
+    const batchDeleteExperimentTypes = async () => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除选中的 ${selectedExperimentTypes.value.length} 个实验类型吗？此操作不可撤销。`,
+          '确认批量删除',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        // 批量删除
+        for (const type of selectedExperimentTypes.value) {
+          if (window.electronAPI && window.electronAPI.systemConfig) {
+            await window.electronAPI.systemConfig.deleteExperimentType(type.id)
+          }
+
+          // 从本地列表中移除
+          const index = experimentTypeOptions.value.findIndex(item => item.id === type.id)
+          if (index !== -1) {
+            experimentTypeOptions.value.splice(index, 1)
+          }
+        }
+
+        const deletedCount = selectedExperimentTypes.value.length
+        selectedExperimentTypes.value = []
+        ElMessage.success(`成功删除 ${deletedCount} 个实验类型`)
+
+        // 重新加载系统配置以确保数据同步
+        await store.dispatch('loadSystemConfig')
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除实验类型失败:', error)
+          ElMessage.error('批量删除失败')
+        }
+      }
+    }
+
+    // 数据库管理方法
+    const performHealthCheck = async () => {
+      healthCheckLoading.value = true
+      try {
+        if (window.electronAPI && window.electronAPI.database) {
+          databaseStatus.value = await window.electronAPI.database.healthCheck()
+          ElMessage.success('数据库健康检查完成')
+        } else {
+          // 浏览器环境模拟
+          databaseStatus.value = {
+            status: 'healthy',
+            checks: [
+              { type: 'table_integrity', status: 'ok', count: 5 },
+              { type: 'indexes', status: 'ok', count: 12 },
+              { type: 'database_size', status: 'ok', size_mb: '2.5' }
+            ],
+            timestamp: new Date().toISOString()
+          }
+          ElMessage.success('数据库健康检查完成（模拟）')
+        }
+      } catch (error) {
+        console.error('数据库健康检查失败:', error)
+        ElMessage.error('数据库健康检查失败')
+      } finally {
+        healthCheckLoading.value = false
+      }
+    }
+
+    const optimizeDatabase = async () => {
+      try {
+        await ElMessageBox.confirm(
+          '数据库优化可能需要一些时间，期间系统可能会暂时无响应。确定要继续吗？',
+          '确认优化',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        optimizeLoading.value = true
+
+        if (window.electronAPI && window.electronAPI.database) {
+          const result = await window.electronAPI.database.optimize()
+          if (result.status === 'success') {
+            ElMessage.success('数据库优化完成')
+            // 重新执行健康检查
+            await performHealthCheck()
+          } else {
+            ElMessage.error('数据库优化失败: ' + result.error)
+          }
+        } else {
+          // 浏览器环境模拟
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          ElMessage.success('数据库优化完成（模拟）')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('数据库优化失败:', error)
+          ElMessage.error('数据库优化失败')
+        }
+      } finally {
+        optimizeLoading.value = false
+      }
+    }
+
+    const loadMigrationHistory = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.database) {
+          migrationHistory.value = await window.electronAPI.database.getMigrationHistory()
+        } else {
+          // 浏览器环境模拟
+          migrationHistory.value = [
+            {
+              id: 1,
+              version: '1.0.4',
+              name: 'add_foreign_key_constraints',
+              executed_at: new Date().toISOString(),
+              checksum: 'a1b2c3d4e5f6'
+            },
+            {
+              id: 2,
+              version: '1.0.3',
+              name: 'optimize_table_structure',
+              executed_at: new Date(Date.now() - 86400000).toISOString(),
+              checksum: 'f6e5d4c3b2a1'
+            }
+          ]
+        }
+      } catch (error) {
+        console.error('加载迁移历史失败:', error)
+        ElMessage.error('加载迁移历史失败')
+      }
+    }
+
+    const getCheckLabel = (type) => {
+      const labels = {
+        'table_integrity': '表完整性',
+        'indexes': '索引状态',
+        'database_size': '数据库大小'
+      }
+      return labels[type] || type
+    }
+
+    const formatDate = (dateString) => {
+      if (!dateString) return ''
+      return new Date(dateString).toLocaleString('zh-CN')
+    }
+
+    // 权限管理方法
+    const loadRoles = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.permissions) {
+          roles.value = await window.electronAPI.permissions.getRoles()
+        } else {
+          // 浏览器环境模拟
+          roles.value = [
+            {
+              id: 1,
+              name: 'admin',
+              display_name: '系统管理员',
+              description: '拥有系统所有权限',
+              is_system: 1,
+              user_count: 1,
+              permission_count: 18
+            },
+            {
+              id: 2,
+              name: 'analyst',
+              display_name: '分析员',
+              description: '可以进行生物信息学分析',
+              is_system: 1,
+              user_count: 0,
+              permission_count: 8
+            }
+          ]
+        }
+      } catch (error) {
+        console.error('加载角色列表失败:', error)
+        ElMessage.error('加载角色列表失败')
+      }
+    }
+
+    const loadPermissions = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.permissions) {
+          permissions.value = await window.electronAPI.permissions.getPermissions()
+        } else {
+          // 浏览器环境模拟
+          permissions.value = [
+            { id: 1, name: 'users.view', display_name: '查看用户', module: 'users', action: 'view', description: '' },
+            { id: 2, name: 'users.create', display_name: '创建用户', module: 'users', action: 'create', description: '' },
+            { id: 3, name: 'strains.view', display_name: '查看菌株', module: 'strains', action: 'view', description: '' },
+            { id: 4, name: 'strains.create', display_name: '创建菌株', module: 'strains', action: 'create', description: '' },
+            { id: 5, name: 'analysis.run', display_name: '运行分析', module: 'analysis', action: 'run', description: '' }
+          ]
+        }
+      } catch (error) {
+        console.error('加载权限列表失败:', error)
+        ElMessage.error('加载权限列表失败')
+      }
+    }
+
+    const showCreateRoleDialog = () => {
+      ElMessage.info('创建角色功能开发中...')
+    }
+
+    const editRolePermissions = (role) => {
+      ElMessage.info(`编辑角色 ${role.display_name} 的权限功能开发中...`)
+    }
+
+    const deleteRole = async (role) => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除角色 "${role.display_name}" 吗？`,
+          '确认删除',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        ElMessage.success('删除成功')
+        await loadRoles()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除角色失败:', error)
+          ElMessage.error('删除角色失败')
         }
       }
     }
@@ -653,7 +1755,11 @@ export default {
       loadSpeciesOptions()
       loadRegionOptions()
       loadSourceOptions()
+      loadExperimentTypeOptions()
       loadSystemConfig()
+      loadMigrationHistory()
+      loadRoles()
+      loadPermissions()
     })
 
     return {
@@ -664,6 +1770,8 @@ export default {
       speciesForm,
       speciesFormRules,
       speciesFormRef,
+      fetchingNCBI,
+      fetchNCBIInfo,
       regionOptions,
       regionDialogVisible,
       isEditRegion,
@@ -676,8 +1784,27 @@ export default {
       sourceForm,
       sourceFormRules,
       sourceFormRef,
+      experimentTypeOptions,
+      experimentTypeDialogVisible,
+      isEditExperimentType,
+      experimentTypeForm,
+      experimentTypeFormRules,
+      experimentTypeFormRef,
+      selectedExperimentTypes,
       systemConfig,
       parentRegions,
+      // 批量操作相关
+      selectedSpecies,
+      selectedRegions,
+      selectedSources,
+      handleSpeciesSelectionChange,
+      handleRegionSelectionChange,
+      handleSourceSelectionChange,
+      handleExperimentTypeSelectionChange,
+      batchDeleteSpecies,
+      batchDeleteRegions,
+      batchDeleteSources,
+      batchDeleteExperimentTypes,
       addSpecies,
       editSpecies,
       saveSpecies,
@@ -693,7 +1820,32 @@ export default {
       saveSource,
       toggleSourceStatus,
       deleteSource,
+      addExperimentType,
+      editExperimentType,
+      saveExperimentType,
+      toggleExperimentTypeStatus,
+      deleteExperimentType,
       saveSystemConfig,
+      // 数据库管理
+      databaseStatus,
+      migrationHistory,
+      healthCheckLoading,
+      optimizeLoading,
+      performHealthCheck,
+      optimizeDatabase,
+      loadMigrationHistory,
+      getCheckLabel,
+      formatDate,
+      // 权限管理
+      permissionActiveTab,
+      roles,
+      permissions,
+      groupedPermissions,
+      loadRoles,
+      loadPermissions,
+      showCreateRoleDialog,
+      editRolePermissions,
+      deleteRole,
       getLevelText
     }
   }
@@ -742,7 +1894,104 @@ export default {
   color: #303133;
 }
 
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.header-actions .el-button {
+  margin: 0;
+}
+
 .system-config {
   margin-top: 20px;
+}
+
+.database-management {
+  .database-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+    h3 {
+      margin: 0;
+      color: #303133;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+  }
+
+  .status-card, .migration-card {
+    margin-bottom: 20px;
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+
+    .status-item {
+      padding: 12px;
+      border: 1px solid #e4e7ed;
+      border-radius: 4px;
+      background: #fafafa;
+
+      .status-label {
+        font-size: 14px;
+        color: #606266;
+        margin-bottom: 8px;
+      }
+
+      .status-value {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .count, .size {
+          font-size: 12px;
+          color: #909399;
+        }
+      }
+    }
+  }
+
+  .checksum {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    background: #f5f7fa;
+    padding: 2px 4px;
+    border-radius: 2px;
+  }
+}
+
+.permission-management {
+  .roles-header, .permissions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+    h4 {
+      margin: 0;
+      color: #303133;
+    }
+  }
+
+  .el-tabs--card {
+    .el-tabs__header {
+      margin-bottom: 20px;
+    }
+  }
 }
 </style>

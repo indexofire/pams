@@ -16,7 +16,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     update: (id, userData) => ipcRenderer.invoke('users:update', id, userData),
     delete: (id) => ipcRenderer.invoke('users:delete', id),
     updateProfile: (userId, profileData) => ipcRenderer.invoke('users:updateProfile', userId, profileData),
-    updateSettings: (userId, settingsData) => ipcRenderer.invoke('users:updateSettings', userId, settingsData)
+    updateSettings: (userId, settingsData) => ipcRenderer.invoke('users:updateSettings', userId, settingsData),
+    // 权限相关
+    getUserPermissions: (userId) => ipcRenderer.invoke('users:getUserPermissions', userId),
+    getUserMenus: (userId) => ipcRenderer.invoke('users:getUserMenus', userId),
+    getAllRoles: () => ipcRenderer.invoke('users:getAllRoles'),
+    getAllPermissions: () => ipcRenderer.invoke('users:getAllPermissions'),
+    hasPermission: (userId, permission) => ipcRenderer.invoke('users:hasPermission', userId, permission),
+    validateOperation: (userId, operation, resource) => ipcRenderer.invoke('users:validateOperation', userId, operation, resource)
   },
 
   // 认证管理
@@ -66,7 +73,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteRegion: (id) => ipcRenderer.invoke('systemConfig:deleteRegion', id),
     getSampleSources: () => ipcRenderer.invoke('systemConfig:getSampleSources'),
     saveSampleSource: (sourceData) => ipcRenderer.invoke('systemConfig:saveSampleSource', sourceData),
-    deleteSampleSource: (id) => ipcRenderer.invoke('systemConfig:deleteSampleSource', id)
+    deleteSampleSource: (id) => ipcRenderer.invoke('systemConfig:deleteSampleSource', id),
+    getExperimentTypes: () => ipcRenderer.invoke('systemConfig:getExperimentTypes'),
+    saveExperimentType: (typeData) => ipcRenderer.invoke('systemConfig:saveExperimentType', typeData),
+    deleteExperimentType: (id) => ipcRenderer.invoke('systemConfig:deleteExperimentType', id)
   },
 
   // NCBI服务
@@ -85,6 +95,36 @@ contextBridge.exposeInMainWorld('electronAPI', {
     performVirulenceAnalysis: (genomeFiles, options) => ipcRenderer.invoke('bioinformatics:performVirulenceAnalysis', genomeFiles, options),
     performResistanceAnalysis: (genomeFiles, options) => ipcRenderer.invoke('bioinformatics:performResistanceAnalysis', genomeFiles, options),
     generateAnalysisReport: (results) => ipcRenderer.invoke('bioinformatics:generateAnalysisReport', results)
+  },
+
+  // 审计日志
+  audit: {
+    getLogs: (filters, pagination) => ipcRenderer.invoke('audit:getLogs', filters, pagination),
+    getStats: (timeRange) => ipcRenderer.invoke('audit:getStats', timeRange),
+    exportLogs: (filters, format) => ipcRenderer.invoke('audit:exportLogs', filters, format),
+    detectAnomalies: () => ipcRenderer.invoke('audit:detectAnomalies'),
+    cleanupOldLogs: (retentionDays) => ipcRenderer.invoke('audit:cleanupOldLogs', retentionDays)
+  },
+
+  // 数据库管理
+  database: {
+    healthCheck: () => ipcRenderer.invoke('database:healthCheck'),
+    optimize: () => ipcRenderer.invoke('database:optimize'),
+    getMigrationHistory: () => ipcRenderer.invoke('database:getMigrationHistory'),
+    getCurrentVersion: () => ipcRenderer.invoke('database:getCurrentVersion')
+  },
+
+  // 权限管理
+  permissions: {
+    getRoles: () => ipcRenderer.invoke('permissions:getRoles'),
+    getPermissions: () => ipcRenderer.invoke('permissions:getPermissions'),
+    getRolePermissions: (roleId) => ipcRenderer.invoke('permissions:getRolePermissions', roleId),
+    getUserPermissions: (userId) => ipcRenderer.invoke('permissions:getUserPermissions', userId),
+    hasPermission: (userId, permissionName) => ipcRenderer.invoke('permissions:hasPermission', userId, permissionName),
+    assignRoleToUser: (userId, roleId, assignedBy, expiresAt) => ipcRenderer.invoke('permissions:assignRoleToUser', userId, roleId, assignedBy, expiresAt),
+    removeRoleFromUser: (userId, roleId) => ipcRenderer.invoke('permissions:removeRoleFromUser', userId, roleId),
+    assignPermissionToRole: (roleId, permissionId) => ipcRenderer.invoke('permissions:assignPermissionToRole', roleId, permissionId),
+    removePermissionFromRole: (roleId, permissionId) => ipcRenderer.invoke('permissions:removePermissionFromRole', roleId, permissionId)
   },
 
   // 事件监听

@@ -90,6 +90,21 @@
               />
             </el-select>
           </el-form-item>
+          <el-form-item label="实验类型">
+            <el-select
+              v-model="filterForm.experiment_type"
+              placeholder="请选择实验类型"
+              clearable
+            >
+              <el-option label="全部" value="" />
+              <el-option
+                v-for="option in experimentTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="searchStrains">查询</el-button>
             <el-button @click="resetFilter">重置</el-button>
@@ -115,6 +130,7 @@
           <el-table-column prop="sample_id" label="样本编号" width="120" />
           <el-table-column prop="sample_source" label="样本来源" width="100" />
           <el-table-column prop="region" label="地区" width="100" />
+          <el-table-column prop="experiment_type" label="实验类型" width="120" />
           <el-table-column prop="onset_date" label="发病日期" width="100" />
           <el-table-column prop="sampling_date" label="采样日期" width="100" />
           <el-table-column prop="isolation_date" label="分离日期" width="100" />
@@ -427,6 +443,19 @@
                 </el-form-item>
               </el-col>
               <el-col :span="12">
+                <el-form-item label="实验类型" prop="experiment_type">
+                  <DropdownInput
+                    v-model="strainForm.basic.experiment_type"
+                    :options="experimentTypeOptions"
+                    placeholder="请选择或输入实验类型"
+                    :disabled="!isEditMode"
+                    @change="handleExperimentTypeChange"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
                 <el-form-item label="发病日期" prop="onset_date">
                   <el-date-picker
                     v-model="strainForm.basic.onset_date"
@@ -616,7 +645,8 @@ export default {
       strain_id: '',
       species: '',
       region: '',
-      sample_source: ''
+      sample_source: '',
+      experiment_type: ''
     })
 
     const pagination = reactive({
@@ -640,6 +670,7 @@ export default {
         sample_id: '',
         sample_source: '',
         region: '',
+        experiment_type: '',
         onset_date: '',
         sampling_date: '',
         isolation_date: '',
@@ -1542,6 +1573,7 @@ export default {
       strainForm.basic.sample_id = ''
       strainForm.basic.sample_source = ''
       strainForm.basic.region = ''
+      strainForm.basic.experiment_type = ''
       strainForm.basic.onset_date = ''
       strainForm.basic.sampling_date = ''
       strainForm.basic.isolation_date = ''
@@ -1561,6 +1593,7 @@ export default {
       strainForm.basic.sample_id = strain.sample_id
       strainForm.basic.sample_source = strain.sample_source
       strainForm.basic.region = strain.region
+      strainForm.basic.experiment_type = strain.experiment_type || ''
       strainForm.basic.onset_date = strain.onset_date
       strainForm.basic.sampling_date = strain.sampling_date
       strainForm.basic.isolation_date = strain.isolation_date
@@ -1677,6 +1710,7 @@ export default {
     const speciesOptions = computed(() => store.getters.activeSpeciesOptions)
     const regionOptions = computed(() => store.getters.activeRegionOptions)
     const sourceOptions = computed(() => store.getters.activeSourceOptions)
+    const experimentTypeOptions = computed(() => store.getters.activeExperimentTypeOptions)
 
     // 处理选项变化，如果是新值则保存到系统配置
     const handleSpeciesChange = async (value) => {
@@ -1724,11 +1758,26 @@ export default {
       }
     }
 
+    const handleExperimentTypeChange = async (value) => {
+      const existingOption = experimentTypeOptions.value.find(option => option.value === value)
+      if (!existingOption && value && value.trim()) {
+        try {
+          await store.dispatch('saveExperimentTypeOption', {
+            value,
+            label: value,
+            category: 'custom'
+          })
+        } catch (error) {
+          console.error('保存实验类型选项失败:', error)
+        }
+      }
+    }
+
     onMounted(async () => {
       // 并行加载菌株数据和系统配置
       await Promise.all([
         loadStrains(),
-        store.dispatch('fetchSystemConfig')
+        store.dispatch('loadSystemConfig')
       ])
     })
 
@@ -1760,9 +1809,11 @@ export default {
       speciesOptions,
       regionOptions,
       sourceOptions,
+      experimentTypeOptions,
       handleSpeciesChange,
       handleRegionChange,
       handleSourceChange,
+      handleExperimentTypeChange,
       // 对话框相关
       strainDialogVisible,
       isEditMode,

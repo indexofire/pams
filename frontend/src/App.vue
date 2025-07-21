@@ -49,10 +49,15 @@
             <el-icon><Document /></el-icon>
             <span>报告中心</span>
           </el-menu-item>
-          <el-menu-item index="/system-settings" v-if="isAdmin">
-            <el-icon><Setting /></el-icon>
-            <span>系统设置</span>
-          </el-menu-item>
+          <el-sub-menu index="admin" v-if="isAdmin">
+            <template #title>
+              <el-icon><Setting /></el-icon>
+              <span>系统管理</span>
+            </template>
+            <el-menu-item index="/system-settings">系统设置</el-menu-item>
+            <el-menu-item index="/role-management">角色权限管理</el-menu-item>
+            <el-menu-item index="/security-audit">安全审计</el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-aside>
 

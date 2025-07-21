@@ -1,8 +1,12 @@
 const bcrypt = require('bcryptjs')
+const PermissionService = require('./PermissionService')
+const SecurityService = require('./SecurityService')
 
 class UserService {
   constructor(databaseService) {
     this.db = databaseService
+    this.permissionService = new PermissionService(databaseService)
+    this.securityService = new SecurityService()
   }
 
   /**
@@ -34,36 +38,77 @@ class UserService {
    */
   async createUser(userData) {
     try {
-      // 验证必要字段
-      this.validateUserData(userData)
-      
+      // 安全验证和清理输入数据
+      const validationRules = {
+        username: {
+          required: true,
+          type: 'username',
+          label: '用户名'
+        },
+        password: {
+          required: true,
+          type: 'password',
+          label: '密码'
+        },
+        email: {
+          required: false,
+          type: 'email',
+          label: '邮箱'
+        },
+        role: {
+          required: true,
+          label: '角色'
+        }
+      }
+
+      const validation = this.securityService.validateInput(userData, validationRules)
+      if (!validation.valid) {
+        const errorMessages = Object.values(validation.errors).flat()
+        throw new Error(errorMessages.join('; '))
+      }
+
+      // 清理输入数据
+      const sanitizedData = this.securityService.sanitizeInput(userData)
+
+      // 验证角色是否有效
+      const availableRoles = this.permissionService.getAllRoles()
+      if (!availableRoles[sanitizedData.role]) {
+        throw new Error('无效的用户角色')
+      }
+
       // 检查用户名是否重复
-      const existingUser = this.db.getUserByUsername(userData.username)
+      const existingUser = this.db.getUserByUsername(sanitizedData.username)
       if (existingUser) {
         throw new Error('用户名已存在')
       }
 
       // 检查邮箱是否重复（如果提供了邮箱）
-      if (userData.email) {
+      if (sanitizedData.email) {
         const existingUsers = this.db.getUsers()
-        const emailExists = existingUsers.some(user => 
-          user.email === userData.email
+        const emailExists = existingUsers.some(user =>
+          user.email === sanitizedData.email
         )
-        
+
         if (emailExists) {
           throw new Error('邮箱已存在')
         }
       }
 
       // 加密密码
-      const hashedPassword = await bcrypt.hash(userData.password, 10)
+      const hashedPassword = await bcrypt.hash(sanitizedData.password, 10)
 
       // 准备用户数据
       const userWithHashedPassword = {
-        ...userData,
+        ...sanitizedData,
         password: hashedPassword,
-        email: userData.email || `${userData.username}@pams.local`,
-        role: userData.role || 'user'
+        email: sanitizedData.email || `${sanitizedData.username}@pams.local`,
+        role: sanitizedData.role || 'viewer',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        status: 'active',
+        last_login: null,
+        failed_login_attempts: 0,
+        locked_until: null
       }
 
       return await this.db.createUser(userWithHashedPassword)
@@ -157,17 +202,31 @@ class UserService {
    */
   async login(username, password) {
     try {
-      // 确保参数有效
-      if (!username || !password) {
-        throw new Error('用户名和密码不能为空')
+      // 安全验证输入
+      const usernameValidation = this.securityService.validateUsername(username)
+      if (!usernameValidation.valid) {
+        throw new Error('用户名格式无效')
       }
 
-      let user = this.db.getUserByUsername(username)
+      if (!password) {
+        throw new Error('密码不能为空')
+      }
+
+      // 清理输入数据
+      const sanitizedUsername = usernameValidation.sanitized
+
+      let user = this.db.getUserByUsername(sanitizedUsername)
       console.log('查询用户结果:', user)
       console.log('用户密码字段:', user ? user.password : 'user is null')
 
+      // 检查账户是否被锁定
+      if (user && this.isAccountLocked(user)) {
+        await this.recordFailedLogin(sanitizedUsername)
+        throw new Error('账户已被锁定，请稍后再试')
+      }
+
       // 如果数据库中没有用户，创建默认管理员用户
-      if (!user && username === 'admin') {
+      if (!user && sanitizedUsername === 'admin') {
         console.log('创建默认管理员用户')
         const hashedPassword = await bcrypt.hash('admin123', 10)
         const adminUser = {
@@ -191,7 +250,8 @@ class UserService {
       }
 
       if (!user) {
-        throw new Error('用户名不存在')
+        await this.recordFailedLogin(sanitizedUsername)
+        throw new Error('用户名或密码错误')
       }
 
       // 检查用户密码字段
@@ -203,23 +263,17 @@ class UserService {
       // 验证密码
       const isPasswordValid = await bcrypt.compare(password, user.password)
       if (!isPasswordValid) {
-        throw new Error('密码错误')
+        await this.recordFailedLogin(sanitizedUsername)
+        throw new Error('用户名或密码错误')
       }
 
       // 检查用户状态
-      if (!user.isActive) {
+      if (!user.isActive || user.status === 'disabled') {
         throw new Error('用户已被禁用')
       }
 
-      // 更新最后登录时间
-      try {
-        await this.db.updateUser(user.id, {
-          lastLogin: new Date().toISOString()
-        })
-      } catch (updateError) {
-        console.warn('更新登录时间失败:', updateError)
-        // 不阻止登录流程
-      }
+      // 登录成功，重置失败计数
+      await this.resetFailedLoginAttempts(user.id)
 
       // 返回用户信息（不包含密码）
       const { password: _, ...userInfo } = user
@@ -437,6 +491,143 @@ class UserService {
   isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     return emailRegex.test(email)
+  }
+
+  /**
+   * 检查用户权限
+   */
+  hasPermission(userId, permission) {
+    try {
+      const user = this.db.getUserById(userId)
+      if (!user) {
+        return false
+      }
+      return this.permissionService.hasPermission(user.role, permission)
+    } catch (error) {
+      console.error('检查权限失败:', error)
+      return false
+    }
+  }
+
+  /**
+   * 检查用户是否有任一权限
+   */
+  hasAnyPermission(userId, permissions) {
+    try {
+      const user = this.db.getUserById(userId)
+      if (!user) {
+        return false
+      }
+      return this.permissionService.hasAnyPermission(user.role, permissions)
+    } catch (error) {
+      console.error('检查权限失败:', error)
+      return false
+    }
+  }
+
+  /**
+   * 获取用户菜单
+   */
+  getUserMenus(userId) {
+    try {
+      const user = this.db.getUserById(userId)
+      if (!user) {
+        return []
+      }
+      return this.permissionService.getUserMenus(user.role)
+    } catch (error) {
+      console.error('获取用户菜单失败:', error)
+      return []
+    }
+  }
+
+  /**
+   * 获取所有角色
+   */
+  getAllRoles() {
+    return this.permissionService.getAllRoles()
+  }
+
+  /**
+   * 获取所有权限
+   */
+  getAllPermissions() {
+    return this.permissionService.getAllPermissions()
+  }
+
+  /**
+   * 验证操作权限
+   */
+  validateOperation(userId, operation, resource) {
+    try {
+      const user = this.db.getUserById(userId)
+      if (!user) {
+        return false
+      }
+      return this.permissionService.validateOperation(user.role, operation, resource)
+    } catch (error) {
+      console.error('验证操作权限失败:', error)
+      return false
+    }
+  }
+
+  /**
+   * 记录登录失败
+   */
+  async recordFailedLogin(username) {
+    try {
+      const user = this.db.getUserByUsername(username)
+      if (user) {
+        const failedAttempts = (user.failed_login_attempts || 0) + 1
+        const updateData = {
+          failed_login_attempts: failedAttempts,
+          updated_at: new Date().toISOString()
+        }
+
+        // 如果失败次数超过5次，锁定账户30分钟
+        if (failedAttempts >= 5) {
+          const lockUntil = new Date()
+          lockUntil.setMinutes(lockUntil.getMinutes() + 30)
+          updateData.locked_until = lockUntil.toISOString()
+          updateData.status = 'locked'
+        }
+
+        await this.db.updateUser(user.id, updateData)
+      }
+    } catch (error) {
+      console.error('记录登录失败失败:', error)
+    }
+  }
+
+  /**
+   * 重置登录失败计数
+   */
+  async resetFailedLoginAttempts(userId) {
+    try {
+      await this.db.updateUser(userId, {
+        failed_login_attempts: 0,
+        locked_until: null,
+        status: 'active',
+        last_login: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('重置登录失败计数失败:', error)
+    }
+  }
+
+  /**
+   * 检查账户是否被锁定
+   */
+  isAccountLocked(user) {
+    if (!user.locked_until) {
+      return false
+    }
+
+    const lockUntil = new Date(user.locked_until)
+    const now = new Date()
+
+    return now < lockUntil
   }
 }
 

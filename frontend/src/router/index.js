@@ -101,6 +101,18 @@ const routes = [
     name: 'SystemSettings',
     component: () => import('../views/SystemSettings.vue'),
     meta: { title: '系统设置', requiresAuth: true, requiresRole: 'admin' }
+  },
+  {
+    path: '/role-management',
+    name: 'RoleManagement',
+    component: () => import('../views/RoleManagement.vue'),
+    meta: { title: '角色权限管理', requiresAuth: true, requiresRole: 'admin' }
+  },
+  {
+    path: '/security-audit',
+    name: 'SecurityAudit',
+    component: () => import('../views/SecurityAudit.vue'),
+    meta: { title: '安全审计', requiresAuth: true, requiresRole: 'admin' }
   }
 ]
 

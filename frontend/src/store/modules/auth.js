@@ -45,6 +45,9 @@ const actions = {
       commit('SET_TOKEN', user.token)
       commit('SET_PERMISSIONS', user.permissions || [])
 
+      // 加载用户权限
+      await this.dispatch('permission/loadUserPermissions')
+
       // 如果选择记住密码，保存到localStorage
       if (remember) {
         localStorage.setItem('remembered_username', username)
@@ -91,6 +94,9 @@ const actions = {
       }
 
       commit('LOGOUT')
+
+      // 清除权限数据
+      await this.dispatch('permission/clearPermissions')
 
       // 清除localStorage
       localStorage.removeItem('user')

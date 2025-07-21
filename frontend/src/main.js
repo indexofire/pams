@@ -3,6 +3,10 @@ import App from './App.vue'
 import router from './router'
 import store from './store'
 
+// 权限控制
+import permissionDirectives from './directives/permission'
+import { createPermissionGuard } from './router/permission'
+
 // Element Plus
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
@@ -119,10 +123,18 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 // 注册ECharts组件
 app.component('v-chart', ECharts)
 
+// 注册权限指令
+Object.keys(permissionDirectives).forEach(key => {
+  app.directive(key, permissionDirectives[key])
+})
+
 // 使用插件
 app.use(store)
 app.use(router)
 app.use(ElementPlus)
+
+// 设置路由权限守卫
+createPermissionGuard(router)
 
 // 挂载应用
 app.mount('#app')

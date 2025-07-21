@@ -178,12 +178,26 @@ export default {
 
     const loadGenomes = async () => {
       try {
-        genomes.value = [
-          { id: 1, name: 'E.coli-001-genome' },
-          { id: 2, name: 'S.aureus-002-genome' }
-        ]
+        if (window.electronAPI && window.electronAPI.genomes) {
+          const response = await window.electronAPI.genomes.getGenomes()
+          genomes.value = response.genomes.map(genome => ({
+            id: genome.id,
+            name: genome.file_name,
+            file_path: genome.file_path,
+            species: genome.species,
+            strain_id: genome.strain_id
+          }))
+        } else {
+          // 浏览器环境模拟数据
+          genomes.value = [
+            { id: 1, name: 'E.coli-001-genome.fasta', file_path: '/mock/path/ecoli.fasta', species: 'Escherichia coli' },
+            { id: 2, name: 'S.aureus-002-genome.fasta', file_path: '/mock/path/saureus.fasta', species: 'Staphylococcus aureus' },
+            { id: 3, name: 'Salmonella-003-genome.fasta', file_path: '/mock/path/salmonella.fasta', species: 'Salmonella enterica' }
+          ]
+        }
       } catch (error) {
         console.error('加载基因组列表失败:', error)
+        ElMessage.error('加载基因组列表失败')
       }
     }
 
@@ -295,9 +309,8 @@ export default {
           resistance_score: results.genomes[0]?.resistanceScore || 0,
           status: 'completed',
           created_at: new Date().toLocaleString(),
-          results: results
+          results
         })
-
       } catch (error) {
         console.error('耐药基因分析失败:', error)
         ElMessage.error('耐药基因分析失败: ' + error.message)
@@ -343,9 +356,8 @@ export default {
           detected_genes: results.summary.totalGenes,
           status: 'completed',
           created_at: new Date().toLocaleString(),
-          results: results
+          results
         })
-
       } catch (error) {
         console.error('批量耐药基因分析失败:', error)
         ElMessage.error('批量耐药基因分析失败: ' + error.message)
@@ -390,7 +402,7 @@ export default {
         const genomeResult = {
           genomeFile: genomeFile.split('/').pop(),
           database: options.database,
-          detectedGenes: detectedGenes,
+          detectedGenes,
           resistanceScore: Math.floor(Math.random() * 10) + 1
         }
 

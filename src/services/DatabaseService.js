@@ -3,6 +3,8 @@ const path = require('path')
 const fs = require('fs-extra')
 const { app } = require('electron')
 const bcrypt = require('bcryptjs')
+const MigrationService = require('./MigrationService')
+const PermissionService = require('./PermissionService')
 
 class DatabaseService {
   constructor() {
@@ -45,6 +47,13 @@ class DatabaseService {
 
     // 创建默认数据
     await this.createDefaultData()
+
+    // 初始化迁移服务并执行迁移
+    this.migrationService = new MigrationService(this)
+    await this.migrationService.runMigrations()
+
+    // 初始化权限服务
+    this.permissionService = new PermissionService(this)
 
     // 保存数据库
     await this.saveDatabase()
@@ -125,6 +134,7 @@ class DatabaseService {
         sample_id TEXT,
         sample_source TEXT,
         region TEXT,
+        experiment_type TEXT,
         onset_date TEXT,
         sampling_date TEXT,
         isolation_date TEXT,
@@ -138,6 +148,13 @@ class DatabaseService {
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     `)
+
+    // 为现有菌株表添加实验类型字段（如果不存在）
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN experiment_type TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
 
     // 基因组表
     this.db.run(`
@@ -271,6 +288,21 @@ class DatabaseService {
         description TEXT,
         status TEXT DEFAULT 'active',
         sort_order INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // 实验类型配置表
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS experiment_types_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        code TEXT UNIQUE NOT NULL,
+        description TEXT,
+        category TEXT DEFAULT 'analysis',
+        status TEXT DEFAULT 'active',
+        sort_order INTEGER DEFAULT 999,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
@@ -529,26 +561,27 @@ class DatabaseService {
     try {
       const stmt = this.db.prepare(`
         INSERT INTO strains (
-          strain_id, species, sample_id, sample_source, region,
+          strain_id, species, sample_id, sample_source, region, experiment_type,
           onset_date, sampling_date, isolation_date, uploaded_by,
           virulence_genes, antibiotic_resistance, st_type, serotype, molecular_serotype
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
-      
+
       stmt.bind([
-        strainData.strain_id || null, 
-        strainData.species || null, 
+        strainData.strain_id || null,
+        strainData.species || null,
         strainData.sample_id || null,
-        strainData.sample_source || null, 
-        strainData.region || null, 
+        strainData.sample_source || null,
+        strainData.region || null,
+        strainData.experiment_type || null,
         strainData.onset_date || null,
-        strainData.sampling_date || null, 
-        strainData.isolation_date || null, 
+        strainData.sampling_date || null,
+        strainData.isolation_date || null,
         strainData.uploaded_by || null,
-        strainData.virulence_genes || null, 
+        strainData.virulence_genes || null,
         strainData.antibiotic_resistance || null,
-        strainData.st_type || null, 
-        strainData.serotype || null, 
+        strainData.st_type || null,
+        strainData.serotype || null,
         strainData.molecular_serotype || null
       ])
       
@@ -593,18 +626,18 @@ class DatabaseService {
   async updateStrain(id, strainData) {
     const stmt = this.db.prepare(`
       UPDATE strains SET
-        strain_id = ?, species = ?, sample_id = ?, sample_source = ?, region = ?,
+        strain_id = ?, species = ?, sample_id = ?, sample_source = ?, region = ?, experiment_type = ?,
         onset_date = ?, sampling_date = ?, isolation_date = ?, uploaded_by = ?,
         virulence_genes = ?, antibiotic_resistance = ?, st_type = ?, serotype = ?,
         molecular_serotype = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `)
-    
+
     stmt.run([
       strainData.strain_id, strainData.species, strainData.sample_id,
-      strainData.sample_source, strainData.region, strainData.onset_date,
-      strainData.sampling_date, strainData.isolation_date, strainData.uploaded_by,
-      strainData.virulence_genes, strainData.antibiotic_resistance,
+      strainData.sample_source, strainData.region, strainData.experiment_type,
+      strainData.onset_date, strainData.sampling_date, strainData.isolation_date,
+      strainData.uploaded_by, strainData.virulence_genes, strainData.antibiotic_resistance,
       strainData.st_type, strainData.serotype, strainData.molecular_serotype, id
     ])
     
@@ -865,11 +898,46 @@ class DatabaseService {
 
   async createDefaultSpeciesConfig() {
     const defaultSpecies = [
-      { name: '大肠杆菌', scientific_name: 'Escherichia coli', description: '常见的肠道细菌，重要的食源性病原菌', sort_order: 1 },
-      { name: '沙门氏菌', scientific_name: 'Salmonella spp.', description: '重要的食源性病原菌，引起肠胃炎', sort_order: 2 },
-      { name: '志贺氏菌', scientific_name: 'Shigella spp.', description: '引起细菌性痢疾的病原菌', sort_order: 3 },
-      { name: '弧菌', scientific_name: 'Vibrio spp.', description: '水生细菌，包括霍乱弧菌等', sort_order: 4 },
-      { name: '金黄色葡萄球菌', scientific_name: 'Staphylococcus aureus', description: '常见的致病菌，可引起多种感染', sort_order: 5 }
+      {
+        name: '大肠杆菌',
+        scientific_name: 'Escherichia coli',
+        abbreviation: 'E. coli',
+        ncbi_txid: '562',
+        description: '常见的肠道细菌，重要的食源性病原菌',
+        sort_order: 1
+      },
+      {
+        name: '沙门氏菌',
+        scientific_name: 'Salmonella enterica',
+        abbreviation: 'S. enterica',
+        ncbi_txid: '28901',
+        description: '重要的食源性病原菌，引起肠胃炎',
+        sort_order: 2
+      },
+      {
+        name: '志贺氏菌',
+        scientific_name: 'Shigella flexneri',
+        abbreviation: 'S. flexneri',
+        ncbi_txid: '623',
+        description: '引起细菌性痢疾的病原菌',
+        sort_order: 3
+      },
+      {
+        name: '霍乱弧菌',
+        scientific_name: 'Vibrio cholerae',
+        abbreviation: 'V. cholerae',
+        ncbi_txid: '666',
+        description: '引起霍乱的水生细菌',
+        sort_order: 4
+      },
+      {
+        name: '金黄色葡萄球菌',
+        scientific_name: 'Staphylococcus aureus',
+        abbreviation: 'S. aureus',
+        ncbi_txid: '1280',
+        description: '常见的致病菌，可引起多种感染',
+        sort_order: 5
+      }
     ]
 
     for (const species of defaultSpecies) {
@@ -884,10 +952,17 @@ class DatabaseService {
 
         if (!existing) {
           const insertStmt = this.db.prepare(`
-            INSERT INTO species_config (name, scientific_name, description, sort_order)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO species_config (name, scientific_name, abbreviation, ncbi_txid, description, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?)
           `)
-          insertStmt.bind([species.name, species.scientific_name, species.description, species.sort_order])
+          insertStmt.bind([
+            species.name,
+            species.scientific_name,
+            species.abbreviation || null,
+            species.ncbi_txid || null,
+            species.description,
+            species.sort_order
+          ])
           insertStmt.step()
           insertStmt.free()
         }
@@ -963,6 +1038,42 @@ class DatabaseService {
         console.error('创建样本来源配置失败:', error)
       }
     }
+
+    // 初始化默认实验类型
+    const defaultExperimentTypes = [
+      { name: 'MLST分析', code: 'mlst', description: '多位点序列分型分析', category: 'typing', sort_order: 1 },
+      { name: '血清分型', code: 'serotyping', description: '血清学分型分析', category: 'typing', sort_order: 2 },
+      { name: '毒力基因检测', code: 'virulence', description: '毒力基因分析', category: 'gene_analysis', sort_order: 3 },
+      { name: '耐药基因检测', code: 'resistance', description: '耐药基因分析', category: 'gene_analysis', sort_order: 4 },
+      { name: '全基因组测序', code: 'wgs', description: '全基因组序列分析', category: 'sequencing', sort_order: 5 },
+      { name: '比较基因组学', code: 'comparative', description: '比较基因组分析', category: 'analysis', sort_order: 6 },
+      { name: '系统发育分析', code: 'phylogeny', description: '系统发育树构建', category: 'analysis', sort_order: 7 },
+      { name: '基因组注释', code: 'annotation', description: '基因组功能注释', category: 'annotation', sort_order: 8 }
+    ]
+
+    for (const type of defaultExperimentTypes) {
+      try {
+        const checkStmt = this.db.prepare('SELECT * FROM experiment_types_config WHERE code = ?')
+        checkStmt.bind([type.code])
+        let existing = null
+        if (checkStmt.step()) {
+          existing = checkStmt.getAsObject()
+        }
+        checkStmt.free()
+
+        if (!existing) {
+          const insertStmt = this.db.prepare(`
+            INSERT INTO experiment_types_config (name, code, description, category, sort_order)
+            VALUES (?, ?, ?, ?, ?)
+          `)
+          insertStmt.bind([type.name, type.code, type.description, type.category, type.sort_order])
+          insertStmt.step()
+          insertStmt.free()
+        }
+      } catch (error) {
+        console.error('创建实验类型配置失败:', error)
+      }
+    }
   }
 
   // 获取系统配置
@@ -1028,6 +1139,23 @@ class DatabaseService {
       return results
     } catch (error) {
       console.error('获取样本来源配置失败:', error)
+      return []
+    }
+  }
+
+  // 获取实验类型配置
+  getExperimentTypesConfig() {
+    try {
+      const stmt = this.db.prepare('SELECT * FROM experiment_types_config WHERE status = ? ORDER BY sort_order, name')
+      stmt.bind(['active'])
+      const results = []
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
+    } catch (error) {
+      console.error('获取实验类型配置失败:', error)
       return []
     }
   }

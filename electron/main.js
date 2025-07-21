@@ -12,11 +12,13 @@ const GenomeService = require('../src/services/GenomeService')
 const AnalysisService = require('../src/services/AnalysisService')
 const UserService = require('../src/services/UserService')
 const SystemConfigService = require('../src/services/SystemConfigService')
+const AuditService = require('../src/services/AuditService')
 const NCBIService = require('../src/services/NCBIService')
 const BioinformaticsService = require('../src/services/BioinformaticsService')
 
 let mainWindow
 let dbService
+let auditService
 
 async function createWindow() {
   // 初始化数据库
@@ -24,6 +26,10 @@ async function createWindow() {
     dbService = new DatabaseService()
     await dbService.initialize()
     console.log('数据库初始化成功')
+
+    // 初始化审计服务
+    auditService = new AuditService(dbService)
+    console.log('审计服务初始化成功')
   } catch (error) {
     console.error('数据库初始化失败:', error)
   }
@@ -240,9 +246,38 @@ function registerIpcHandlers() {
     try {
       console.log('收到登录请求:', { username, password: password ? '***' : 'undefined' })
       const userService = new UserService(dbService)
-      return await userService.login(username, password)
+      const result = await userService.login(username, password)
+
+      // 记录登录审计日志
+      if (auditService) {
+        await auditService.logLogin(
+          username,
+          result.id,
+          'success',
+          '127.0.0.1', // Electron环境下的本地IP
+          'Electron App',
+          `session_${Date.now()}`,
+          { loginMethod: 'password' }
+        )
+      }
+
+      return result
     } catch (error) {
       console.error('登录处理失败:', error)
+
+      // 记录登录失败审计日志
+      if (auditService) {
+        await auditService.logLogin(
+          username,
+          null,
+          'failure',
+          '127.0.0.1',
+          'Electron App',
+          null,
+          { error: error.message }
+        )
+      }
+
       throw error
     }
   })
@@ -271,6 +306,155 @@ function registerIpcHandlers() {
   ipcMain.handle('users:updateSettings', async (event, userId, settingsData) => {
     const userService = new UserService(dbService)
     return await userService.updateUserSettings(userId, settingsData)
+  })
+
+  // 权限相关
+  ipcMain.handle('users:getUserPermissions', async (event, userId) => {
+    const userService = new UserService(dbService)
+    const user = await userService.getUserById(userId)
+    if (!user) {
+      throw new Error('用户不存在')
+    }
+    return userService.permissionService.getRolePermissions(user.role)
+  })
+
+  ipcMain.handle('users:getUserMenus', async (event, userId) => {
+    const userService = new UserService(dbService)
+    return await userService.getUserMenus(userId)
+  })
+
+  ipcMain.handle('users:getAllRoles', async () => {
+    const userService = new UserService(dbService)
+    return userService.getAllRoles()
+  })
+
+  ipcMain.handle('users:getAllPermissions', async () => {
+    const userService = new UserService(dbService)
+    return userService.getAllPermissions()
+  })
+
+  ipcMain.handle('users:hasPermission', async (event, userId, permission) => {
+    const userService = new UserService(dbService)
+    return userService.hasPermission(userId, permission)
+  })
+
+  ipcMain.handle('users:validateOperation', async (event, userId, operation, resource) => {
+    const userService = new UserService(dbService)
+    return userService.validateOperation(userId, operation, resource)
+  })
+
+  // 审计相关
+  ipcMain.handle('audit:getLogs', async (event, filters, pagination) => {
+    return auditService.getAuditLogs(filters, pagination)
+  })
+
+  ipcMain.handle('audit:getStats', async (event, timeRange) => {
+    return auditService.getAuditStats(timeRange)
+  })
+
+  ipcMain.handle('audit:exportLogs', async (event, filters, format) => {
+    return auditService.exportAuditLogs(filters, format)
+  })
+
+  ipcMain.handle('audit:detectAnomalies', async () => {
+    return auditService.detectAnomalies()
+  })
+
+  ipcMain.handle('audit:cleanupOldLogs', async (event, retentionDays) => {
+    return auditService.cleanupOldLogs(retentionDays)
+  })
+
+  // 数据库管理相关
+  ipcMain.handle('database:healthCheck', async () => {
+    if (dbService.migrationService) {
+      return await dbService.migrationService.healthCheck()
+    }
+    return { status: 'error', error: '迁移服务未初始化' }
+  })
+
+  ipcMain.handle('database:optimize', async () => {
+    if (dbService.migrationService) {
+      return await dbService.migrationService.optimizeDatabase()
+    }
+    return { status: 'error', error: '迁移服务未初始化' }
+  })
+
+  ipcMain.handle('database:getMigrationHistory', async () => {
+    if (dbService.migrationService) {
+      return dbService.migrationService.getMigrationHistory()
+    }
+    return []
+  })
+
+  ipcMain.handle('database:getCurrentVersion', async () => {
+    if (dbService.migrationService) {
+      return dbService.migrationService.getCurrentVersion()
+    }
+    return '0.0.0'
+  })
+
+  // 权限管理相关
+  ipcMain.handle('permissions:getRoles', async () => {
+    if (dbService.permissionService) {
+      return dbService.permissionService.getRoles()
+    }
+    return []
+  })
+
+  ipcMain.handle('permissions:getPermissions', async () => {
+    if (dbService.permissionService) {
+      return dbService.permissionService.getPermissions()
+    }
+    return []
+  })
+
+  ipcMain.handle('permissions:getRolePermissions', async (event, roleId) => {
+    if (dbService.permissionService) {
+      return dbService.permissionService.getRolePermissions(roleId)
+    }
+    return []
+  })
+
+  ipcMain.handle('permissions:getUserPermissions', async (event, userId) => {
+    if (dbService.permissionService) {
+      return dbService.permissionService.getUserPermissions(userId)
+    }
+    return []
+  })
+
+  ipcMain.handle('permissions:hasPermission', async (event, userId, permissionName) => {
+    if (dbService.permissionService) {
+      return dbService.permissionService.hasPermission(userId, permissionName)
+    }
+    return false
+  })
+
+  ipcMain.handle('permissions:assignRoleToUser', async (event, userId, roleId, assignedBy, expiresAt) => {
+    if (dbService.permissionService) {
+      return dbService.permissionService.assignRoleToUser(userId, roleId, assignedBy, expiresAt)
+    }
+    return false
+  })
+
+  ipcMain.handle('permissions:removeRoleFromUser', async (event, userId, roleId) => {
+    if (dbService.permissionService) {
+      return dbService.permissionService.removeRoleFromUser(userId, roleId)
+    }
+    return false
+  })
+
+  ipcMain.handle('permissions:assignPermissionToRole', async (event, roleId, permissionId) => {
+    if (dbService.permissionService) {
+      return dbService.permissionService.assignPermissionToRole(roleId, permissionId)
+    }
+    return false
+  })
+
+  ipcMain.handle('permissions:removePermissionFromRole', async (event, roleId, permissionId) => {
+    if (dbService.permissionService) {
+      return dbService.permissionService.removePermissionFromRole(roleId, permissionId)
+    }
+    return false
   })
 
   // 菌株相关
@@ -553,6 +737,21 @@ function registerIpcHandlers() {
   ipcMain.handle('systemConfig:deleteSampleSource', async (event, id) => {
     const systemConfigService = new SystemConfigService(dbService)
     return await systemConfigService.deleteSampleSource(id)
+  })
+
+  ipcMain.handle('systemConfig:getExperimentTypes', async () => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.getExperimentTypesConfig()
+  })
+
+  ipcMain.handle('systemConfig:saveExperimentType', async (event, typeData) => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.saveExperimentType(typeData)
+  })
+
+  ipcMain.handle('systemConfig:deleteExperimentType', async (event, id) => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.deleteExperimentType(id)
   })
 
   // NCBI相关
