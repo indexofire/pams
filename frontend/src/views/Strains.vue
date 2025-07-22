@@ -802,6 +802,14 @@ export default {
       isEditMode.value = true
       activeTab.value = 'basic'
       resetStrainForm()
+
+      // 自动生成菌株编号（按流水号排序）
+      const maxStrainId = strains.value.reduce((max, strain) => {
+        const strainIdNum = parseInt(strain.strain_id)
+        return isNaN(strainIdNum) ? max : Math.max(max, strainIdNum)
+      }, 0)
+      strainForm.basic.strain_id = String(maxStrainId + 1).padStart(6, '0') // 生成6位数字，前面补0
+
       strainForm.basic.uploaded_by = store.getters['auth/user'].username
       strainDialogVisible.value = true
     }

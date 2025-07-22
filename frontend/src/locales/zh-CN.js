@@ -250,12 +250,18 @@ export default {
 
   // 分页
   pagination: {
-    total: '共 {total} 条',
+    total: '共 {total} 条记录',
     page: '第 {current} 页',
-    pageSize: '每页 {size} 条',
-    goto: '跳至',
+    pageSize: '每页显示 {size} 条',
+    goto: '跳转至',
     prev: '上一页',
-    next: '下一页'
+    next: '下一页',
+    jumper: '前往',
+    pageClassifier: '页',
+    totalPrefix: '共',
+    totalSuffix: '条记录',
+    pageSizePrefix: '每页',
+    pageSizeSuffix: '条'
   },
 
   // 日期时间

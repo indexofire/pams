@@ -342,6 +342,7 @@ export default {
     const roleDialogVisible = ref(false)
     const editingRole = ref(false)
     const roleSaveLoading = ref(false)
+    const permissionTreeRef = ref(null)
 
     const roleForm = reactive({
       id: null,
@@ -524,6 +525,12 @@ export default {
         permissions: [...(role.permissions || [])]
       })
       roleDialogVisible.value = true
+      // 等待DOM更新后设置权限树的选中状态
+      nextTick(() => {
+        if (permissionTreeRef.value) {
+          permissionTreeRef.value.setCheckedKeys(role.permissions || [])
+        }
+      })
     }
 
     const viewRole = (role) => {
@@ -535,6 +542,12 @@ export default {
         permissions: [...(role.permissions || [])]
       })
       roleDialogVisible.value = true
+      // 等待DOM更新后设置权限树的选中状态
+      nextTick(() => {
+        if (permissionTreeRef.value) {
+          permissionTreeRef.value.setCheckedKeys(role.permissions || [])
+        }
+      })
     }
 
     const resetRoleForm = () => {
@@ -545,6 +558,12 @@ export default {
         permissions: []
       })
       editingRole.value = false
+      // 清空权限树的选中状态
+      nextTick(() => {
+        if (permissionTreeRef.value) {
+          permissionTreeRef.value.setCheckedKeys([])
+        }
+      })
     }
 
     const handlePermissionCheck = (data, checked) => {
@@ -913,6 +932,7 @@ export default {
       roleDialogVisible,
       editingRole,
       roleSaveLoading,
+      permissionTreeRef,
       roleForm,
       roleRules,
       treeProps,

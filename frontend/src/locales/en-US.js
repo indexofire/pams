@@ -252,12 +252,18 @@ export default {
 
   // Pagination
   pagination: {
-    total: 'Total {total} items',
+    total: 'Total {total} records',
     page: 'Page {current}',
-    pageSize: '{size} items per page',
+    pageSize: 'Show {size} per page',
     goto: 'Go to',
     prev: 'Previous',
-    next: 'Next'
+    next: 'Next',
+    jumper: 'Go to',
+    pageClassifier: '',
+    totalPrefix: 'Total',
+    totalSuffix: 'records',
+    pageSizePrefix: 'Show',
+    pageSizeSuffix: 'per page'
   },
 
   // Date time

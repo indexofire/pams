@@ -274,6 +274,7 @@
           <el-input
             v-model="speciesForm.scientific_name"
             placeholder="请输入学名，如：Escherichia coli"
+            @blur="onScientificNameChange"
           />
         </el-form-item>
         <el-form-item label="缩写">
@@ -281,14 +282,37 @@
             v-model="speciesForm.abbreviation"
             placeholder="自动生成或手动输入"
             style="width: 200px;"
-          />
+          >
+            <template #append>
+              <el-button @click="generateAbbreviation" :loading="abbreviationLoading">
+                自动生成
+              </el-button>
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item label="NCBI TXID">
           <el-input
             v-model="speciesForm.ncbi_txid"
             placeholder="从NCBI获取或手动输入"
             style="width: 200px;"
-          />
+          >
+            <template #append>
+              <el-button @click="searchNCBITaxonomy" :loading="ncbiLoading">
+                从NCBI获取
+              </el-button>
+            </template>
+          </el-input>
+          <div v-if="ncbiSearchResult" class="ncbi-result" style="margin-top: 8px;">
+            <el-alert
+              :type="ncbiSearchResult.success ? 'success' : 'error'"
+              :title="ncbiSearchResult.success ? 'NCBI信息获取成功' : 'NCBI信息获取失败'"
+              :description="ncbiSearchResult.success ?
+                `TXID: ${ncbiSearchResult.txid}, 学名: ${ncbiSearchResult.scientificName}` :
+                ncbiSearchResult.error"
+              show-icon
+              :closable="false"
+            />
+          </div>
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="speciesForm.description" type="textarea" :rows="3" placeholder="请输入描述" />
@@ -391,15 +415,17 @@
 </template>
 
 <script>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { useStore } from 'vuex'
 export default {
   name: 'ExperimentSettings',
   components: {
     Plus
   },
   setup () {
+    const store = useStore()
     const activeTab = ref('species')
 
     // 菌种管理相关
@@ -437,6 +463,11 @@ export default {
     const sourceDialogVisible = ref(false)
     const experimentDialogVisible = ref(false)
 
+    // NCBI相关状态
+    const ncbiLoading = ref(false)
+    const abbreviationLoading = ref(false)
+    const ncbiSearchResult = ref(null)
+
     // 表单数据
     const speciesForm = reactive({
       id: null,
@@ -472,6 +503,243 @@ export default {
       status: 'active'
     })
 
+    // 数据加载和保存方法
+    const loadExperimentData = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // 使用Electron API加载数据
+          const species = await window.electronAPI.systemConfig.getSpecies()
+          const regions = await window.electronAPI.systemConfig.getRegions()
+          const sources = await window.electronAPI.systemConfig.getSampleSources()
+          const experimentTypes = await window.electronAPI.systemConfig.getExperimentTypes()
+
+          speciesOptions.value = species || []
+          regionOptions.value = regions || []
+          sourceOptions.value = sources || []
+          experimentTypes.value = experimentTypes || []
+        } else {
+          // 开发环境：从localStorage加载数据
+          const savedSpecies = localStorage.getItem('pams_species_options')
+          const savedRegions = localStorage.getItem('pams_region_options')
+          const savedSources = localStorage.getItem('pams_source_options')
+          const savedExperiments = localStorage.getItem('pams_experiment_types')
+
+          if (savedSpecies) {
+            try {
+              speciesOptions.value = JSON.parse(savedSpecies)
+            } catch (e) {
+              console.error('解析菌种数据失败:', e)
+              initializeDefaultSpecies()
+            }
+          } else {
+            initializeDefaultSpecies()
+          }
+
+          if (savedRegions) {
+            try {
+              regionOptions.value = JSON.parse(savedRegions)
+            } catch (e) {
+              console.error('解析地区数据失败:', e)
+              initializeDefaultRegions()
+            }
+          } else {
+            initializeDefaultRegions()
+          }
+
+          if (savedSources) {
+            try {
+              sourceOptions.value = JSON.parse(savedSources)
+            } catch (e) {
+              console.error('解析样本来源数据失败:', e)
+              initializeDefaultSources()
+            }
+          } else {
+            initializeDefaultSources()
+          }
+
+          if (savedExperiments) {
+            try {
+              experimentTypes.value = JSON.parse(savedExperiments)
+            } catch (e) {
+              console.error('解析实验类型数据失败:', e)
+              initializeDefaultExperiments()
+            }
+          } else {
+            initializeDefaultExperiments()
+          }
+        }
+      } catch (error) {
+        console.error('加载实验设置数据失败:', error)
+        ElMessage.error('加载数据失败')
+      }
+    }
+
+    const saveExperimentData = () => {
+      try {
+        // 保存到localStorage
+        localStorage.setItem('pams_species_options', JSON.stringify(speciesOptions.value))
+        localStorage.setItem('pams_region_options', JSON.stringify(regionOptions.value))
+        localStorage.setItem('pams_source_options', JSON.stringify(sourceOptions.value))
+        localStorage.setItem('pams_experiment_types', JSON.stringify(experimentTypes.value))
+      } catch (error) {
+        console.error('保存实验设置数据失败:', error)
+      }
+    }
+
+    // 初始化默认数据的方法
+    const initializeDefaultSpecies = () => {
+      speciesOptions.value = [
+        {
+          id: 1,
+          name: '大肠杆菌',
+          scientific_name: 'Escherichia coli',
+          abbreviation: 'Ecol',
+          ncbi_txid: '562',
+          description: '常见的肠道细菌',
+          status: 'active'
+        },
+        {
+          id: 2,
+          name: '沙门氏菌',
+          scientific_name: 'Salmonella enterica',
+          abbreviation: 'Sent',
+          ncbi_txid: '28901',
+          description: '食源性致病菌',
+          status: 'active'
+        }
+      ]
+    }
+
+    const initializeDefaultRegions = () => {
+      regionOptions.value = [
+        {
+          id: 1,
+          name: '北京市',
+          code: '110000',
+          level: 'province',
+          description: '直辖市',
+          status: 'active'
+        },
+        {
+          id: 2,
+          name: '上海市',
+          code: '310000',
+          level: 'province',
+          description: '直辖市',
+          status: 'active'
+        }
+      ]
+    }
+
+    const initializeDefaultSources = () => {
+      sourceOptions.value = [
+        {
+          id: 1,
+          name: '临床样本',
+          category: 'clinical',
+          description: '来自医院的临床样本',
+          status: 'active'
+        },
+        {
+          id: 2,
+          name: '食品样本',
+          category: 'food',
+          description: '来自食品的样本',
+          status: 'active'
+        }
+      ]
+    }
+
+    const initializeDefaultExperiments = () => {
+      experimentTypes.value = [
+        {
+          id: 1,
+          name: '全基因组测序',
+          description: 'WGS测序分析',
+          protocol: 'Illumina测序平台',
+          status: 'active'
+        },
+        {
+          id: 2,
+          name: 'MLST分型',
+          description: '多位点序列分型',
+          protocol: '标准MLST方案',
+          status: 'active'
+        }
+      ]
+    }
+
+    // NCBI相关方法
+    const generateAbbreviation = async () => {
+      if (!speciesForm.scientific_name) {
+        ElMessage.warning('请先输入学名')
+        return
+      }
+
+      abbreviationLoading.value = true
+      try {
+        if (window.electronAPI && window.electronAPI.ncbi) {
+          const abbreviation = await window.electronAPI.ncbi.generateAbbreviation(speciesForm.scientific_name)
+          speciesForm.abbreviation = abbreviation
+          ElMessage.success('缩写生成成功')
+        } else {
+          // 浏览器环境下的简单生成逻辑
+          const parts = speciesForm.scientific_name.trim().split(/\s+/)
+          if (parts.length >= 2) {
+            const genus = parts[0].charAt(0).toUpperCase()
+            const species = parts[1].substring(0, 3).toLowerCase()
+            speciesForm.abbreviation = genus + species
+            ElMessage.success('缩写生成成功')
+          }
+        }
+      } catch (error) {
+        console.error('生成缩写失败:', error)
+        ElMessage.error('生成缩写失败: ' + error.message)
+      } finally {
+        abbreviationLoading.value = false
+      }
+    }
+
+    const searchNCBITaxonomy = async () => {
+      if (!speciesForm.scientific_name) {
+        ElMessage.warning('请先输入学名')
+        return
+      }
+
+      ncbiLoading.value = true
+      ncbiSearchResult.value = null
+
+      try {
+        if (window.electronAPI && window.electronAPI.ncbi) {
+          const result = await window.electronAPI.ncbi.searchTaxonomyId(speciesForm.scientific_name)
+          ncbiSearchResult.value = result
+
+          if (result.success) {
+            speciesForm.ncbi_txid = result.txid
+            ElMessage.success('NCBI信息获取成功')
+          } else {
+            ElMessage.error('NCBI信息获取失败: ' + result.error)
+          }
+        } else {
+          ElMessage.warning('NCBI功能仅在Electron环境下可用')
+        }
+      } catch (error) {
+        console.error('搜索NCBI失败:', error)
+        ElMessage.error('搜索NCBI失败: ' + error.message)
+        ncbiSearchResult.value = {
+          success: false,
+          error: error.message
+        }
+      } finally {
+        ncbiLoading.value = false
+      }
+    }
+
+    const onScientificNameChange = () => {
+      // 当学名改变时，清除之前的NCBI搜索结果
+      ncbiSearchResult.value = null
+    }
+
     // 菌种管理方法
     const addSpecies = () => {
       Object.assign(speciesForm, {
@@ -483,7 +751,15 @@ export default {
         description: '',
         status: 'active'
       })
+      ncbiSearchResult.value = null
       speciesDialogVisible.value = true
+    }
+
+    // 生成新的ID
+    const generateNewId = (dataArray) => {
+      if (dataArray.length === 0) return 1
+      const maxId = Math.max(...dataArray.map(item => item.id || 0))
+      return maxId + 1
     }
 
     const editSpecies = (species) => {
@@ -491,24 +767,53 @@ export default {
       speciesDialogVisible.value = true
     }
 
-    const saveSpecies = () => {
-      if (speciesForm.id) {
-        // 更新菌种
-        const index = speciesOptions.value.findIndex(s => s.id === speciesForm.id)
-        if (index !== -1) {
-          speciesOptions.value[index] = { ...speciesForm }
+    const saveSpecies = async () => {
+      try {
+        if (speciesForm.id) {
+          // 更新菌种
+          const index = speciesOptions.value.findIndex(s => s.id === speciesForm.id)
+          if (index !== -1) {
+            speciesOptions.value[index] = { ...speciesForm }
+          }
+
+          // 同步更新store
+          const storeData = {
+            id: speciesForm.id,
+            value: speciesForm.scientific_name || speciesForm.name,
+            label: speciesForm.name,
+            scientific_name: speciesForm.scientific_name,
+            description: speciesForm.description,
+            status: speciesForm.status
+          }
+          store.commit('UPDATE_SPECIES_OPTION', { id: speciesForm.id, species: storeData })
+          ElMessage.success('菌种更新成功')
+        } else {
+          // 添加菌种 - 使用新的ID生成逻辑
+          const newSpecies = {
+            id: generateNewId(speciesOptions.value),
+            ...speciesForm
+          }
+          speciesOptions.value.push(newSpecies)
+
+          // 同步添加到store
+          const storeData = {
+            id: newSpecies.id,
+            value: newSpecies.scientific_name || newSpecies.name,
+            label: newSpecies.name,
+            scientific_name: newSpecies.scientific_name,
+            description: newSpecies.description,
+            status: newSpecies.status
+          }
+          store.commit('ADD_SPECIES_OPTION', storeData)
+          ElMessage.success('菌种添加成功')
         }
-        ElMessage.success('菌种更新成功')
-      } else {
-        // 添加菌种
-        const newSpecies = {
-          id: Date.now(),
-          ...speciesForm
-        }
-        speciesOptions.value.push(newSpecies)
-        ElMessage.success('菌种添加成功')
+
+        // 保存到localStorage
+        saveExperimentData()
+        speciesDialogVisible.value = false
+      } catch (error) {
+        ElMessage.error('保存失败: ' + error.message)
       }
-      speciesDialogVisible.value = false
     }
 
     const deleteSpecies = (species) => {
@@ -521,6 +826,10 @@ export default {
         if (index !== -1) {
           speciesOptions.value.splice(index, 1)
         }
+        // 同步删除store中的数据
+        store.commit('DELETE_SPECIES_OPTION', species.id)
+        // 保存到localStorage
+        saveExperimentData()
         ElMessage.success('菌种删除成功')
       }).catch(() => {})
     }
@@ -541,24 +850,55 @@ export default {
       regionDialogVisible.value = true
     }
 
-    const saveRegion = () => {
-      if (regionForm.id) {
-        // 更新地区
-        const index = regionOptions.value.findIndex(r => r.id === regionForm.id)
-        if (index !== -1) {
-          regionOptions.value[index] = { ...regionForm }
+    const saveRegion = async () => {
+      try {
+        if (regionForm.id) {
+          // 更新地区
+          const index = regionOptions.value.findIndex(r => r.id === regionForm.id)
+          if (index !== -1) {
+            regionOptions.value[index] = { ...regionForm }
+          }
+
+          // 同步更新store
+          const storeData = {
+            id: regionForm.id,
+            value: regionForm.name,
+            label: regionForm.name,
+            code: regionForm.code,
+            level: regionForm.level,
+            description: regionForm.description || '',
+            status: regionForm.status
+          }
+          store.commit('UPDATE_REGION_OPTION', { id: regionForm.id, region: storeData })
+          ElMessage.success('地区更新成功')
+        } else {
+          // 添加地区 - 使用新的ID生成逻辑
+          const newRegion = {
+            id: generateNewId(regionOptions.value),
+            ...regionForm
+          }
+          regionOptions.value.push(newRegion)
+
+          // 同步添加到store
+          const storeData = {
+            id: newRegion.id,
+            value: newRegion.name,
+            label: newRegion.name,
+            code: newRegion.code,
+            level: newRegion.level,
+            description: newRegion.description || '',
+            status: newRegion.status
+          }
+          store.commit('ADD_REGION_OPTION', storeData)
+          ElMessage.success('地区添加成功')
         }
-        ElMessage.success('地区更新成功')
-      } else {
-        // 添加地区
-        const newRegion = {
-          id: Date.now(),
-          ...regionForm
-        }
-        regionOptions.value.push(newRegion)
-        ElMessage.success('地区添加成功')
+
+        // 保存到localStorage
+        saveExperimentData()
+        regionDialogVisible.value = false
+      } catch (error) {
+        ElMessage.error('保存失败: ' + error.message)
       }
-      regionDialogVisible.value = false
     }
 
     const deleteRegion = (region) => {
@@ -571,6 +911,10 @@ export default {
         if (index !== -1) {
           regionOptions.value.splice(index, 1)
         }
+        // 同步删除store中的数据
+        store.commit('DELETE_REGION_OPTION', region.id)
+        // 保存到localStorage
+        saveExperimentData()
         ElMessage.success('地区删除成功')
       }).catch(() => {})
     }
@@ -591,24 +935,53 @@ export default {
       sourceDialogVisible.value = true
     }
 
-    const saveSource = () => {
-      if (sourceForm.id) {
-        // 更新样本来源
-        const index = sourceOptions.value.findIndex(s => s.id === sourceForm.id)
-        if (index !== -1) {
-          sourceOptions.value[index] = { ...sourceForm }
+    const saveSource = async () => {
+      try {
+        if (sourceForm.id) {
+          // 更新样本来源
+          const index = sourceOptions.value.findIndex(s => s.id === sourceForm.id)
+          if (index !== -1) {
+            sourceOptions.value[index] = { ...sourceForm }
+          }
+
+          // 同步更新store
+          const storeData = {
+            id: sourceForm.id,
+            value: sourceForm.name,
+            label: sourceForm.name,
+            category: sourceForm.category,
+            description: sourceForm.description,
+            status: sourceForm.status
+          }
+          store.commit('UPDATE_SOURCE_OPTION', { id: sourceForm.id, source: storeData })
+          ElMessage.success('样本来源更新成功')
+        } else {
+          // 添加样本来源 - 使用新的ID生成逻辑
+          const newSource = {
+            id: generateNewId(sourceOptions.value),
+            ...sourceForm
+          }
+          sourceOptions.value.push(newSource)
+
+          // 同步添加到store
+          const storeData = {
+            id: newSource.id,
+            value: newSource.name,
+            label: newSource.name,
+            category: newSource.category,
+            description: newSource.description,
+            status: newSource.status
+          }
+          store.commit('ADD_SOURCE_OPTION', storeData)
+          ElMessage.success('样本来源添加成功')
         }
-        ElMessage.success('样本来源更新成功')
-      } else {
-        // 添加样本来源
-        const newSource = {
-          id: Date.now(),
-          ...sourceForm
-        }
-        sourceOptions.value.push(newSource)
-        ElMessage.success('样本来源添加成功')
+
+        // 保存到localStorage
+        saveExperimentData()
+        sourceDialogVisible.value = false
+      } catch (error) {
+        ElMessage.error('保存失败: ' + error.message)
       }
-      sourceDialogVisible.value = false
     }
 
     const deleteSource = (source) => {
@@ -621,6 +994,10 @@ export default {
         if (index !== -1) {
           sourceOptions.value.splice(index, 1)
         }
+        // 同步删除store中的数据
+        store.commit('DELETE_SOURCE_OPTION', source.id)
+        // 保存到localStorage
+        saveExperimentData()
         ElMessage.success('样本来源删除成功')
       }).catch(() => {})
     }
@@ -641,24 +1018,53 @@ export default {
       experimentDialogVisible.value = true
     }
 
-    const saveExperiment = () => {
-      if (experimentForm.id) {
-        // 更新实验类型
-        const index = experimentTypes.value.findIndex(e => e.id === experimentForm.id)
-        if (index !== -1) {
-          experimentTypes.value[index] = { ...experimentForm }
+    const saveExperiment = async () => {
+      try {
+        if (experimentForm.id) {
+          // 更新实验类型
+          const index = experimentTypes.value.findIndex(e => e.id === experimentForm.id)
+          if (index !== -1) {
+            experimentTypes.value[index] = { ...experimentForm }
+          }
+
+          // 同步更新store
+          const storeData = {
+            id: experimentForm.id,
+            value: experimentForm.name,
+            label: experimentForm.name,
+            description: experimentForm.description,
+            protocol: experimentForm.protocol,
+            status: experimentForm.status
+          }
+          store.commit('UPDATE_EXPERIMENT_TYPE_OPTION', { id: experimentForm.id, experimentType: storeData })
+          ElMessage.success('实验类型更新成功')
+        } else {
+          // 添加实验类型 - 使用新的ID生成逻辑
+          const newExperiment = {
+            id: generateNewId(experimentTypes.value),
+            ...experimentForm
+          }
+          experimentTypes.value.push(newExperiment)
+
+          // 同步添加到store
+          const storeData = {
+            id: newExperiment.id,
+            value: newExperiment.name,
+            label: newExperiment.name,
+            description: newExperiment.description,
+            protocol: newExperiment.protocol,
+            status: newExperiment.status
+          }
+          store.commit('ADD_EXPERIMENT_TYPE_OPTION', storeData)
+          ElMessage.success('实验类型添加成功')
         }
-        ElMessage.success('实验类型更新成功')
-      } else {
-        // 添加实验类型
-        const newExperiment = {
-          id: Date.now(),
-          ...experimentForm
-        }
-        experimentTypes.value.push(newExperiment)
-        ElMessage.success('实验类型添加成功')
+
+        // 保存到localStorage
+        saveExperimentData()
+        experimentDialogVisible.value = false
+      } catch (error) {
+        ElMessage.error('保存失败: ' + error.message)
       }
-      experimentDialogVisible.value = false
     }
 
     const deleteExperiment = (experiment) => {
@@ -671,6 +1077,10 @@ export default {
         if (index !== -1) {
           experimentTypes.value.splice(index, 1)
         }
+        // 同步删除store中的数据
+        store.commit('DELETE_EXPERIMENT_TYPE_OPTION', experiment.id)
+        // 保存到localStorage
+        saveExperimentData()
         ElMessage.success('实验类型删除成功')
       }).catch(() => {})
     }
@@ -680,8 +1090,18 @@ export default {
       ElMessage.success(`实验类型已${experiment.status === 'active' ? '启用' : '禁用'}`)
     }
 
+    // 页面加载时初始化数据
+    onMounted(() => {
+      loadExperimentData()
+    })
+
     return {
       activeTab,
+      // 数据加载和保存
+      loadExperimentData,
+      saveExperimentData,
+      generateNewId,
+      // 数据选项
       speciesOptions,
       regionOptions,
       sourceOptions,
@@ -696,6 +1116,13 @@ export default {
       regionForm,
       sourceForm,
       experimentForm,
+      // NCBI相关状态和方法
+      ncbiLoading,
+      abbreviationLoading,
+      ncbiSearchResult,
+      generateAbbreviation,
+      searchNCBITaxonomy,
+      onScientificNameChange,
       // 菌种管理方法
       addSpecies,
       editSpecies,

@@ -11,6 +11,8 @@ import { createPermissionGuard } from './router/permission'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
+import en from 'element-plus/dist/locale/en.mjs'
 
 // 国际化
 import i18n from './i18n'
@@ -134,10 +136,17 @@ Object.keys(permissionDirectives).forEach(key => {
   app.directive(key, permissionDirectives[key])
 })
 
+// 获取Element Plus语言包
+const getElementPlusLocale = (locale) => {
+  return locale === 'zh-CN' ? zhCn : en
+}
+
 // 使用插件
 app.use(store)
 app.use(router)
-app.use(ElementPlus)
+app.use(ElementPlus, {
+  locale: getElementPlusLocale(i18n.global.locale)
+})
 app.use(i18n)
 
 // 设置路由权限守卫
