@@ -6,13 +6,7 @@
     </div>
 
     <div class="content-area">
-      <!-- 系统相关设置区块 -->
-      <div class="settings-section">
-        <div class="section-header">
-          <h2>系统相关设置</h2>
-          <p>管理系统配置和用户权限</p>
-        </div>
-        <el-tabs v-model="activeTab" type="card" class="system-tabs">
+      <el-tabs v-model="activeTab" type="card" class="system-tabs">
         <!-- 用户管理 -->
         <el-tab-pane label="用户管理" name="users">
           <div class="user-management">
@@ -232,7 +226,6 @@
           </el-form>
         </el-tab-pane>
         </el-tabs>
-      </div>
     </div>
   </div>
 

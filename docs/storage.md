@@ -1,5 +1,7 @@
 # Storage
 
+开发过程中数据存放技术介绍。
+
 ## 前端数据存储位置
 
 1. 浏览器环境（开发测试）
@@ -15,6 +17,10 @@
 'pams_region_options'      // 地区数据  
 'pams_source_options'      // 样本来源数据
 'pams_experiment_types'    // 实验类型数据
+通过浏览器开发者工具，切换到 Application/存储面板：
+  - Chrome/Edge：顶部标签栏选择 Application → 左侧菜单展开 Storage → 选择 Local Storage
+  - Firefox：顶部标签栏选择 Storage → 左侧菜单选择 Local Storage
+  - Safari：顶部标签栏选择 存储 → 左侧菜单选择 Local Storage
 ```
 - 物理位置（以Chrome为例）：
   * Linux: ~/.config/google-chrome/Default/Local Storage/leveldb/
@@ -22,6 +28,8 @@
   * macOS: ~/Library/Application Support/Google/Chrome/Default/Local Storage/leveldb/
 
 ### Vuex Store（内存）
+
+Vuex 是一个专为 Vue.js 应用程序开发的状态管理模式 + 库。它采用集中式存储管理应用的所有组件的状态，并以相应的规则保证状态以一种可预测的方式发生变化。
 
 - 存储位置：浏览器内存中
 - 数据类型：响应式状态管理
@@ -73,7 +81,7 @@ if (window.electronAPI && window.electronAPI.systemConfig) {
 
 ### 具体存储位置
 
-浏览器开发环境
+#### 浏览器开发环境
 
 - Chrome DevTools查看：
   1. 打开开发者工具 (F12)
@@ -89,7 +97,7 @@ if (window.electronAPI && window.electronAPI.systemConfig) {
 }
 ```
 
-Electron客户端环境
+#### Electron客户端环境
 
 - 配置目录：
 ```
@@ -114,7 +122,7 @@ pams/
 
 ### 数据同步机制
 
-菌株管理关联
+#### 菌株管理关联
 
 菌株管理界面的下拉选项需要与实验设置关联,菌株管理页面通过Vuex store获取实验设置的数据：
 
