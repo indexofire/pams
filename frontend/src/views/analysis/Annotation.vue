@@ -1,23 +1,23 @@
 <template>
   <div class="annotation-container">
     <div class="page-header">
-      <h2>基因组注释</h2>
-      <p>基因组序列的功能注释和预测</p>
+      <h2>{{ t('analysis.annotation.title') }}</h2>
+      <p>{{ t('analysis.annotation.description') }}</p>
     </div>
 
     <div class="content-area">
       <div class="toolbar">
         <el-button type="primary" @click="startAnnotation">
           <el-icon><VideoPlay /></el-icon>
-          开始注释
+          {{ t('analysis.annotation.startAnalysis') }}
         </el-button>
         <el-button @click="batchAnnotation">
           <el-icon><List /></el-icon>
-          批量注释
+          {{ t('analysis.annotation.batchAnalysis') }}
         </el-button>
                  <el-button @click="viewResults">
            <el-icon><ViewIcon /></el-icon>
-           查看结果
+           {{ t('analysis.annotation.viewResults') }}
          </el-button>
       </div>
 
@@ -129,6 +129,7 @@
 
 <script>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { VideoPlay, List, View as ViewIcon } from '@element-plus/icons-vue'
 
 export default {
@@ -139,6 +140,7 @@ export default {
     ViewIcon
   },
   setup () {
+    const { t } = useI18n()
     const loading = ref(false)
     const genomes = ref([])
     const annotationTasks = ref([])
@@ -263,6 +265,7 @@ export default {
     })
 
     return {
+      t,
       loading,
       genomes,
       annotationTasks,

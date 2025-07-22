@@ -336,6 +336,21 @@
             <el-form-item label="管理员邮箱">
               <el-input v-model="basicForm.adminEmail" placeholder="请输入管理员邮箱" />
             </el-form-item>
+            <el-form-item label="系统语言">
+              <el-select v-model="basicForm.language" placeholder="请选择系统语言" @change="handleLanguageChange">
+                <el-option
+                  v-for="option in systemLanguageOptions"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </el-select>
+              <div class="form-help-text">
+                <p>• 自动检测：根据浏览器语言自动选择</p>
+                <p>• 选择具体语言：固定使用该语言</p>
+                <p>• 用户可在界面右上角临时切换语言</p>
+              </div>
+            </el-form-item>
             <el-form-item label="系统描述">
               <el-input
                 v-model="basicForm.systemDescription"
@@ -610,6 +625,7 @@ import { ref, reactive, onMounted, onErrorCaptured, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
 import { useStore } from 'vuex'
+import { getSystemLanguageOptions, getSystemLanguageSetting, setSystemLocale, reinitializeLocale } from '../i18n'
 
 export default {
   name: 'SystemSettings',
@@ -709,8 +725,12 @@ export default {
       systemName: 'PAMS - 细菌基因组管理系统',
       systemVersion: '1.0.0',
       adminEmail: 'admin@pams.com',
-      systemDescription: '用于细菌基因组数据管理和分析的综合平台'
+      systemDescription: '用于细菌基因组数据管理和分析的综合平台',
+      language: getSystemLanguageSetting()
     })
+
+    // 语言设置选项
+    const systemLanguageOptions = getSystemLanguageOptions()
 
     // 数据库设置
     const databaseForm = reactive({
@@ -1253,6 +1273,28 @@ export default {
       ElMessage.success(`实验类型已${experiment.status === 'active' ? '启用' : '禁用'}`)
     }
 
+    // 语言切换处理
+    const handleLanguageChange = (newLanguage) => {
+      try {
+        // 保存到系统设置
+        setSystemLocale(newLanguage)
+
+        // 重新初始化语言
+        const actualLocale = reinitializeLocale()
+
+        ElMessage.success(`语言设置已更新为: ${systemLanguageOptions.find(opt => opt.value === newLanguage)?.label}`)
+
+        // 如果是自动检测，显示实际使用的语言
+        if (newLanguage === 'auto') {
+          const actualLanguageLabel = systemLanguageOptions.find(opt => opt.value === actualLocale)?.label || actualLocale
+          ElMessage.info(`当前使用语言: ${actualLanguageLabel}`)
+        }
+      } catch (error) {
+        console.error('语言切换失败:', error)
+        ElMessage.error('语言切换失败')
+      }
+    }
+
     // 设置保存方法
     const saveBasicSettings = () => {
       ElMessage.success('基本设置保存成功')
@@ -1508,6 +1550,8 @@ export default {
       experimentDialogVisible,
       experimentForm,
       basicForm,
+      systemLanguageOptions,
+      handleLanguageChange,
       databaseForm,
       getRoleLabel,
       addUser,
@@ -1663,5 +1707,16 @@ em {
   color: #909399;
   margin-top: 4px;
   line-height: 1.4;
+}
+
+.form-help-text {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 8px;
+  line-height: 1.4;
+
+  p {
+    margin: 2px 0;
+  }
 }
 </style>

@@ -107,10 +107,9 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, getCurrentInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
-import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import LanguageSwitcher from './components/LanguageSwitcher.vue'
 
@@ -123,7 +122,8 @@ export default {
     const route = useRoute()
     const router = useRouter()
     const store = useStore()
-    const { t } = useI18n()
+    const instance = getCurrentInstance()
+    const $t = instance.appContext.config.globalProperties.$t
 
     const breadcrumbItems = computed(() => {
       const matched = route.matched.filter(item => item.meta && item.meta.title)
@@ -144,10 +144,10 @@ export default {
     const handleLogout = async () => {
       try {
         await store.dispatch('auth/logout')
-        ElMessage.success(t('messages.logoutSuccess'))
+        ElMessage.success($t('messages.logoutSuccess'))
         router.push('/login')
       } catch (error) {
-        ElMessage.error(t('messages.logoutFailed'))
+        ElMessage.error($t('messages.logoutFailed'))
       }
     }
 

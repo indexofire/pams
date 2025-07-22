@@ -167,6 +167,8 @@
             <el-option label="分析师" value="analyst" />
             <el-option label="技术员" value="technician" />
             <el-option label="查看者" value="viewer" />
+            <el-option label="技术员" value="technician" />
+            <el-option label="查看者" value="viewer" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态" prop="status">
@@ -210,7 +212,7 @@ export default {
       id: null,
       username: '',
       password: '',
-      role: 'user',
+      role: 'viewer',
       status: 'active'
     })
 
@@ -296,7 +298,7 @@ export default {
       userForm.id = null
       userForm.username = ''
       userForm.password = ''
-      userForm.role = 'user'
+      userForm.role = 'viewer'
       userForm.status = 'active'
       userDialogVisible.value = true
     }

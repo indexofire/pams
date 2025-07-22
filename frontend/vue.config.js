@@ -9,7 +9,7 @@ module.exports = defineConfig({
     open: false,
     allowedHosts: 'all',
     client: {
-      webSocketURL: 'ws://localhost:8080/ws',
+      webSocketURL: 'auto://0.0.0.0:0/ws',
       overlay: {
         errors: (error) => {
           // 过滤掉ResizeObserver错误

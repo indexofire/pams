@@ -15,6 +15,9 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 // 国际化
 import i18n from './i18n'
 
+// 用户数据迁移
+import { migrateUserData, needsMigration } from './utils/migrateUserData'
+
 // ECharts
 import ECharts from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -139,6 +142,17 @@ app.use(i18n)
 
 // 设置路由权限守卫
 createPermissionGuard(router)
+
+// 执行用户数据迁移
+if (needsMigration()) {
+  console.log('检测到需要迁移的用户数据，开始迁移...')
+  const migrationResult = migrateUserData()
+  if (migrationResult.success) {
+    console.log('用户数据迁移成功')
+  } else {
+    console.error('用户数据迁移失败:', migrationResult.error)
+  }
+}
 
 // 挂载应用
 app.mount('#app')

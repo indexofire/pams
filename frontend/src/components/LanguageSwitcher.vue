@@ -35,7 +35,8 @@ export default {
   setup () {
     const { locale } = useI18n()
     const currentLocale = ref(getCurrentLocale())
-    const supportedLocales = getSupportedLocales()
+    // 过滤掉'auto'选项，只显示具体语言
+    const supportedLocales = getSupportedLocales().filter(l => l.value !== 'auto')
 
     const currentLocaleLabel = computed(() => {
       const localeObj = supportedLocales.find(l => l.value === currentLocale.value)

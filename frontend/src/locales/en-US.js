@@ -39,6 +39,32 @@ export default {
     about: 'About'
   },
 
+  // Messages
+  messages: {
+    logoutSuccess: 'Logout successful',
+    logoutFailed: 'Logout failed',
+    loginSuccess: 'Login successful',
+    loginFailed: 'Login failed',
+    saveSuccess: 'Save successful',
+    saveFailed: 'Save failed',
+    deleteSuccess: 'Delete successful',
+    deleteFailed: 'Delete failed',
+    updateSuccess: 'Update successful',
+    updateFailed: 'Update failed',
+    createSuccess: 'Create successful',
+    createFailed: 'Create failed',
+    operationSuccess: 'Operation successful',
+    operationFailed: 'Operation failed',
+    noData: 'No data',
+    pleaseSelect: 'Please select',
+    pleaseInput: 'Please input',
+    required: 'Required',
+    optional: 'Optional',
+    confirm: 'Confirm',
+    confirmDelete: 'Confirm delete?',
+    confirmLogout: 'Confirm logout?'
+  },
+
   // Navigation menu
   nav: {
     dashboard: 'Dashboard',
@@ -221,30 +247,6 @@ export default {
     integer: 'Please enter a valid integer',
     positive: 'Please enter a positive number',
     range: 'Please enter a value between {min} and {max}'
-  },
-
-  // Messages
-  messages: {
-    saveSuccess: 'Saved successfully',
-    saveFailed: 'Save failed',
-    deleteSuccess: 'Deleted successfully',
-    deleteFailed: 'Delete failed',
-    updateSuccess: 'Updated successfully',
-    updateFailed: 'Update failed',
-    createSuccess: 'Created successfully',
-    createFailed: 'Create failed',
-    uploadSuccess: 'Uploaded successfully',
-    uploadFailed: 'Upload failed',
-    loadFailed: 'Load failed',
-    networkError: 'Network error',
-    serverError: 'Server error',
-    permissionDenied: 'Permission denied',
-    operationSuccess: 'Operation successful',
-    operationFailed: 'Operation failed',
-    confirmOperation: 'Are you sure you want to perform this operation?',
-    unsavedChanges: 'You have unsaved changes. Are you sure you want to leave?',
-    logoutSuccess: 'Logout successful',
-    logoutFailed: 'Logout failed'
   },
 
   // Pagination

@@ -248,8 +248,8 @@ async function simulateLogin (username, password) {
     },
     {
       id: 2,
-      username: 'advanced',
-      password: 'advanced123',
+      username: 'lab_manager',
+      password: 'lab_manager123',
       role: 'lab_manager',
       permissions: [
         'users.view', 'users.create', 'users.edit',
@@ -263,8 +263,35 @@ async function simulateLogin (username, password) {
     },
     {
       id: 3,
-      username: 'user',
-      password: 'user123',
+      username: 'analyst',
+      password: 'analyst123',
+      role: 'analyst',
+      permissions: [
+        'strains.view', 'strains.create', 'strains.edit',
+        'genomes.view', 'genomes.upload', 'genomes.download', 'genomes.analyze',
+        'analysis.mlst', 'analysis.resistance', 'analysis.virulence', 'analysis.serotyping',
+        'analysis.view_results', 'analysis.export_results',
+        'settings.view',
+        'reports.view', 'reports.generate', 'reports.export'
+      ]
+    },
+    {
+      id: 4,
+      username: 'technician',
+      password: 'technician123',
+      role: 'technician',
+      permissions: [
+        'strains.view', 'strains.create', 'strains.edit',
+        'genomes.view', 'genomes.upload',
+        'analysis.view_results',
+        'settings.view',
+        'reports.view'
+      ]
+    },
+    {
+      id: 5,
+      username: 'viewer',
+      password: 'viewer123',
       role: 'viewer',
       permissions: [
         'strains.view',

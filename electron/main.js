@@ -55,7 +55,9 @@ async function createWindow() {
   if (isDev) {
     // 开发模式：等待前端服务启动后再加载
     setTimeout(() => {
-      mainWindow.loadURL('http://localhost:8080')
+      // 从环境变量获取端口，默认8080
+      const devPort = process.env.DEV_PORT || '8080'
+      mainWindow.loadURL(`http://localhost:${devPort}`)
       mainWindow.webContents.openDevTools()
     }, 3000) // 给前端服务3秒启动时间
   } else {

@@ -39,6 +39,32 @@ export default {
     about: '关于'
   },
 
+  // 消息提示
+  messages: {
+    logoutSuccess: '退出登录成功',
+    logoutFailed: '退出登录失败',
+    loginSuccess: '登录成功',
+    loginFailed: '登录失败',
+    saveSuccess: '保存成功',
+    saveFailed: '保存失败',
+    deleteSuccess: '删除成功',
+    deleteFailed: '删除失败',
+    updateSuccess: '更新成功',
+    updateFailed: '更新失败',
+    createSuccess: '创建成功',
+    createFailed: '创建失败',
+    operationSuccess: '操作成功',
+    operationFailed: '操作失败',
+    noData: '暂无数据',
+    pleaseSelect: '请选择',
+    pleaseInput: '请输入',
+    required: '必填项',
+    optional: '选填项',
+    confirm: '确认',
+    confirmDelete: '确认删除？',
+    confirmLogout: '确认退出登录？'
+  },
+
   // 导航菜单
   nav: {
     dashboard: '仪表板',
@@ -221,30 +247,6 @@ export default {
     integer: '请输入有效的整数',
     positive: '请输入正数',
     range: '请输入 {min} 到 {max} 之间的数值'
-  },
-
-  // 消息提示
-  messages: {
-    saveSuccess: '保存成功',
-    saveFailed: '保存失败',
-    deleteSuccess: '删除成功',
-    deleteFailed: '删除失败',
-    updateSuccess: '更新成功',
-    updateFailed: '更新失败',
-    createSuccess: '创建成功',
-    createFailed: '创建失败',
-    uploadSuccess: '上传成功',
-    uploadFailed: '上传失败',
-    loadFailed: '加载失败',
-    networkError: '网络错误',
-    serverError: '服务器错误',
-    permissionDenied: '权限不足',
-    operationSuccess: '操作成功',
-    operationFailed: '操作失败',
-    confirmOperation: '确定要执行此操作吗？',
-    unsavedChanges: '有未保存的更改，确定要离开吗？',
-    logoutSuccess: '退出登录成功',
-    logoutFailed: '退出登录失败'
   },
 
   // 分页
