@@ -5,6 +5,7 @@ out
 .DS_Store
 .eslintcache
 *.log*
+.augment
 
 # local env files
 .env.local
