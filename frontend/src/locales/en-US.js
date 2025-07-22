@@ -81,6 +81,7 @@ export default {
     reports: 'Report Center',
     systemManagement: 'System Management',
     systemSettings: 'System Settings',
+    experimentSettings: 'Experiment Settings',
     roleManagement: 'Role & Permission Management',
     securityAudit: 'Security Audit',
     logout: 'Logout'

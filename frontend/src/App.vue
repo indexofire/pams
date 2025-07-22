@@ -54,9 +54,9 @@
               <el-icon><Setting /></el-icon>
               <span>{{ $t('nav.systemManagement') }}</span>
             </template>
-            <el-menu-item index="/system-settings">{{ $t('nav.systemSettings') }}</el-menu-item>
-            <el-menu-item index="/role-management">{{ $t('nav.roleManagement') }}</el-menu-item>
-            <el-menu-item index="/security-audit">{{ $t('nav.securityAudit') }}</el-menu-item>
+            <el-menu-item index="/admin/system-settings">{{ $t('nav.systemSettings') }}</el-menu-item>
+            <el-menu-item index="/admin/experiment-settings">{{ $t('nav.experimentSettings') }}</el-menu-item>
+            <el-menu-item index="/admin/security-audit">{{ $t('nav.securityAudit') }}</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-aside>
@@ -107,9 +107,10 @@
 </template>
 
 <script>
-import { computed, getCurrentInstance } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import LanguageSwitcher from './components/LanguageSwitcher.vue'
 
@@ -122,8 +123,7 @@ export default {
     const route = useRoute()
     const router = useRouter()
     const store = useStore()
-    const instance = getCurrentInstance()
-    const $t = instance.appContext.config.globalProperties.$t
+    const { t } = useI18n()
 
     const breadcrumbItems = computed(() => {
       const matched = route.matched.filter(item => item.meta && item.meta.title)
@@ -144,10 +144,10 @@ export default {
     const handleLogout = async () => {
       try {
         await store.dispatch('auth/logout')
-        ElMessage.success($t('messages.logoutSuccess'))
+        ElMessage.success(t('messages.logoutSuccess'))
         router.push('/login')
       } catch (error) {
-        ElMessage.error($t('messages.logoutFailed'))
+        ElMessage.error(t('messages.logoutFailed'))
       }
     }
 

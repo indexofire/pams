@@ -94,25 +94,41 @@ const routes = [
   },
   {
     path: '/user-management',
-    redirect: '/system-settings'
+    redirect: '/admin/system-settings'
   },
   {
+    path: '/admin',
+    name: 'Admin',
+    meta: { requiresAuth: true, requiresRole: 'admin' },
+    children: [
+      {
+        path: 'system-settings',
+        name: 'SystemSettings',
+        component: () => import('../views/SystemSettings.vue'),
+        meta: { title: '系统设置', requiresAuth: true, requiresRole: 'admin' }
+      },
+      {
+        path: 'experiment-settings',
+        name: 'ExperimentSettings',
+        component: () => import('../views/ExperimentSettings.vue'),
+        meta: { title: '实验设置', requiresAuth: true, requiresRole: 'admin' }
+      },
+      {
+        path: 'security-audit',
+        name: 'SecurityAudit',
+        component: () => import('../views/SecurityAudit.vue'),
+        meta: { title: '安全审计', requiresAuth: true, requiresRole: 'admin' }
+      }
+    ]
+  },
+  // 兼容性重定向
+  {
     path: '/system-settings',
-    name: 'SystemSettings',
-    component: () => import('../views/SystemSettings.vue'),
-    meta: { title: '系统设置', requiresAuth: true, requiresRole: 'admin' }
+    redirect: '/admin/system-settings'
   },
   {
     path: '/role-management',
-    name: 'RoleManagement',
-    component: () => import('../views/RoleManagement.vue'),
-    meta: { title: '角色权限管理', requiresAuth: true, requiresRole: 'admin' }
-  },
-  {
-    path: '/security-audit',
-    name: 'SecurityAudit',
-    component: () => import('../views/SecurityAudit.vue'),
-    meta: { title: '安全审计', requiresAuth: true, requiresRole: 'admin' }
+    redirect: '/admin/system-settings'
   }
 ]
 
