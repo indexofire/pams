@@ -769,7 +769,7 @@ export default {
 
     const saveSpecies = async () => {
       try {
-        if (speciesForm.id) {
+        if (speciesForm.id && speciesForm.id !== null) {
           // 更新菌种
           const index = speciesOptions.value.findIndex(s => s.id === speciesForm.id)
           if (index !== -1) {
@@ -789,10 +789,15 @@ export default {
           ElMessage.success('菌种更新成功')
         } else {
           // 添加菌种 - 使用新的ID生成逻辑
+          const newId = generateNewId(speciesOptions.value)
           const newSpecies = {
-            id: generateNewId(speciesOptions.value),
-            ...speciesForm
+            ...speciesForm,
+            id: newId
           }
+          // 确保删除可能存在的null id
+          delete newSpecies.id
+          newSpecies.id = newId
+
           speciesOptions.value.push(newSpecies)
 
           // 同步添加到store
@@ -805,7 +810,7 @@ export default {
             status: newSpecies.status
           }
           store.commit('ADD_SPECIES_OPTION', storeData)
-          ElMessage.success('菌种添加成功')
+          ElMessage.success(`菌种添加成功，ID: ${newId}`)
         }
 
         // 保存到localStorage
@@ -852,7 +857,7 @@ export default {
 
     const saveRegion = async () => {
       try {
-        if (regionForm.id) {
+        if (regionForm.id && regionForm.id !== null) {
           // 更新地区
           const index = regionOptions.value.findIndex(r => r.id === regionForm.id)
           if (index !== -1) {
@@ -873,10 +878,15 @@ export default {
           ElMessage.success('地区更新成功')
         } else {
           // 添加地区 - 使用新的ID生成逻辑
+          const newId = generateNewId(regionOptions.value)
           const newRegion = {
-            id: generateNewId(regionOptions.value),
-            ...regionForm
+            ...regionForm,
+            id: newId
           }
+          // 确保删除可能存在的null id
+          delete newRegion.id
+          newRegion.id = newId
+
           regionOptions.value.push(newRegion)
 
           // 同步添加到store
@@ -890,7 +900,7 @@ export default {
             status: newRegion.status
           }
           store.commit('ADD_REGION_OPTION', storeData)
-          ElMessage.success('地区添加成功')
+          ElMessage.success(`地区添加成功，ID: ${newId}`)
         }
 
         // 保存到localStorage
@@ -937,7 +947,7 @@ export default {
 
     const saveSource = async () => {
       try {
-        if (sourceForm.id) {
+        if (sourceForm.id && sourceForm.id !== null) {
           // 更新样本来源
           const index = sourceOptions.value.findIndex(s => s.id === sourceForm.id)
           if (index !== -1) {
@@ -957,10 +967,15 @@ export default {
           ElMessage.success('样本来源更新成功')
         } else {
           // 添加样本来源 - 使用新的ID生成逻辑
+          const newId = generateNewId(sourceOptions.value)
           const newSource = {
-            id: generateNewId(sourceOptions.value),
-            ...sourceForm
+            ...sourceForm,
+            id: newId
           }
+          // 确保删除可能存在的null id
+          delete newSource.id
+          newSource.id = newId
+
           sourceOptions.value.push(newSource)
 
           // 同步添加到store
@@ -973,7 +988,7 @@ export default {
             status: newSource.status
           }
           store.commit('ADD_SOURCE_OPTION', storeData)
-          ElMessage.success('样本来源添加成功')
+          ElMessage.success(`样本来源添加成功，ID: ${newId}`)
         }
 
         // 保存到localStorage
@@ -1020,7 +1035,7 @@ export default {
 
     const saveExperiment = async () => {
       try {
-        if (experimentForm.id) {
+        if (experimentForm.id && experimentForm.id !== null) {
           // 更新实验类型
           const index = experimentTypes.value.findIndex(e => e.id === experimentForm.id)
           if (index !== -1) {
@@ -1040,10 +1055,15 @@ export default {
           ElMessage.success('实验类型更新成功')
         } else {
           // 添加实验类型 - 使用新的ID生成逻辑
+          const newId = generateNewId(experimentTypes.value)
           const newExperiment = {
-            id: generateNewId(experimentTypes.value),
-            ...experimentForm
+            ...experimentForm,
+            id: newId
           }
+          // 确保删除可能存在的null id
+          delete newExperiment.id
+          newExperiment.id = newId
+
           experimentTypes.value.push(newExperiment)
 
           // 同步添加到store
@@ -1056,7 +1076,7 @@ export default {
             status: newExperiment.status
           }
           store.commit('ADD_EXPERIMENT_TYPE_OPTION', storeData)
-          ElMessage.success('实验类型添加成功')
+          ElMessage.success(`实验类型添加成功，ID: ${newId}`)
         }
 
         // 保存到localStorage
