@@ -28,6 +28,9 @@
           <el-button v-if="storageUsage.percentage > 80" size="small" type="warning" @click="clearBrowserStorage">
             清理存储
           </el-button>
+          <el-button size="small" type="danger" @click="cleanupCorruptedData">
+            清理损坏数据
+          </el-button>
         </div>
       </div>
 
@@ -47,9 +50,12 @@
               clearable
             >
               <el-option label="全部" value="" />
-              <el-option label="大肠杆菌" value="E.coli" />
-              <el-option label="金黄色葡萄球菌" value="S.aureus" />
-              <el-option label="肺炎链球菌" value="S.pneumoniae" />
+              <el-option
+                v-for="species in availableSpecies"
+                :key="species.id"
+                :label="species.name"
+                :value="species.name"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="数据类型">
@@ -73,13 +79,20 @@
 
       <div class="table-section">
         <el-table
-          :data="genomes"
+          :data="paginatedGenomes"
           v-loading="loading"
           border
           style="width: 100%"
         >
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="originalName" label="基因组名称" min-width="150" />
+          <el-table-column prop="sequenceNumber" label="序号" width="80" />
+          <el-table-column prop="strainName" label="菌株名称" min-width="120" />
+          <el-table-column prop="originalName" label="数据文件" min-width="150" />
+          <el-table-column prop="md5Hash" label="MD5校验值" min-width="120">
+            <template #default="scope">
+              <span v-if="scope.row.md5Hash" class="md5-hash">{{ scope.row.md5Hash.substring(0, 8) }}...</span>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column label="序列信息" min-width="120">
             <template #default="scope">
               <div v-if="scope.row.analysis">
@@ -193,7 +206,7 @@
           </div>
           <template #tip>
             <div class="el-upload__tip">
-              支持 .fasta, .fa, .fna, .gz 格式的基因组文件，单个文件不超过 500MB
+              支持 .fasta, .fa, .fna, .gz 格式的基因组文件，单个文件不超过 100MB
             </div>
           </template>
         </el-upload>
@@ -413,7 +426,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { Upload, Download, Refresh, UploadFilled, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { analyzeFastaSequence, validateFastaFormat, formatAnalysisResults, generateQualityReport } from '@/utils/genomeAnalysis'
@@ -440,6 +453,7 @@ export default {
     const fileList = ref([])
     const uploadRef = ref(null)
     const availableStrains = ref([])
+    const availableSpecies = ref([])
     const uploadAction = '#' // 不使用自动上传
     const acceptedFormats = '.fasta,.fa,.fna,.gz'
 
@@ -463,6 +477,32 @@ export default {
       total: 0
     })
 
+    // 生成流水号
+    const generateSequenceNumber = (genomes) => {
+      return genomes.map((genome, index) => {
+        // 如果已经有strainName，直接使用；否则尝试从关联菌株获取
+        let strainName = genome.strainName || '-'
+        if ((!genome.strainName || genome.strainName === '-') && genome.strainId) {
+          const associatedStrain = availableStrains.value.find(strain => strain.id === genome.strainId)
+          strainName = associatedStrain ? associatedStrain.strain_id : '-'
+        }
+
+        return {
+          ...genome,
+          sequenceNumber: index + 1,
+          strainName
+        }
+      })
+    }
+
+    // 分页数据计算属性
+    const paginatedGenomes = computed(() => {
+      const start = (pagination.current - 1) * pagination.size
+      const end = start + pagination.size
+      const genomesWithSequence = generateSequenceNumber(genomes.value)
+      return genomesWithSequence.slice(start, end)
+    })
+
     const loadGenomes = async () => {
       loading.value = true
       try {
@@ -475,28 +515,60 @@ export default {
           // 浏览器环境：使用IndexedDB存储
           try {
             const allGenomes = await browserStorage.getAllGenomes()
-            genomes.value = allGenomes || []
+
+            // 检查是否有解压缩错误的数据
+            const corruptedGenomes = allGenomes.filter(genome => genome.error)
+            if (corruptedGenomes.length > 0) {
+              console.warn(`发现 ${corruptedGenomes.length} 个损坏的基因组数据`)
+              ElMessage.warning(`发现 ${corruptedGenomes.length} 个损坏的基因组数据，建议清理`)
+
+              // 询问用户是否清理损坏数据
+              try {
+                await ElMessageBox.confirm(
+                  '检测到损坏的基因组数据，是否清理这些数据？',
+                  '数据清理',
+                  {
+                    confirmButtonText: '清理',
+                    cancelButtonText: '跳过',
+                    type: 'warning'
+                  }
+                )
+
+                // 用户确认清理
+                const cleanedCount = await browserStorage.cleanupCorruptedGenomes()
+                ElMessage.success(`已清理 ${cleanedCount} 个损坏的数据`)
+
+                // 重新加载数据
+                const cleanedGenomes = await browserStorage.getAllGenomes()
+                genomes.value = cleanedGenomes || []
+              } catch (cleanupError) {
+                if (cleanupError !== 'cancel') {
+                  console.error('清理数据失败:', cleanupError)
+                }
+                // 即使清理失败，也显示可用的数据
+                genomes.value = allGenomes.filter(genome => !genome.error) || []
+              }
+            } else {
+              genomes.value = allGenomes || []
+            }
+
             pagination.total = genomes.value.length
           } catch (error) {
             console.warn('从IndexedDB加载基因组数据失败，使用模拟数据:', error)
-            // 如果IndexedDB失败，使用模拟数据
-            genomes.value = [
-              {
-                id: 1,
-                name: 'E.coli-001-genome',
-                species: 'E.coli',
-                data_type: 'complete',
-                genome_size: '4.6 Mb',
-                gc_content: '50.8%',
-                upload_date: '2023-01-15'
-              }
-            ]
-            pagination.total = 1
+
+            // 如果是字符串长度错误，提示用户清理数据
+            if (error.message && error.message.includes('Invalid string length')) {
+              ElMessage.error('基因组数据损坏，请清理浏览器存储数据')
+            }
+
+            // 如果IndexedDB失败，使用空数据
+            genomes.value = []
+            pagination.total = 0
           }
         }
       } catch (error) {
         console.error('加载基因组数据失败:', error)
-        ElMessage.error('加载基因组数据失败')
+        ElMessage.error('加载基因组数据失败: ' + error.message)
       } finally {
         loading.value = false
       }
@@ -578,12 +650,11 @@ export default {
 
     const handleSizeChange = (size) => {
       pagination.size = size
-      loadGenomes()
+      pagination.current = 1 // 重置到第一页
     }
 
     const handleCurrentChange = (current) => {
       pagination.current = current
-      loadGenomes()
     }
 
     // 加载可用菌株
@@ -604,6 +675,27 @@ export default {
       } catch (error) {
         console.error('加载菌株列表失败:', error)
         ElMessage.error('加载菌株列表失败')
+      }
+    }
+
+    // 加载可用菌种
+    const loadAvailableSpecies = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.species) {
+          const species = await window.electronAPI.species.getAll()
+          availableSpecies.value = species || []
+        } else {
+          // 开发环境从localStorage获取
+          const savedSpecies = localStorage.getItem('pams_species')
+          if (savedSpecies) {
+            availableSpecies.value = JSON.parse(savedSpecies)
+          } else {
+            availableSpecies.value = []
+          }
+        }
+      } catch (error) {
+        console.error('加载菌种列表失败:', error)
+        ElMessage.error('加载菌种列表失败')
       }
     }
 
@@ -638,6 +730,7 @@ export default {
         // 重新加载数据
         await loadGenomes()
         await loadAvailableStrains()
+        await loadAvailableSpecies()
         await loadStorageUsage()
       } catch (error) {
         if (error !== 'cancel') {
@@ -705,7 +798,44 @@ export default {
 
     // 上传前验证
     const beforeUpload = (file) => {
-      return false // 阻止自动上传
+      // 检查文件格式
+      const allowedTypes = ['.fasta', '.fa', '.fna', '.gz']
+      const fileName = file.name.toLowerCase()
+      const isValidType = allowedTypes.some(type => fileName.endsWith(type))
+
+      if (!isValidType) {
+        ElMessage.error('只支持 .fasta, .fa, .fna, .gz 格式的文件')
+        return false
+      }
+
+      // 检查文件大小 (100MB)
+      const isValidSize = file.size / 1024 / 1024 < 100
+      if (!isValidSize) {
+        ElMessage.error('文件大小不能超过 100MB')
+        return false
+      }
+
+      return false // 阻止自动上传，使用手动上传
+    }
+
+    // 计算文件MD5值
+    const calculateMD5 = (file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+          try {
+            const arrayBuffer = e.target.result
+            const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer)
+            const hashArray = Array.from(new Uint8Array(hashBuffer))
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+            resolve(hashHex)
+          } catch (error) {
+            reject(error)
+          }
+        }
+        reader.onerror = reject
+        reader.readAsArrayBuffer(file)
+      })
     }
 
     // 自动关联菌株
@@ -840,6 +970,16 @@ export default {
               throw new Error(`文件 ${file.name} 不是有效的FASTA格式`)
             }
 
+            // 计算MD5校验值
+            let md5Hash = null
+            try {
+              md5Hash = await calculateMD5(file)
+              console.log(`${file.name} MD5校验值: ${md5Hash}`)
+            } catch (md5Error) {
+              console.warn('MD5计算失败:', md5Error)
+              ElMessage.warning(`${file.name} MD5计算失败，但文件上传继续`)
+            }
+
             // 分析序列
             let analysisResults = null
             let qualityReport = null
@@ -857,16 +997,25 @@ export default {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
             const newFileName = `${timestamp}_${fileName}`
 
+            // 生成流水号ID
+            const newId = genomes.value.length > 0 ? Math.max(...genomes.value.map(g => g.id || 0)) + 1 : 1
+
+            // 获取关联菌株的名称
+            const associatedStrain = availableStrains.value.find(strain => strain.id === file.associatedStrain)
+            const strainName = associatedStrain ? associatedStrain.strain_id : '-'
+
             const genomeData = {
-              id: Date.now() + Math.random(),
+              id: newId,
               name: newFileName,
               originalName: file.name,
               strainId: file.associatedStrain,
+              strainName, // 使用实际的菌株名称
               size: file.size,
               content,
               isCompressed,
               uploadDate: new Date().toISOString(),
               status: 'uploaded',
+              md5Hash, // 添加MD5校验值
               // 添加序列分析结果
               analysis: analysisResults,
               qualityReport,
@@ -977,15 +1126,50 @@ export default {
       }
     }
 
+    // 清理损坏数据
+    const cleanupCorruptedData = async () => {
+      try {
+        await ElMessageBox.confirm(
+          '此操作将清理所有损坏的基因组数据，是否继续？',
+          '清理损坏数据',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        loading.value = true
+        const cleanedCount = await browserStorage.cleanupCorruptedGenomes()
+
+        if (cleanedCount > 0) {
+          ElMessage.success(`已清理 ${cleanedCount} 个损坏的数据`)
+          // 重新加载数据
+          await loadGenomes()
+        } else {
+          ElMessage.info('没有发现损坏的数据')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('清理数据失败:', error)
+          ElMessage.error('清理数据失败: ' + error.message)
+        }
+      } finally {
+        loading.value = false
+      }
+    }
+
     onMounted(() => {
       loadGenomes()
       loadAvailableStrains()
+      loadAvailableSpecies()
       loadStorageUsage()
     })
 
     return {
       loading,
       genomes,
+      paginatedGenomes,
       filterForm,
       pagination,
       searchGenomes,
@@ -1005,12 +1189,15 @@ export default {
       fileList,
       uploadRef,
       availableStrains,
+      availableSpecies,
       uploadAction,
       acceptedFormats,
       loadAvailableStrains,
+      loadAvailableSpecies,
       handleFileChange,
       handleFileRemove,
       beforeUpload,
+      calculateMD5,
       autoAssociateStrain,
       formatFileSize,
       startUpload,
@@ -1023,6 +1210,7 @@ export default {
       // 存储相关
       storageUsage,
       clearBrowserStorage,
+      cleanupCorruptedData,
       // 分析对话框相关
       analysisDialogVisible,
       selectedGenome,
@@ -1041,17 +1229,19 @@ export default {
 }
 
 .page-header {
-  margin-bottom: 20px;
-}
+  margin-bottom: 30px;
 
-.page-header h1 {
-  margin: 0 0 8px 0;
-  color: #303133;
-}
+  h1 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    color: #303133;
+  }
 
-.page-header p {
-  margin: 0;
-  color: #606266;
+  p {
+    margin: 0;
+    color: #909399;
+    font-size: 14px;
+  }
 }
 
 .content-area {
@@ -1166,5 +1356,14 @@ export default {
 .version-text {
   color: #6c757d;
   font-size: 12px;
+}
+
+.md5-hash {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #666;
+  background: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 2px;
 }
 </style>

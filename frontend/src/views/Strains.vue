@@ -105,6 +105,27 @@
               />
             </el-select>
           </el-form-item>
+          <el-form-item label="分离单位">
+            <el-input
+              v-model="filterForm.isolation_unit"
+              placeholder="请输入分离单位"
+              clearable
+            />
+          </el-form-item>
+          <el-form-item label="监测来源">
+            <el-input
+              v-model="filterForm.monitoring_source"
+              placeholder="请输入监测来源"
+              clearable
+            />
+          </el-form-item>
+          <el-form-item label="型别">
+            <el-input
+              v-model="filterForm.serotype"
+              placeholder="请输入型别"
+              clearable
+            />
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="searchStrains">查询</el-button>
             <el-button @click="resetFilter">重置</el-button>
@@ -114,7 +135,7 @@
 
       <div class="table-section">
         <el-table
-          :data="strains"
+          :data="filteredStrains"
           v-loading="loading"
           border
           style="width: 100%"
@@ -135,6 +156,12 @@
           <el-table-column prop="sampling_date" label="采样日期" width="100" />
           <el-table-column prop="isolation_date" label="分离日期" width="100" />
           <el-table-column prop="uploaded_by" label="上传用户" width="100" />
+          <el-table-column prop="isolation_unit" label="分离单位" width="120" />
+          <el-table-column prop="identification_result" label="鉴定结果" width="120" />
+          <el-table-column prop="monitoring_source" label="监测来源" width="100" />
+          <el-table-column prop="patient_name" label="姓名" width="100" />
+          <el-table-column prop="serotype" label="型别" width="100" />
+          <el-table-column prop="patient_age" label="年龄" width="80" />
           <el-table-column label="操作" width="200" fixed="right">
             <template #default="scope">
               <el-button size="small" @click="viewStrain(scope.row)">
@@ -499,6 +526,67 @@
                 </el-form-item>
               </el-col>
             </el-row>
+            <!-- 新增字段 -->
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="分离单位" prop="isolation_unit">
+                  <el-input
+                    v-model="strainForm.basic.isolation_unit"
+                    placeholder="请输入分离单位"
+                    :disabled="!isEditMode"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="鉴定结果" prop="identification_result">
+                  <el-input
+                    v-model="strainForm.basic.identification_result"
+                    placeholder="请输入鉴定结果"
+                    :disabled="!isEditMode"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="监测来源" prop="monitoring_source">
+                  <el-input
+                    v-model="strainForm.basic.monitoring_source"
+                    placeholder="请输入监测来源"
+                    :disabled="!isEditMode"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="姓名" prop="patient_name">
+                  <el-input
+                    v-model="strainForm.basic.patient_name"
+                    placeholder="请输入患者姓名"
+                    :disabled="!isEditMode"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="型别" prop="serotype">
+                  <el-input
+                    v-model="strainForm.basic.serotype"
+                    placeholder="请输入型别"
+                    :disabled="!isEditMode"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="年龄" prop="patient_age">
+                  <el-input
+                    v-model="strainForm.basic.patient_age"
+                    placeholder="请输入年龄"
+                    :disabled="!isEditMode"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
           </el-form>
         </el-tab-pane>
 
@@ -646,7 +734,10 @@ export default {
       species: '',
       region: '',
       sample_source: '',
-      experiment_type: ''
+      experiment_type: '',
+      isolation_unit: '',
+      monitoring_source: '',
+      serotype: ''
     })
 
     const pagination = reactive({
@@ -675,7 +766,14 @@ export default {
         sampling_date: '',
         isolation_date: '',
         uploaded_by: '',
-        created_at: ''
+        created_at: '',
+        // 新增字段
+        isolation_unit: '', // 分离单位
+        identification_result: '', // 鉴定结果
+        monitoring_source: '', // 监测来源
+        patient_name: '', // 姓名
+        serotype: '', // 型别
+        patient_age: '' // 年龄
       },
       characteristics: {
         virulence_genes: '',
@@ -750,44 +848,78 @@ export default {
 
     // 初始化默认菌株数据
     const initializeDefaultStrains = () => {
-      strains.value = [
-        {
-          id: 1,
-          strain_id: 'E.coli-001',
-          species: '大肠杆菌',
-          sample_id: 'S001',
-          sample_source: '血液',
-          region: '北京市',
-          onset_date: '2023-01-10',
-          sampling_date: '2023-01-12',
-          isolation_date: '2023-01-15',
-          uploaded_by: 'admin',
-          created_at: '2023-01-15T08:00:00.000Z',
-          updated_at: '2023-01-15T08:00:00.000Z'
-        },
-        {
-          id: 2,
-          strain_id: 'Salmonella-002',
-          species: '沙门氏菌',
-          sample_id: 'S002',
-          sample_source: '粪便',
-          region: '上海市',
-          onset_date: '2023-01-08',
-          sampling_date: '2023-01-10',
-          isolation_date: '2023-01-12',
-          uploaded_by: 'advanced',
-          created_at: '2023-01-12T08:00:00.000Z',
-          updated_at: '2023-01-12T08:00:00.000Z'
-        }
-      ]
-      pagination.total = strains.value.length
+      strains.value = []
+      pagination.total = 0
       // 保存到localStorage
       localStorage.setItem('pams_strains', JSON.stringify(strains.value))
     }
 
+    // 过滤菌株数据
+    const filteredStrains = computed(() => {
+      let filtered = strains.value
+
+      // 菌株编号过滤
+      if (filterForm.strain_id) {
+        filtered = filtered.filter(strain =>
+          strain.strain_id && strain.strain_id.toLowerCase().includes(filterForm.strain_id.toLowerCase())
+        )
+      }
+
+      // 菌种过滤
+      if (filterForm.species) {
+        filtered = filtered.filter(strain =>
+          strain.species && strain.species.includes(filterForm.species)
+        )
+      }
+
+      // 地区过滤
+      if (filterForm.region) {
+        filtered = filtered.filter(strain =>
+          strain.region && strain.region.includes(filterForm.region)
+        )
+      }
+
+      // 样本来源过滤
+      if (filterForm.sample_source) {
+        filtered = filtered.filter(strain =>
+          strain.sample_source && strain.sample_source.includes(filterForm.sample_source)
+        )
+      }
+
+      // 实验类型过滤
+      if (filterForm.experiment_type) {
+        filtered = filtered.filter(strain =>
+          strain.experiment_type && strain.experiment_type.includes(filterForm.experiment_type)
+        )
+      }
+
+      // 分离单位过滤
+      if (filterForm.isolation_unit) {
+        filtered = filtered.filter(strain =>
+          strain.isolation_unit && strain.isolation_unit.toLowerCase().includes(filterForm.isolation_unit.toLowerCase())
+        )
+      }
+
+      // 监测来源过滤
+      if (filterForm.monitoring_source) {
+        filtered = filtered.filter(strain =>
+          strain.monitoring_source && strain.monitoring_source.toLowerCase().includes(filterForm.monitoring_source.toLowerCase())
+        )
+      }
+
+      // 型别过滤
+      if (filterForm.serotype) {
+        filtered = filtered.filter(strain =>
+          strain.serotype && strain.serotype.toLowerCase().includes(filterForm.serotype.toLowerCase())
+        )
+      }
+
+      return filtered
+    })
+
     const searchStrains = () => {
       pagination.current = 1
-      loadStrains()
+      // 不需要重新加载数据，过滤逻辑在计算属性中处理
     }
 
     const resetFilter = () => {
@@ -795,6 +927,10 @@ export default {
       filterForm.species = ''
       filterForm.region = ''
       filterForm.sample_source = ''
+      filterForm.experiment_type = ''
+      filterForm.isolation_unit = ''
+      filterForm.monitoring_source = ''
+      filterForm.serotype = ''
       searchStrains()
     }
 
@@ -1587,6 +1723,13 @@ export default {
       strainForm.basic.isolation_date = ''
       strainForm.basic.uploaded_by = ''
       strainForm.basic.created_at = ''
+      // 重置新增字段
+      strainForm.basic.isolation_unit = ''
+      strainForm.basic.identification_result = ''
+      strainForm.basic.monitoring_source = ''
+      strainForm.basic.patient_name = ''
+      strainForm.basic.serotype = ''
+      strainForm.basic.patient_age = ''
       strainForm.characteristics.virulence_genes = ''
       strainForm.characteristics.antibiotic_resistance = ''
       strainForm.characteristics.st_type = ''
@@ -1607,6 +1750,13 @@ export default {
       strainForm.basic.isolation_date = strain.isolation_date
       strainForm.basic.uploaded_by = strain.uploaded_by
       strainForm.basic.created_at = strain.created_at
+      // 加载新增字段
+      strainForm.basic.isolation_unit = strain.isolation_unit || ''
+      strainForm.basic.identification_result = strain.identification_result || ''
+      strainForm.basic.monitoring_source = strain.monitoring_source || ''
+      strainForm.basic.patient_name = strain.patient_name || ''
+      strainForm.basic.serotype = strain.serotype || ''
+      strainForm.basic.patient_age = strain.patient_age || ''
 
       // 加载特征信息（这里需要根据实际数据结构调整）
       strainForm.characteristics.virulence_genes = strain.virulence_genes || ''
@@ -1800,6 +1950,7 @@ export default {
     return {
       loading,
       strains,
+      filteredStrains,
       selectedStrains,
       filterForm,
       pagination,
@@ -1871,17 +2022,19 @@ export default {
 }
 
 .page-header {
-  margin-bottom: 20px;
-}
+  margin-bottom: 30px;
 
-.page-header h1 {
-  margin: 0 0 8px 0;
-  color: #303133;
-}
+  h1 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    color: #303133;
+  }
 
-.page-header p {
-  margin: 0;
-  color: #606266;
+  p {
+    margin: 0;
+    color: #909399;
+    font-size: 14px;
+  }
 }
 
 .content-area {

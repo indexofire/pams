@@ -107,7 +107,7 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { useI18n } from 'vue-i18n'
@@ -124,6 +124,15 @@ export default {
     const router = useRouter()
     const store = useStore()
     const { t } = useI18n()
+
+    // 在应用启动时加载系统配置
+    onMounted(async () => {
+      try {
+        await store.dispatch('loadSystemConfig')
+      } catch (error) {
+        console.error('加载系统配置失败:', error)
+      }
+    })
 
     const breadcrumbItems = computed(() => {
       const matched = route.matched.filter(item => item.meta && item.meta.title)

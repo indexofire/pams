@@ -581,17 +581,19 @@ export default {
 }
 
 .page-header {
-  margin-bottom: 20px;
-}
+  margin-bottom: 30px;
 
-.page-header h1 {
-  margin: 0 0 8px 0;
-  color: #303133;
-}
+  h1 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    color: #303133;
+  }
 
-.page-header p {
-  margin: 0;
-  color: #606266;
+  p {
+    margin: 0;
+    color: #909399;
+    font-size: 14px;
+  }
 }
 
 .content-area {

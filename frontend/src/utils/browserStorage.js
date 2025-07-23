@@ -108,11 +108,28 @@ class BrowserStorage {
       const request = store.getAll()
 
       request.onsuccess = () => {
-        const genomes = request.result.map(genome => ({
-          ...genome,
-          content: this.decompressString(genome.content)
-        }))
-        resolve(genomes)
+        try {
+          const genomes = request.result.map(genome => {
+            try {
+              return {
+                ...genome,
+                content: this.decompressString(genome.content)
+              }
+            } catch (error) {
+              console.error('Error decompressing genome:', genome.id, error)
+              // 如果解压缩失败，返回基本信息但不包含内容
+              return {
+                ...genome,
+                content: '',
+                error: 'Decompression failed'
+              }
+            }
+          })
+          resolve(genomes)
+        } catch (error) {
+          console.error('Error processing genomes:', error)
+          reject(error)
+        }
       }
 
       request.onerror = () => {
@@ -300,33 +317,61 @@ class BrowserStorage {
    * 解压缩字符串
    */
   decompressString (compressed) {
-    // 简单的RLE解压缩
-    let decompressed = ''
-    let i = 0
-
-    while (i < compressed.length) {
-      const char = compressed[i]
-
-      // 检查是否是压缩格式
-      if (i + 1 < compressed.length && /\d/.test(compressed[i + 1])) {
-        let numStr = ''
-        let j = i + 1
-
-        while (j < compressed.length && /\d/.test(compressed[j])) {
-          numStr += compressed[j]
-          j++
-        }
-
-        const count = parseInt(numStr)
-        decompressed += char.repeat(count)
-        i = j
-      } else {
-        decompressed += char
-        i++
-      }
+    // 检查输入是否有效
+    if (!compressed || typeof compressed !== 'string') {
+      console.warn('Invalid compressed data:', compressed)
+      return ''
     }
 
-    return decompressed
+    try {
+      // 简单的RLE解压缩
+      let decompressed = ''
+      let i = 0
+      const MAX_REPEAT_COUNT = 1000000 // 最大重复次数限制，防止内存溢出
+
+      while (i < compressed.length) {
+        const char = compressed[i]
+
+        // 检查是否是压缩格式
+        if (i + 1 < compressed.length && /\d/.test(compressed[i + 1])) {
+          let numStr = ''
+          let j = i + 1
+
+          while (j < compressed.length && /\d/.test(compressed[j])) {
+            numStr += compressed[j]
+            j++
+          }
+
+          const count = parseInt(numStr)
+
+          // 安全检查：防止count过大导致内存溢出
+          if (isNaN(count) || count < 0) {
+            console.warn('Invalid repeat count:', numStr)
+            decompressed += char
+            i++
+            continue
+          }
+
+          if (count > MAX_REPEAT_COUNT) {
+            console.warn('Repeat count too large:', count, 'limiting to', MAX_REPEAT_COUNT)
+            decompressed += char.repeat(MAX_REPEAT_COUNT)
+          } else {
+            decompressed += char.repeat(count)
+          }
+
+          i = j
+        } else {
+          decompressed += char
+          i++
+        }
+      }
+
+      return decompressed
+    } catch (error) {
+      console.error('Error decompressing string:', error)
+      // 如果解压缩失败，返回原始数据
+      return compressed
+    }
   }
 
   /**
@@ -366,6 +411,48 @@ class BrowserStorage {
 
       transaction.onerror = () => {
         reject(new Error('清理存储失败'))
+      }
+    })
+  }
+
+  /**
+   * 清理损坏的基因组数据
+   */
+  async cleanupCorruptedGenomes () {
+    await this.ensureDB()
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(['genomes'], 'readwrite')
+      const store = transaction.objectStore('genomes')
+      const request = store.getAll()
+
+      request.onsuccess = () => {
+        const genomes = request.result
+        let cleanedCount = 0
+
+        genomes.forEach(genome => {
+          try {
+            // 尝试解压缩内容
+            this.decompressString(genome.content)
+          } catch (error) {
+            console.log('Removing corrupted genome:', genome.id, error.message)
+            store.delete(genome.id)
+            cleanedCount++
+          }
+        })
+
+        transaction.oncomplete = () => {
+          console.log(`Cleaned up ${cleanedCount} corrupted genomes`)
+          resolve(cleanedCount)
+        }
+
+        transaction.onerror = () => {
+          reject(new Error('清理损坏数据失败'))
+        }
+      }
+
+      request.onerror = () => {
+        reject(new Error('获取基因组数据失败'))
       }
     })
   }

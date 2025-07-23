@@ -180,13 +180,13 @@ const store = createStore({
           // 转换数据格式以适配前端需求
           const formattedSpecies = species.map(item => ({
             id: item.id,
-            value: item.scientific_name || item.name,
+            value: item.name, // 使用菌种名称而不是学名
             label: item.name,
+            scientific_name: item.scientific_name, // 保留学名字段
             description: item.description,
             status: item.status,
             abbreviation: item.abbreviation,
-            ncbi_txid: item.ncbi_txid,
-            scientific_name: item.scientific_name
+            ncbi_txid: item.ncbi_txid
           }))
 
           const formattedRegions = regions.map(item => ({
@@ -219,6 +219,90 @@ const store = createStore({
           commit('SET_REGION_OPTIONS', formattedRegions)
           commit('SET_SOURCE_OPTIONS', formattedSources)
           commit('SET_EXPERIMENT_TYPE_OPTIONS', formattedExperimentTypes)
+        } else {
+          // 开发环境：从localStorage加载或使用默认模拟数据
+          const savedSpecies = localStorage.getItem('pams_species')
+          const savedRegions = localStorage.getItem('pams_regions')
+          const savedSources = localStorage.getItem('pams_sources')
+          const savedExperimentTypes = localStorage.getItem('pams_experiment_types')
+
+          // 默认模拟数据
+          const defaultSpecies = [
+            { id: 1, name: '大肠杆菌', scientific_name: 'E.coli', description: '常见病原菌', status: 'active' },
+            { id: 2, name: '沙门氏菌', scientific_name: 'Salmonella', description: '肠道病原菌', status: 'active' },
+            { id: 3, name: '志贺氏菌', scientific_name: 'Shigella', description: '痢疾病原菌', status: 'active' },
+            { id: 4, name: '弧菌', scientific_name: 'Vibrio', description: '水生细菌', status: 'active' },
+            { id: 5, name: '金黄色葡萄球菌', scientific_name: 'S.aureus', description: '常见致病菌', status: 'active' }
+          ]
+
+          const defaultRegions = [
+            { id: 1, name: '北京市', description: '直辖市', status: 'active' },
+            { id: 2, name: '上海市', description: '直辖市', status: 'active' },
+            { id: 3, name: '广东省', description: '省份', status: 'active' },
+            { id: 4, name: '江苏省', description: '省份', status: 'active' },
+            { id: 5, name: '浙江省', description: '省份', status: 'active' },
+            { id: 6, name: '山东省', description: '省份', status: 'active' }
+          ]
+
+          const defaultSources = [
+            { id: 1, name: '血液', description: '临床血液样本', status: 'active' },
+            { id: 2, name: '粪便', description: '临床粪便样本', status: 'active' },
+            { id: 3, name: '尿液', description: '临床尿液样本', status: 'active' },
+            { id: 4, name: '食品', description: '食品样本', status: 'active' },
+            { id: 5, name: '水源', description: '环境水样', status: 'active' },
+            { id: 6, name: '土壤', description: '环境土样', status: 'active' }
+          ]
+
+          // 处理菌种数据
+          const species = savedSpecies ? JSON.parse(savedSpecies) : defaultSpecies
+          const formattedSpecies = species.map(item => ({
+            id: item.id,
+            value: item.name, // 使用菌种名称而不是学名
+            label: item.name,
+            scientific_name: item.scientific_name,
+            description: item.description,
+            status: item.status,
+            abbreviation: item.abbreviation,
+            ncbi_txid: item.ncbi_txid
+          }))
+          commit('SET_SPECIES_OPTIONS', formattedSpecies)
+
+          // 处理地区数据
+          const regions = savedRegions ? JSON.parse(savedRegions) : defaultRegions
+          const formattedRegions = regions.map(item => ({
+            id: item.id,
+            value: item.name,
+            label: item.name,
+            description: item.description,
+            status: item.status
+          }))
+          commit('SET_REGION_OPTIONS', formattedRegions)
+
+          // 处理样本来源数据
+          const sources = savedSources ? JSON.parse(savedSources) : defaultSources
+          const formattedSources = sources.map(item => ({
+            id: item.id,
+            value: item.name,
+            label: item.name,
+            description: item.description,
+            status: item.status
+          }))
+          commit('SET_SOURCE_OPTIONS', formattedSources)
+
+          // 处理实验类型数据（如果有的话）
+          if (savedExperimentTypes) {
+            const experimentTypes = JSON.parse(savedExperimentTypes)
+            const formattedExperimentTypes = experimentTypes.map(item => ({
+              id: item.id,
+              value: item.name,
+              label: item.name,
+              code: item.code,
+              category: item.category,
+              description: item.description,
+              status: item.status
+            }))
+            commit('SET_EXPERIMENT_TYPE_OPTIONS', formattedExperimentTypes)
+          }
         }
       } catch (error) {
         console.error('加载系统配置失败:', error)
@@ -466,11 +550,11 @@ const store = createStore({
           // 开发环境模拟数据
           const mockConfig = {
             species: [
-              { id: 1, value: 'E.coli', label: '大肠杆菌', description: '常见病原菌', status: 'active' },
-              { id: 2, value: 'Salmonella', label: '沙门氏菌', description: '肠道病原菌', status: 'active' },
-              { id: 3, value: 'Shigella', label: '志贺氏菌', description: '痢疾病原菌', status: 'active' },
-              { id: 4, value: 'Vibrio', label: '弧菌', description: '水生细菌', status: 'active' },
-              { id: 5, value: 'S.aureus', label: '金黄色葡萄球菌', description: '常见致病菌', status: 'active' }
+              { id: 1, value: '大肠杆菌', label: '大肠杆菌', scientific_name: 'E.coli', description: '常见病原菌', status: 'active' },
+              { id: 2, value: '沙门氏菌', label: '沙门氏菌', scientific_name: 'Salmonella', description: '肠道病原菌', status: 'active' },
+              { id: 3, value: '志贺氏菌', label: '志贺氏菌', scientific_name: 'Shigella', description: '痢疾病原菌', status: 'active' },
+              { id: 4, value: '弧菌', label: '弧菌', scientific_name: 'Vibrio', description: '水生细菌', status: 'active' },
+              { id: 5, value: '金黄色葡萄球菌', label: '金黄色葡萄球菌', scientific_name: 'S.aureus', description: '常见致病菌', status: 'active' }
             ],
             regions: [
               { id: 1, value: 'beijing', label: '北京市', description: '直辖市', status: 'active' },
