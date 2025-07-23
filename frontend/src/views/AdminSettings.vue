@@ -1016,12 +1016,8 @@ export default {
           const species = await window.electronAPI.systemConfig.getSpecies()
           speciesOptions.value = species || []
         } else {
-          // 浏览器环境模拟数据
-          speciesOptions.value = [
-            { id: 1, name: '大肠杆菌', scientific_name: 'Escherichia coli', abbreviation: 'Ecol', ncbi_txid: '562', description: '常见病原菌', status: 'active' },
-            { id: 2, name: '沙门氏菌', scientific_name: 'Salmonella enterica', abbreviation: 'Sent', ncbi_txid: '28901', description: '肠道病原菌', status: 'active' },
-            { id: 3, name: '志贺氏菌', scientific_name: 'Shigella flexneri', abbreviation: 'Sfle', ncbi_txid: '623', description: '痢疾病原菌', status: 'active' }
-          ]
+          // 浏览器环境空数据 - 对应实验设置中的菌种字段
+          speciesOptions.value = []
         }
         // 同步到Vuex store
         await store.dispatch('loadSystemConfig')
@@ -1037,12 +1033,8 @@ export default {
           const regions = await window.electronAPI.systemConfig.getRegions()
           regionOptions.value = regions || []
         } else {
-          // 浏览器环境模拟数据
-          regionOptions.value = [
-            { id: 1, name: '北京市', code: '110000', level: 'province', parent_id: null, parent_name: '', status: 'active' },
-            { id: 2, name: '上海市', code: '310000', level: 'province', parent_id: null, parent_name: '', status: 'active' },
-            { id: 3, name: '广东省', code: '440000', level: 'province', parent_id: null, parent_name: '', status: 'active' }
-          ]
+          // 浏览器环境空数据 - 对应实验设置中的地区字段
+          regionOptions.value = []
         }
         // 同步到Vuex store
         await store.dispatch('loadSystemConfig')
@@ -1058,12 +1050,8 @@ export default {
           const sources = await window.electronAPI.systemConfig.getSampleSources()
           sourceOptions.value = sources || []
         } else {
-          // 浏览器环境模拟数据
-          sourceOptions.value = [
-            { id: 1, name: '血液', category: 'clinical', description: '临床血液样本', status: 'active' },
-            { id: 2, name: '粪便', category: 'clinical', description: '临床粪便样本', status: 'active' },
-            { id: 3, name: '食品', category: 'food', description: '食品样本', status: 'active' }
-          ]
+          // 浏览器环境空数据 - 对应实验设置中的样本来源字段
+          sourceOptions.value = []
         }
         // 同步到Vuex store
         await store.dispatch('loadSystemConfig')
@@ -1079,14 +1067,8 @@ export default {
           const types = await window.electronAPI.systemConfig.getExperimentTypes()
           experimentTypeOptions.value = types || []
         } else {
-          // 浏览器环境模拟数据
-          experimentTypeOptions.value = [
-            { id: 1, name: 'MLST分析', code: 'mlst', category: 'typing', description: '多位点序列分型分析', status: 'active' },
-            { id: 2, name: '血清分型', code: 'serotyping', category: 'typing', description: '血清学分型分析', status: 'active' },
-            { id: 3, name: '毒力基因检测', code: 'virulence', category: 'gene_analysis', description: '毒力基因分析', status: 'active' },
-            { id: 4, name: '耐药基因检测', code: 'resistance', category: 'gene_analysis', description: '耐药基因分析', status: 'active' },
-            { id: 5, name: '全基因组测序', code: 'wgs', category: 'sequencing', description: '全基因组序列分析', status: 'active' }
-          ]
+          // 浏览器环境空数据 - 对应实验设置中的实验类型字段
+          experimentTypeOptions.value = []
         }
         // 同步到Vuex store
         await store.dispatch('loadSystemConfig')

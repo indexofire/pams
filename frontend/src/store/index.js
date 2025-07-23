@@ -226,32 +226,10 @@ const store = createStore({
           const savedSources = localStorage.getItem('pams_sources')
           const savedExperimentTypes = localStorage.getItem('pams_experiment_types')
 
-          // 默认模拟数据
-          const defaultSpecies = [
-            { id: 1, name: '大肠杆菌', scientific_name: 'E.coli', description: '常见病原菌', status: 'active' },
-            { id: 2, name: '沙门氏菌', scientific_name: 'Salmonella', description: '肠道病原菌', status: 'active' },
-            { id: 3, name: '志贺氏菌', scientific_name: 'Shigella', description: '痢疾病原菌', status: 'active' },
-            { id: 4, name: '弧菌', scientific_name: 'Vibrio', description: '水生细菌', status: 'active' },
-            { id: 5, name: '金黄色葡萄球菌', scientific_name: 'S.aureus', description: '常见致病菌', status: 'active' }
-          ]
-
-          const defaultRegions = [
-            { id: 1, name: '北京市', description: '直辖市', status: 'active' },
-            { id: 2, name: '上海市', description: '直辖市', status: 'active' },
-            { id: 3, name: '广东省', description: '省份', status: 'active' },
-            { id: 4, name: '江苏省', description: '省份', status: 'active' },
-            { id: 5, name: '浙江省', description: '省份', status: 'active' },
-            { id: 6, name: '山东省', description: '省份', status: 'active' }
-          ]
-
-          const defaultSources = [
-            { id: 1, name: '血液', description: '临床血液样本', status: 'active' },
-            { id: 2, name: '粪便', description: '临床粪便样本', status: 'active' },
-            { id: 3, name: '尿液', description: '临床尿液样本', status: 'active' },
-            { id: 4, name: '食品', description: '食品样本', status: 'active' },
-            { id: 5, name: '水源', description: '环境水样', status: 'active' },
-            { id: 6, name: '土壤', description: '环境土样', status: 'active' }
-          ]
+          // 默认空数据 - 对应实验设置中的相关字段
+          const defaultSpecies = []
+          const defaultRegions = []
+          const defaultSources = []
 
           // 处理菌种数据
           const species = savedSpecies ? JSON.parse(savedSpecies) : defaultSpecies
@@ -452,14 +430,20 @@ const store = createStore({
             })
           }
 
-          // 生成模拟的菌种分布数据
-          const speciesDistribution = [
-            { name: '大肠杆菌', value: Math.floor(totalStrains * 0.35) || 35 },
-            { name: '沙门氏菌', value: Math.floor(totalStrains * 0.25) || 25 },
-            { name: '志贺氏菌', value: Math.floor(totalStrains * 0.20) || 20 },
-            { name: '弧菌', value: Math.floor(totalStrains * 0.15) || 15 },
-            { name: '其他', value: Math.floor(totalStrains * 0.05) || 5 }
-          ]
+          // 生成基于实际菌株数据的菌种分布数据
+          const speciesDistribution = []
+          if (totalStrains > 0) {
+            // 基于实际菌株数据计算分布
+            const speciesCount = {}
+            state.strains.forEach(strain => {
+              const species = strain.species || '未知'
+              speciesCount[species] = (speciesCount[species] || 0) + 1
+            })
+
+            Object.entries(speciesCount).forEach(([name, value]) => {
+              speciesDistribution.push({ name, value })
+            })
+          }
 
           // 生成最近活动数据
           const recentActivities = [
@@ -547,31 +531,12 @@ const store = createStore({
 
           commit('SET_SYSTEM_CONFIG', formattedConfig)
         } else {
-          // 开发环境模拟数据
+          // 开发环境空数据 - 对应实验设置中的相关字段
           const mockConfig = {
-            species: [
-              { id: 1, value: '大肠杆菌', label: '大肠杆菌', scientific_name: 'E.coli', description: '常见病原菌', status: 'active' },
-              { id: 2, value: '沙门氏菌', label: '沙门氏菌', scientific_name: 'Salmonella', description: '肠道病原菌', status: 'active' },
-              { id: 3, value: '志贺氏菌', label: '志贺氏菌', scientific_name: 'Shigella', description: '痢疾病原菌', status: 'active' },
-              { id: 4, value: '弧菌', label: '弧菌', scientific_name: 'Vibrio', description: '水生细菌', status: 'active' },
-              { id: 5, value: '金黄色葡萄球菌', label: '金黄色葡萄球菌', scientific_name: 'S.aureus', description: '常见致病菌', status: 'active' }
-            ],
-            regions: [
-              { id: 1, value: 'beijing', label: '北京市', description: '直辖市', status: 'active' },
-              { id: 2, value: 'shanghai', label: '上海市', description: '直辖市', status: 'active' },
-              { id: 3, value: 'guangdong', label: '广东省', description: '省份', status: 'active' },
-              { id: 4, value: 'jiangsu', label: '江苏省', description: '省份', status: 'active' },
-              { id: 5, value: 'zhejiang', label: '浙江省', description: '省份', status: 'active' },
-              { id: 6, value: 'shandong', label: '山东省', description: '省份', status: 'active' }
-            ],
-            sources: [
-              { id: 1, value: 'blood', label: '血液', description: '临床血液样本', status: 'active' },
-              { id: 2, value: 'feces', label: '粪便', description: '临床粪便样本', status: 'active' },
-              { id: 3, value: 'urine', label: '尿液', description: '临床尿液样本', status: 'active' },
-              { id: 4, value: 'food', label: '食品', description: '食品样本', status: 'active' },
-              { id: 5, value: 'water', label: '水源', description: '环境水样', status: 'active' },
-              { id: 6, value: 'soil', label: '土壤', description: '环境土样', status: 'active' }
-            ]
+            species: [],
+            regions: [],
+            sources: [],
+            experimentTypes: []
           }
           commit('SET_SYSTEM_CONFIG', mockConfig)
         }

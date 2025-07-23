@@ -45,9 +45,12 @@
                   clearable
                   multiple
                 >
-                  <el-option label="大肠杆菌" value="E.coli" />
-                  <el-option label="沙门氏菌" value="Salmonella" />
-                  <el-option label="志贺氏菌" value="Shigella" />
+                  <el-option
+                    v-for="species in speciesOptions"
+                    :key="species.value"
+                    :label="species.label"
+                    :value="species.value"
+                  />
                 </el-select>
               </el-form-item>
 
@@ -58,9 +61,12 @@
                   clearable
                   multiple
                 >
-                  <el-option label="北京市" value="beijing" />
-                  <el-option label="上海市" value="shanghai" />
-                  <el-option label="广东省" value="guangdong" />
+                  <el-option
+                    v-for="region in regionOptions"
+                    :key="region.value"
+                    :label="region.label"
+                    :value="region.value"
+                  />
                 </el-select>
               </el-form-item>
 
@@ -71,9 +77,12 @@
                   clearable
                   multiple
                 >
-                  <el-option label="血液" value="blood" />
-                  <el-option label="粪便" value="feces" />
-                  <el-option label="食品" value="food" />
+                  <el-option
+                    v-for="source in sourceOptions"
+                    :key="source.value"
+                    :label="source.label"
+                    :value="source.value"
+                  />
                 </el-select>
               </el-form-item>
 
@@ -254,12 +263,19 @@
 <script>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useStore } from 'vuex'
 
 export default {
   name: 'StrainAnalysis',
   setup () {
+    const store = useStore()
     const loading = ref(false)
     const activeTab = ref('overview')
+
+    // 系统配置选项
+    const speciesOptions = computed(() => store.getters.activeSpeciesOptions)
+    const regionOptions = computed(() => store.getters.activeRegionOptions)
+    const sourceOptions = computed(() => store.getters.activeSourceOptions)
 
     const filterForm = reactive({
       strain_id: '',
@@ -550,6 +566,8 @@ export default {
     })
 
     onMounted(() => {
+      // 加载系统配置
+      store.dispatch('loadSystemConfig')
       loadData()
     })
 
@@ -560,6 +578,11 @@ export default {
       filteredData,
       pagination,
       statistics,
+      // 系统配置选项
+      speciesOptions,
+      regionOptions,
+      sourceOptions,
+      // 方法
       applyFilter,
       resetFilter,
       exportResults,
