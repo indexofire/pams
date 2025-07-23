@@ -1,4 +1,4 @@
-TODO.md
+TODO*.md
 node_modules
 dist
 out
@@ -6,6 +6,7 @@ out
 .eslintcache
 *.log*
 .augment
+RELEASE.md
 
 # local env files
 .env.local

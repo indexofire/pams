@@ -1,0 +1,86 @@
+[
+  {
+    "name": "杭州",
+    "code": "HZ",
+    "level": "city",
+    "status": "active"
+  },
+  {
+    "name": "上城",
+    "code": "SC",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "拱墅",
+    "code": "GS",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "西湖",
+    "code": "XH",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "滨江",
+    "code": "BJ",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "钱塘",
+    "code": "QT",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "萧山",
+    "code": "XS",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "余杭",
+    "code": "YH",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "临平",
+    "code": "LP",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "临安",
+    "code": "LA",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "富阳",
+    "code": "FY",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "桐庐",
+    "code": "TL",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "建德",
+    "code": "JD",
+    "level": "district",
+    "status": "active"
+  },
+  {
+    "name": "淳安",
+    "code": "CA",
+    "level": "district",
+    "status": "active"
+  }
+]

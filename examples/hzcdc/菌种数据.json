@@ -1,0 +1,26 @@
+[
+  {
+    "name": "大肠埃希菌",
+    "scientific_name": "Escherichia coli",
+    "abbreviation": "ECO",
+    "ncbi_txid": "562",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "沙门菌",
+    "scientific_name": "Salmonella",
+    "abbreviation": "SAL",
+    "ncbi_txid": "590",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "副溶血性弧菌",
+    "scientific_name": "Vibrio parahaemolyticus",
+    "abbreviation": "VPA",
+    "ncbi_txid": "670",
+    "description": "",
+    "status": "active"
+  }
+]

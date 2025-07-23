@@ -469,6 +469,9 @@ function registerIpcHandlers() {
     // 确保日期字段为正确的字符串格式
     const processedData = { ...strainData }
 
+    // 移除原有的id字段，让数据库自动分配唯一ID
+    delete processedData.id
+
     // 处理可能的日期字段
     const dateFields = ['onset_date', 'sampling_date', 'isolation_date']
     dateFields.forEach(field => {
@@ -498,6 +501,9 @@ function registerIpcHandlers() {
       // 处理每个菌株数据的日期字段
       const processedStrains = strainsData.map(strainData => {
         const processedData = { ...strainData }
+
+        // 移除原有的id字段，让数据库自动分配唯一ID
+        delete processedData.id
 
         // 处理可能的日期字段
         const dateFields = ['onset_date', 'sampling_date', 'isolation_date']
@@ -729,6 +735,11 @@ function registerIpcHandlers() {
   ipcMain.handle('systemConfig:getSampleSources', async () => {
     const systemConfigService = new SystemConfigService(dbService)
     return await systemConfigService.getSampleSourcesConfig()
+  })
+
+  ipcMain.handle('systemConfig:getProjects', async () => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.getProjectsConfig()
   })
 
   ipcMain.handle('systemConfig:saveSampleSource', async (event, sourceData) => {

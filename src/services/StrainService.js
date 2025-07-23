@@ -312,8 +312,12 @@ class StrainService {
               throw new Error(`第${i + 1}行：菌株编号 ${strainData.strain_id} 已存在`)
             }
 
+            // 移除原有的id字段，让数据库自动分配唯一ID
+            const cleanStrainData = { ...strainData }
+            delete cleanStrainData.id
+
             // 创建菌株
-            const result = await this.createStrain(strainData)
+            const result = await this.createStrain(cleanStrainData)
             results.push(result)
           } catch (error) {
             errors.push({
@@ -360,14 +364,22 @@ class StrainService {
         errors: []
       }
 
+      // 获取当前最大ID，确保导入的记录ID不重复
+      let nextId = this.db.getNextAvailableId()
+
       for (const strainData of strainsData) {
         try {
-          await this.createStrain(strainData)
+          // 移除原有的id字段，让数据库自动分配
+          const cleanStrainData = { ...strainData }
+          delete cleanStrainData.id
+
+          await this.createStrain(cleanStrainData)
           results.success++
+          nextId++ // 递增ID计数器
         } catch (error) {
           results.failed++
           results.errors.push({
-            strain: strainData.name || 'Unknown',
+            strain: strainData.strain_id || strainData.name || 'Unknown',
             error: error.message
           })
         }
@@ -384,30 +396,119 @@ class StrainService {
    * 验证菌株数据
    */
   validateStrainData(strainData, isCreate = true) {
+    // 菌株编号验证
     if (isCreate && !strainData.strain_id) {
       throw new Error('菌株编号不能为空')
     }
 
-    if (strainData.strain_id && typeof strainData.strain_id !== 'string') {
-      throw new Error('菌株编号必须是字符串')
+    if (strainData.strain_id) {
+      if (typeof strainData.strain_id !== 'string') {
+        throw new Error('菌株编号必须是字符串')
+      }
+
+      const trimmedId = strainData.strain_id.trim()
+      if (trimmedId.length === 0) {
+        throw new Error('菌株编号不能为空')
+      }
+
+      if (trimmedId.length < 3 || trimmedId.length > 50) {
+        throw new Error('菌株编号长度必须在3-50个字符之间')
+      }
+
+      // 正则表达式检查：只允许数字、大小写英文、下划线、连字符
+      const strainIdPattern = /^[a-zA-Z0-9_-]+$/
+      if (!strainIdPattern.test(trimmedId)) {
+        throw new Error('菌株编号只能包含数字、大小写英文字母、下划线和连字符')
+      }
     }
 
-    if (strainData.strain_id && strainData.strain_id.trim().length === 0) {
-      throw new Error('菌株编号不能为空')
-    }
-
+    // 菌种验证
     if (isCreate && !strainData.species) {
       throw new Error('菌种不能为空')
     }
 
-    if (strainData.species && typeof strainData.species !== 'string') {
-      throw new Error('菌种必须是字符串')
+    if (strainData.species) {
+      if (typeof strainData.species !== 'string') {
+        throw new Error('菌种必须是字符串')
+      }
+
+      if (strainData.species.trim().length === 0) {
+        throw new Error('菌种不能为空')
+      }
     }
 
-    if (strainData.species && strainData.species.trim().length === 0) {
-      throw new Error('菌种不能为空')
+    // 样本编号验证
+    if (isCreate && !strainData.sample_id) {
+      throw new Error('样本编号不能为空')
     }
 
+    if (strainData.sample_id) {
+      if (typeof strainData.sample_id !== 'string') {
+        throw new Error('样本编号必须是字符串')
+      }
+
+      const trimmedSampleId = strainData.sample_id.trim()
+      if (trimmedSampleId.length === 0) {
+        throw new Error('样本编号不能为空')
+      }
+
+      if (trimmedSampleId.length > 255) {
+        throw new Error('样本编号长度不能超过255个字符')
+      }
+
+      // 验证多个样本编号（逗号分隔）
+      const sampleIds = trimmedSampleId.split(',')
+      const sampleIdPattern = /^[a-zA-Z0-9_-]+$/
+
+      for (const sampleId of sampleIds) {
+        const cleanSampleId = sampleId.trim()
+        if (cleanSampleId.length === 0) {
+          throw new Error('样本编号不能为空')
+        }
+        if (!sampleIdPattern.test(cleanSampleId)) {
+          throw new Error('样本编号只能包含数字、大小写英文字母、下划线和连字符')
+        }
+      }
+    }
+
+    // 地区验证
+    if (isCreate && !strainData.region) {
+      throw new Error('地区不能为空')
+    }
+
+    // 分离日期验证
+    if (isCreate && !strainData.isolation_date) {
+      throw new Error('分离日期不能为空')
+    }
+
+    // 上送日期验证
+    if (isCreate && !strainData.submission_date) {
+      throw new Error('上送日期不能为空')
+    }
+
+    // 名称验证
+    if (strainData.patient_name) {
+      if (typeof strainData.patient_name !== 'string') {
+        throw new Error('名称必须是字符串')
+      }
+
+      if (strainData.patient_name.trim().length > 255) {
+        throw new Error('名称长度不能超过255个字符')
+      }
+    }
+
+    // 来源验证
+    if (strainData.project_source) {
+      if (typeof strainData.project_source !== 'string') {
+        throw new Error('来源必须是字符串')
+      }
+
+      if (strainData.project_source.trim().length > 50) {
+        throw new Error('来源长度不能超过50个字符')
+      }
+    }
+
+    // 日期格式验证
     if (strainData.isolation_date && !this.isValidDate(strainData.isolation_date)) {
       throw new Error('分离日期格式无效')
     }
@@ -418,6 +519,10 @@ class StrainService {
 
     if (strainData.onset_date && !this.isValidDate(strainData.onset_date)) {
       throw new Error('发病日期格式无效')
+    }
+
+    if (strainData.submission_date && !this.isValidDate(strainData.submission_date)) {
+      throw new Error('上送日期格式无效')
     }
   }
 

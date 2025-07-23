@@ -38,7 +38,7 @@
               <el-table-column prop="name" label="菌种名称" />
               <el-table-column prop="scientific_name" label="学名" />
               <el-table-column prop="abbreviation" label="缩写" width="100" />
-              <el-table-column prop="ncbi_txid" label="NCBI TXID" width="120">
+              <el-table-column prop="ncbi_txid" label="NCBI物种ID" width="120">
                 <template #default="scope">
                   <span v-if="scope.row.ncbi_txid">
                     <a :href="`https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=${scope.row.ncbi_txid}`"
@@ -500,7 +500,7 @@
         <el-form-item label="缩写" prop="abbreviation">
           <el-input v-model="speciesForm.abbreviation" placeholder="请输入菌种缩写" />
         </el-form-item>
-        <el-form-item label="NCBI TXID" prop="ncbi_txid">
+        <el-form-item label="NCBI物种ID" prop="ncbi_txid">
           <div style="display: flex; gap: 8px;">
             <el-input
               v-model="speciesForm.ncbi_txid"

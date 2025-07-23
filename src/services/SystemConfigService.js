@@ -239,6 +239,18 @@ class SystemConfigService {
   }
 
   /**
+   * 获取项目配置
+   */
+  async getProjectsConfig() {
+    try {
+      return this.db.getProjectsConfig()
+    } catch (error) {
+      console.error('获取项目配置失败:', error)
+      throw new Error('获取项目配置失败')
+    }
+  }
+
+  /**
    * 保存样本来源配置
    */
   async saveSampleSource(sourceData) {

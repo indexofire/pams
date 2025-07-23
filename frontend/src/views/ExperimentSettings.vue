@@ -52,7 +52,7 @@
                   </template>
                 </el-table-column>
                 <el-table-column prop="abbreviation" label="缩写" width="80" />
-                <el-table-column prop="ncbi_txid" label="NCBI TXID" width="100">
+                <el-table-column prop="ncbi_txid" label="NCBI物种ID" width="100">
                   <template #default="scope">
                     <span v-if="scope.row.ncbi_txid">
                       <a :href="`https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=${scope.row.ncbi_txid}`"
@@ -299,6 +299,92 @@
             </div>
           </el-tab-pane>
 
+          <!-- 来源管理 -->
+          <el-tab-pane label="来源管理" name="projects">
+            <div class="project-management">
+              <div class="toolbar">
+                <div class="toolbar-left">
+                  <el-button type="primary" @click="addProject">
+                    <el-icon><Plus /></el-icon>
+                    添加来源
+                  </el-button>
+                </div>
+                <div class="toolbar-right">
+                  <el-button
+                    type="success"
+                    :disabled="selectedProjects.length === 0"
+                    @click="exportSelectedProjects"
+                  >
+                    <el-icon><Download /></el-icon>
+                    导出选中 ({{ selectedProjects.length }})
+                  </el-button>
+                  <el-button type="warning" @click="importProjects">
+                    <el-icon><Upload /></el-icon>
+                    导入来源
+                  </el-button>
+                </div>
+              </div>
+
+              <el-table
+                :data="paginatedProjects"
+                border
+                style="width: 100%"
+                :height="400"
+                :table-layout="'fixed'"
+                @selection-change="handleProjectSelectionChange"
+              >
+                <el-table-column type="selection" width="55" />
+                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="name" label="项目名称" min-width="150" />
+                <el-table-column prop="description" label="描述" min-width="200" />
+                <el-table-column prop="status" label="状态" width="100">
+                  <template #default="scope">
+                    <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'">
+                      {{ scope.row.status === 'active' ? '启用' : '禁用' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="200" fixed="right">
+                  <template #default="scope">
+                    <el-button
+                      type="primary"
+                      size="small"
+                      @click="editProject(scope.row)"
+                    >
+                      编辑
+                    </el-button>
+                    <el-button
+                      :type="scope.row.status === 'active' ? 'warning' : 'success'"
+                      size="small"
+                      @click="toggleProjectStatus(scope.row)"
+                    >
+                      {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                    </el-button>
+                    <el-button
+                      type="danger"
+                      size="small"
+                      @click="deleteProject(scope.row.id)"
+                    >
+                      删除
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+
+              <div class="pagination-container">
+                <el-pagination
+                  v-model:current-page="projectPagination.current"
+                  v-model:page-size="projectPagination.size"
+                  :page-sizes="[10, 20, 50, 100]"
+                  :total="projectPagination.total"
+                  layout="total, sizes, prev, pager, next, jumper"
+                  @size-change="handleProjectSizeChange"
+                  @current-change="handleProjectPageChange"
+                />
+              </div>
+            </div>
+          </el-tab-pane>
+
           <!-- 实验类型管理 -->
           <el-tab-pane label="实验类型管理" name="experiments">
             <div class="experiment-management">
@@ -429,7 +515,7 @@
             </template>
           </el-input>
         </el-form-item>
-        <el-form-item label="NCBI TXID">
+        <el-form-item label="NCBI物种ID">
           <el-input
             v-model="speciesForm.ncbi_txid"
             placeholder="从NCBI获取或手动输入"
@@ -524,6 +610,28 @@
       <template #footer>
         <el-button @click="sourceDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="saveSource">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 来源编辑对话框 -->
+    <el-dialog v-model="projectDialogVisible" title="来源管理" width="600px">
+      <el-form :model="projectForm" label-width="80px">
+        <el-form-item label="项目名称">
+          <el-input v-model="projectForm.name" placeholder="请输入项目名称" />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="projectForm.description" type="textarea" :rows="3" placeholder="请输入描述" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="projectForm.status">
+            <el-radio label="active">启用</el-radio>
+            <el-radio label="inactive">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="projectDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveProject">确定</el-button>
       </template>
     </el-dialog>
 
@@ -892,6 +1000,9 @@ export default {
     // 样本来源管理相关
     const sourceOptions = ref([])
 
+    // 来源管理相关
+    const projectOptions = ref([])
+
     // 实验管理相关
     const experimentTypes = ref([])
 
@@ -899,12 +1010,14 @@ export default {
     const selectedSpecies = ref([])
     const selectedRegions = ref([])
     const selectedSources = ref([])
+    const selectedProjects = ref([])
     const selectedExperiments = ref([])
 
     // 对话框状态
     const speciesDialogVisible = ref(false)
     const regionDialogVisible = ref(false)
     const sourceDialogVisible = ref(false)
+    const projectDialogVisible = ref(false)
     const experimentDialogVisible = ref(false)
     const thresholdDialogVisible = ref(false)
     const batchAddDialogVisible = ref(false)
@@ -938,6 +1051,12 @@ export default {
     })
 
     const sourcePagination = reactive({
+      current: 1,
+      size: 10,
+      total: 0
+    })
+
+    const projectPagination = reactive({
       current: 1,
       size: 10,
       total: 0
@@ -977,6 +1096,13 @@ export default {
       id: null,
       name: '',
       category: 'clinical',
+      description: '',
+      status: 'active'
+    })
+
+    const projectForm = reactive({
+      id: null,
+      name: '',
       description: '',
       status: 'active'
     })
@@ -1021,17 +1147,19 @@ export default {
           const species = await window.electronAPI.systemConfig.getSpecies()
           const regions = await window.electronAPI.systemConfig.getRegions()
           const sources = await window.electronAPI.systemConfig.getSampleSources()
-          const experimentTypes = await window.electronAPI.systemConfig.getExperimentTypes()
+          const experimentTypesData = await window.electronAPI.systemConfig.getExperimentTypes()
 
           speciesOptions.value = species || []
           regionOptions.value = regions || []
           sourceOptions.value = sources || []
-          experimentTypes.value = experimentTypes || []
+          projectOptions.value = [] // 项目数据暂时为空，后续可以从API获取
+          experimentTypes.value = experimentTypesData || []
         } else {
           // 开发环境：从localStorage加载数据
           const savedSpecies = localStorage.getItem('pams_species_options')
           const savedRegions = localStorage.getItem('pams_region_options')
           const savedSources = localStorage.getItem('pams_source_options')
+          const savedProjects = localStorage.getItem('pams_project_options')
           const savedExperiments = localStorage.getItem('pams_experiment_types')
 
           if (savedSpecies) {
@@ -1067,6 +1195,17 @@ export default {
             sourceOptions.value = []
           }
 
+          if (savedProjects) {
+            try {
+              projectOptions.value = JSON.parse(savedProjects)
+            } catch (e) {
+              console.error('解析项目数据失败:', e)
+              projectOptions.value = []
+            }
+          } else {
+            projectOptions.value = []
+          }
+
           if (savedExperiments) {
             try {
               experimentTypes.value = JSON.parse(savedExperiments)
@@ -1090,6 +1229,7 @@ export default {
         localStorage.setItem('pams_species_options', JSON.stringify(speciesOptions.value))
         localStorage.setItem('pams_region_options', JSON.stringify(regionOptions.value))
         localStorage.setItem('pams_source_options', JSON.stringify(sourceOptions.value))
+        localStorage.setItem('pams_project_options', JSON.stringify(projectOptions.value))
         localStorage.setItem('pams_experiment_types', JSON.stringify(experimentTypes.value))
       } catch (error) {
         console.error('保存实验设置数据失败:', error)
@@ -1248,22 +1388,40 @@ export default {
       }
     }
 
-    const deleteSpecies = (species) => {
-      ElMessageBox.confirm('确定要删除该菌种吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        const index = speciesOptions.value.findIndex(s => s.id === species.id)
-        if (index !== -1) {
-          speciesOptions.value.splice(index, 1)
+    const deleteSpecies = async (species) => {
+      try {
+        await ElMessageBox.confirm('确定要删除该菌种吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // Electron环境：调用API删除数据库中的数据
+          await window.electronAPI.systemConfig.deleteSpecies(species.id)
+          // 重新从数据库加载数据以确保一致性
+          const speciesData = await window.electronAPI.systemConfig.getSpecies()
+          speciesOptions.value = speciesData || []
+          ElMessage.success('菌种删除成功')
+        } else {
+          // 浏览器环境：删除内存数据并保存到localStorage
+          const index = speciesOptions.value.findIndex(s => s.id === species.id)
+          if (index !== -1) {
+            speciesOptions.value.splice(index, 1)
+          }
+          // 同步删除store中的数据
+          store.commit('DELETE_SPECIES_OPTION', species.id)
+          // 保存到localStorage
+          saveExperimentData()
+          ElMessage.success('菌种删除成功')
         }
-        // 同步删除store中的数据
-        store.commit('DELETE_SPECIES_OPTION', species.id)
-        // 保存到localStorage
-        saveExperimentData()
-        ElMessage.success('菌种删除成功')
-      }).catch(() => {})
+        updatePaginationTotals()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除菌种失败:', error)
+          ElMessage.error('删除失败：' + error.message)
+        }
+      }
     }
 
     const toggleSpeciesStatus = (species) => {
@@ -1338,22 +1496,40 @@ export default {
       }
     }
 
-    const deleteRegion = (region) => {
-      ElMessageBox.confirm('确定要删除该地区吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        const index = regionOptions.value.findIndex(r => r.id === region.id)
-        if (index !== -1) {
-          regionOptions.value.splice(index, 1)
+    const deleteRegion = async (region) => {
+      try {
+        await ElMessageBox.confirm('确定要删除该地区吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // Electron环境：调用API删除数据库中的数据
+          await window.electronAPI.systemConfig.deleteRegion(region.id)
+          // 重新从数据库加载数据以确保一致性
+          const regionsData = await window.electronAPI.systemConfig.getRegions()
+          regionOptions.value = regionsData || []
+          ElMessage.success('地区删除成功')
+        } else {
+          // 浏览器环境：删除内存数据并保存到localStorage
+          const index = regionOptions.value.findIndex(r => r.id === region.id)
+          if (index !== -1) {
+            regionOptions.value.splice(index, 1)
+          }
+          // 同步删除store中的数据
+          store.commit('DELETE_REGION_OPTION', region.id)
+          // 保存到localStorage
+          saveExperimentData()
+          ElMessage.success('地区删除成功')
         }
-        // 同步删除store中的数据
-        store.commit('DELETE_REGION_OPTION', region.id)
-        // 保存到localStorage
-        saveExperimentData()
-        ElMessage.success('地区删除成功')
-      }).catch(() => {})
+        updatePaginationTotals()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除地区失败:', error)
+          ElMessage.error('删除失败：' + error.message)
+        }
+      }
     }
 
     const toggleRegionStatus = (region) => {
@@ -1426,27 +1602,114 @@ export default {
       }
     }
 
-    const deleteSource = (source) => {
-      ElMessageBox.confirm('确定要删除该样本来源吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        const index = sourceOptions.value.findIndex(s => s.id === source.id)
-        if (index !== -1) {
-          sourceOptions.value.splice(index, 1)
+    const deleteSource = async (source) => {
+      try {
+        await ElMessageBox.confirm('确定要删除该样本来源吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // Electron环境：调用API删除数据库中的数据
+          await window.electronAPI.systemConfig.deleteSampleSource(source.id)
+          // 重新从数据库加载数据以确保一致性
+          const sourcesData = await window.electronAPI.systemConfig.getSampleSources()
+          sourceOptions.value = sourcesData || []
+          ElMessage.success('样本来源删除成功')
+        } else {
+          // 浏览器环境：删除内存数据并保存到localStorage
+          const index = sourceOptions.value.findIndex(s => s.id === source.id)
+          if (index !== -1) {
+            sourceOptions.value.splice(index, 1)
+          }
+          // 同步删除store中的数据
+          store.commit('DELETE_SOURCE_OPTION', source.id)
+          // 保存到localStorage
+          saveExperimentData()
+          ElMessage.success('样本来源删除成功')
         }
-        // 同步删除store中的数据
-        store.commit('DELETE_SOURCE_OPTION', source.id)
-        // 保存到localStorage
-        saveExperimentData()
-        ElMessage.success('样本来源删除成功')
-      }).catch(() => {})
+        updatePaginationTotals()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除样本来源失败:', error)
+          ElMessage.error('删除失败：' + error.message)
+        }
+      }
     }
 
     const toggleSourceStatus = (source) => {
       source.status = source.status === 'active' ? 'inactive' : 'active'
       ElMessage.success(`样本来源已${source.status === 'active' ? '启用' : '禁用'}`)
+    }
+
+    // 来源管理方法
+    const addProject = () => {
+      Object.assign(projectForm, { id: null, name: '', description: '', status: 'active' })
+      projectDialogVisible.value = true
+    }
+
+    const editProject = (project) => {
+      Object.assign(projectForm, project)
+      projectDialogVisible.value = true
+    }
+
+    const saveProject = async () => {
+      if (!projectForm.name.trim()) {
+        ElMessage.warning('请输入项目名称')
+        return
+      }
+
+      try {
+        if (projectForm.id) {
+          // 更新现有项目
+          const index = projectOptions.value.findIndex(item => item.id === projectForm.id)
+          if (index !== -1) {
+            projectOptions.value[index] = { ...projectForm }
+          }
+          ElMessage.success('项目更新成功')
+        } else {
+          // 添加新项目
+          const newProject = {
+            ...projectForm,
+            id: generateNewId(projectOptions.value)
+          }
+          projectOptions.value.push(newProject)
+          ElMessage.success('项目添加成功')
+        }
+
+        projectDialogVisible.value = false
+        saveExperimentData()
+        updatePaginationTotals()
+      } catch (error) {
+        console.error('保存项目失败:', error)
+        ElMessage.error('保存项目失败')
+      }
+    }
+
+    const deleteProject = async (id) => {
+      try {
+        await ElMessageBox.confirm('确定要删除这个项目吗？', '确认删除', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+
+        projectOptions.value = projectOptions.value.filter(item => item.id !== id)
+        ElMessage.success('项目删除成功')
+        saveExperimentData()
+        updatePaginationTotals()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除项目失败:', error)
+          ElMessage.error('删除项目失败')
+        }
+      }
+    }
+
+    const toggleProjectStatus = (project) => {
+      project.status = project.status === 'active' ? 'inactive' : 'active'
+      ElMessage.success(`项目已${project.status === 'active' ? '启用' : '禁用'}`)
     }
 
     // 实验类型管理方法
@@ -1770,22 +2033,40 @@ export default {
       }
     }
 
-    const deleteExperiment = (experiment) => {
-      ElMessageBox.confirm('确定要删除该实验类型吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        const index = experimentTypes.value.findIndex(e => e.id === experiment.id)
-        if (index !== -1) {
-          experimentTypes.value.splice(index, 1)
+    const deleteExperiment = async (experiment) => {
+      try {
+        await ElMessageBox.confirm('确定要删除该实验类型吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // Electron环境：调用API删除数据库中的数据
+          await window.electronAPI.systemConfig.deleteExperimentType(experiment.id)
+          // 重新从数据库加载数据以确保一致性
+          const experimentTypesData = await window.electronAPI.systemConfig.getExperimentTypes()
+          experimentTypes.value = experimentTypesData || []
+          ElMessage.success('实验类型删除成功')
+        } else {
+          // 浏览器环境：删除内存数据并保存到localStorage
+          const index = experimentTypes.value.findIndex(e => e.id === experiment.id)
+          if (index !== -1) {
+            experimentTypes.value.splice(index, 1)
+          }
+          // 同步删除store中的数据
+          store.commit('DELETE_EXPERIMENT_TYPE_OPTION', experiment.id)
+          // 保存到localStorage
+          saveExperimentData()
+          ElMessage.success('实验类型删除成功')
         }
-        // 同步删除store中的数据
-        store.commit('DELETE_EXPERIMENT_TYPE_OPTION', experiment.id)
-        // 保存到localStorage
-        saveExperimentData()
-        ElMessage.success('实验类型删除成功')
-      }).catch(() => {})
+        updatePaginationTotals()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除实验类型失败:', error)
+          ElMessage.error('删除失败：' + error.message)
+        }
+      }
     }
 
     const toggleExperimentStatus = (experiment) => {
@@ -1877,6 +2158,7 @@ export default {
       speciesPagination.total = speciesOptions.value.length
       regionPagination.total = regionOptions.value.length
       sourcePagination.total = sourceOptions.value.length
+      projectPagination.total = projectOptions.value.length
       experimentPagination.total = experimentTypes.value.length
     }
 
@@ -1899,6 +2181,12 @@ export default {
       return sourceOptions.value.slice(start, end)
     })
 
+    const paginatedProjects = computed(() => {
+      const start = (projectPagination.current - 1) * projectPagination.size
+      const end = start + projectPagination.size
+      return projectOptions.value.slice(start, end)
+    })
+
     const paginatedExperiments = computed(() => {
       const start = (experimentPagination.current - 1) * experimentPagination.size
       const end = start + experimentPagination.size
@@ -1916,6 +2204,10 @@ export default {
 
     const handleSourcePageChange = (page) => {
       sourcePagination.current = page
+    }
+
+    const handleProjectPageChange = (page) => {
+      projectPagination.current = page
     }
 
     const handleExperimentPageChange = (page) => {
@@ -1937,6 +2229,11 @@ export default {
       sourcePagination.current = 1
     }
 
+    const handleProjectSizeChange = (size) => {
+      projectPagination.size = size
+      projectPagination.current = 1
+    }
+
     const handleExperimentSizeChange = (size) => {
       experimentPagination.size = size
       experimentPagination.current = 1
@@ -1954,6 +2251,10 @@ export default {
 
     const handleSourcesSelectionChange = (selection) => {
       selectedSources.value = selection
+    }
+
+    const handleProjectSelectionChange = (selection) => {
+      selectedProjects.value = selection
     }
 
     const handleExperimentsSelectionChange = (selection) => {
@@ -2015,6 +2316,22 @@ export default {
       ElMessage.success(`成功导出 ${selectedSources.value.length} 条样本来源数据`)
     }
 
+    const exportSelectedProjects = () => {
+      if (selectedProjects.value.length === 0) {
+        ElMessage.warning('请先选择要导出的来源')
+        return
+      }
+
+      const exportData = selectedProjects.value.map(item => ({
+        name: item.name,
+        description: item.description,
+        status: item.status
+      }))
+
+      downloadJSON(exportData, `来源数据_${new Date().toISOString().split('T')[0]}.json`)
+      ElMessage.success(`成功导出 ${selectedProjects.value.length} 条来源数据`)
+    }
+
     const exportSelectedExperiments = () => {
       if (selectedExperiments.value.length === 0) {
         ElMessage.warning('请先选择要导出的实验类型')
@@ -2064,7 +2381,7 @@ export default {
       }
 
       if (item.ncbi_txid && (typeof item.ncbi_txid !== 'string' && typeof item.ncbi_txid !== 'number')) {
-        errors.push('NCBI TXID必须是字符串或数字类型')
+        errors.push('NCBI物种ID必须是字符串或数字类型')
       }
 
       if (item.description && typeof item.description !== 'string') {
@@ -2087,7 +2404,7 @@ export default {
         const file = event.target.files[0]
         if (file) {
           const reader = new FileReader()
-          reader.onload = (e) => {
+          reader.onload = async (e) => {
             try {
               const importData = JSON.parse(e.target.result)
 
@@ -2104,13 +2421,16 @@ export default {
               const validItems = []
               const invalidItems = []
 
+              // 获取当前最大ID，用于生成新的唯一ID
+              let nextId = generateNewId(speciesOptions.value)
+
               // 验证每个数据项
               importData.forEach((item, index) => {
                 const errors = validateSpeciesData(item)
                 if (errors.length === 0) {
                   // 标准化数据格式
                   const newSpecies = {
-                    id: generateNewId(speciesOptions.value),
+                    id: nextId++, // 使用递增ID确保唯一性
                     name: item.name.trim(),
                     scientific_name: item.scientific_name ? item.scientific_name.trim() : '',
                     abbreviation: item.abbreviation ? item.abbreviation.trim() : '',
@@ -2130,9 +2450,31 @@ export default {
 
               // 添加有效数据
               if (validItems.length > 0) {
-                validItems.forEach(item => {
-                  speciesOptions.value.push(item)
-                })
+                if (window.electronAPI && window.electronAPI.systemConfig) {
+                  // Electron环境：逐个保存到数据库，然后重新加载数据
+                  let successCount = 0
+                  for (const item of validItems) {
+                    try {
+                      await window.electronAPI.systemConfig.saveSpecies(item)
+                      successCount++
+                    } catch (error) {
+                      console.error('保存菌种到数据库失败:', error)
+                      ElMessage.error(`保存菌种 ${item.name} 失败: ${error.message}`)
+                    }
+                  }
+
+                  // 重新从数据库加载数据以确保一致性
+                  if (successCount > 0) {
+                    const species = await window.electronAPI.systemConfig.getSpecies()
+                    speciesOptions.value = species || []
+                  }
+                } else {
+                  // 浏览器环境：添加到内存并保存到localStorage
+                  validItems.forEach(item => {
+                    speciesOptions.value.push(item)
+                  })
+                  saveExperimentData()
+                }
                 updatePaginationTotals()
               }
 
@@ -2194,7 +2536,7 @@ export default {
         const file = event.target.files[0]
         if (file) {
           const reader = new FileReader()
-          reader.onload = (e) => {
+          reader.onload = async (e) => {
             try {
               const importData = JSON.parse(e.target.result)
 
@@ -2211,13 +2553,16 @@ export default {
               const validItems = []
               const invalidItems = []
 
+              // 获取当前最大ID，用于生成新的唯一ID
+              let nextId = generateNewId(regionOptions.value)
+
               // 验证每个数据项
               importData.forEach((item, index) => {
                 const errors = validateRegionData(item)
                 if (errors.length === 0) {
                   // 标准化数据格式
                   const newRegion = {
-                    id: generateNewId(regionOptions.value),
+                    id: nextId++, // 使用递增ID确保唯一性
                     name: item.name.trim(),
                     code: item.code ? item.code.trim() : '',
                     level: item.level || 'province',
@@ -2236,9 +2581,31 @@ export default {
 
               // 添加有效数据
               if (validItems.length > 0) {
-                validItems.forEach(item => {
-                  regionOptions.value.push(item)
-                })
+                if (window.electronAPI && window.electronAPI.systemConfig) {
+                  // Electron环境：逐个保存到数据库，然后重新加载数据
+                  let successCount = 0
+                  for (const item of validItems) {
+                    try {
+                      await window.electronAPI.systemConfig.saveRegion(item)
+                      successCount++
+                    } catch (error) {
+                      console.error('保存地区到数据库失败:', error)
+                      ElMessage.error(`保存地区 ${item.name} 失败: ${error.message}`)
+                    }
+                  }
+
+                  // 重新从数据库加载数据以确保一致性
+                  if (successCount > 0) {
+                    const regions = await window.electronAPI.systemConfig.getRegions()
+                    regionOptions.value = regions || []
+                  }
+                } else {
+                  // 浏览器环境：添加到内存并保存到localStorage
+                  validItems.forEach(item => {
+                    regionOptions.value.push(item)
+                  })
+                  saveExperimentData()
+                }
                 updatePaginationTotals()
               }
 
@@ -2288,6 +2655,27 @@ export default {
       return errors
     }
 
+    // 验证来源数据格式
+    const validateProjectData = (item) => {
+      const errors = []
+
+      // 检查必需字段
+      if (!item.name || typeof item.name !== 'string' || item.name.trim() === '') {
+        errors.push('项目名称不能为空')
+      }
+
+      // 检查可选字段的类型
+      if (item.description && typeof item.description !== 'string') {
+        errors.push('描述必须是字符串类型')
+      }
+
+      if (item.status && !['active', 'inactive'].includes(item.status)) {
+        errors.push('状态必须是active或inactive')
+      }
+
+      return errors
+    }
+
     const importSources = () => {
       const input = document.createElement('input')
       input.type = 'file'
@@ -2296,7 +2684,7 @@ export default {
         const file = event.target.files[0]
         if (file) {
           const reader = new FileReader()
-          reader.onload = (e) => {
+          reader.onload = async (e) => {
             try {
               const importData = JSON.parse(e.target.result)
 
@@ -2313,13 +2701,16 @@ export default {
               const validItems = []
               const invalidItems = []
 
+              // 获取当前最大ID，用于生成新的唯一ID
+              let nextId = generateNewId(sourceOptions.value)
+
               // 验证每个数据项
               importData.forEach((item, index) => {
                 const errors = validateSourceData(item)
                 if (errors.length === 0) {
                   // 标准化数据格式
                   const newSource = {
-                    id: generateNewId(sourceOptions.value),
+                    id: nextId++, // 使用递增ID确保唯一性
                     name: item.name.trim(),
                     category: item.category || 'other',
                     description: item.description ? item.description.trim() : '',
@@ -2337,15 +2728,104 @@ export default {
 
               // 添加有效数据
               if (validItems.length > 0) {
-                validItems.forEach(item => {
-                  sourceOptions.value.push(item)
-                })
+                if (window.electronAPI && window.electronAPI.systemConfig) {
+                  // Electron环境：逐个保存到数据库，然后重新加载数据
+                  let successCount = 0
+                  for (const item of validItems) {
+                    try {
+                      await window.electronAPI.systemConfig.saveSampleSource(item)
+                      successCount++
+                    } catch (error) {
+                      console.error('保存样本来源到数据库失败:', error)
+                      ElMessage.error(`保存样本来源 ${item.name} 失败: ${error.message}`)
+                    }
+                  }
+
+                  // 重新从数据库加载数据以确保一致性
+                  if (successCount > 0) {
+                    const sources = await window.electronAPI.systemConfig.getSampleSources()
+                    sourceOptions.value = sources || []
+                  }
+                } else {
+                  // 浏览器环境：添加到内存并保存到localStorage
+                  validItems.forEach(item => {
+                    sourceOptions.value.push(item)
+                  })
+                  saveExperimentData()
+                }
                 updatePaginationTotals()
               }
 
               // 显示结果
               if (invalidItems.length === 0) {
                 ElMessage.success(`成功导入 ${validItems.length} 条样本来源数据`)
+              } else if (validItems.length === 0) {
+                ElMessage.error(`导入失败，所有 ${invalidItems.length} 条数据都有格式错误`)
+                console.error('导入错误详情:', invalidItems)
+              } else {
+                ElMessage.warning(`部分导入成功：${validItems.length} 条成功，${invalidItems.length} 条失败`)
+                console.warn('导入错误详情:', invalidItems)
+              }
+            } catch (error) {
+              console.error('JSON解析错误:', error)
+              ElMessage.error(`导入文件解析失败：${error.message}`)
+            }
+          }
+          reader.readAsText(file)
+        }
+      }
+      input.click()
+    }
+
+    const importProjects = () => {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.json'
+      input.onchange = (event) => {
+        const file = event.target.files[0]
+        if (file) {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            try {
+              const importData = JSON.parse(e.target.result)
+
+              if (!Array.isArray(importData)) {
+                ElMessage.error('导入文件格式错误：应为数组格式')
+                return
+              }
+
+              const validItems = []
+              const invalidItems = []
+
+              // 获取当前最大ID，用于生成新的唯一ID
+              let nextId = generateNewId(projectOptions.value)
+
+              importData.forEach((item, index) => {
+                const errors = validateProjectData(item)
+                if (errors.length === 0) {
+                  validItems.push({
+                    ...item,
+                    id: nextId++ // 使用递增ID确保唯一性
+                  })
+                } else {
+                  invalidItems.push({
+                    index: index + 1,
+                    item,
+                    errors
+                  })
+                }
+              })
+
+              // 添加有效的项目
+              if (validItems.length > 0) {
+                projectOptions.value.push(...validItems)
+                saveExperimentData()
+                updatePaginationTotals()
+              }
+
+              // 显示结果
+              if (invalidItems.length === 0) {
+                ElMessage.success(`成功导入 ${validItems.length} 条来源数据`)
               } else if (validItems.length === 0) {
                 ElMessage.error(`导入失败，所有 ${invalidItems.length} 条数据都有格式错误`)
                 console.error('导入错误详情:', invalidItems)
@@ -2461,7 +2941,7 @@ export default {
         const file = event.target.files[0]
         if (file) {
           const reader = new FileReader()
-          reader.onload = (e) => {
+          reader.onload = async (e) => {
             try {
               const importData = JSON.parse(e.target.result)
 
@@ -2478,13 +2958,16 @@ export default {
               const validItems = []
               const invalidItems = []
 
+              // 获取当前最大ID，用于生成新的唯一ID
+              let nextId = generateNewId(experimentTypes.value)
+
               // 验证每个数据项
               importData.forEach((item, index) => {
                 const errors = validateExperimentData(item)
                 if (errors.length === 0) {
                   // 标准化数据格式
                   const newExperiment = {
-                    id: generateNewId(experimentTypes.value),
+                    id: nextId++, // 使用递增ID确保唯一性
                     name: item.name.trim(),
                     description: item.description ? item.description.trim() : '',
                     experimentData: item.experimentData || [],
@@ -2502,9 +2985,31 @@ export default {
 
               // 添加有效数据
               if (validItems.length > 0) {
-                validItems.forEach(item => {
-                  experimentTypes.value.push(item)
-                })
+                if (window.electronAPI && window.electronAPI.systemConfig) {
+                  // Electron环境：逐个保存到数据库，然后重新加载数据
+                  let successCount = 0
+                  for (const item of validItems) {
+                    try {
+                      await window.electronAPI.systemConfig.saveExperimentType(item)
+                      successCount++
+                    } catch (error) {
+                      console.error('保存实验类型到数据库失败:', error)
+                      ElMessage.error(`保存实验类型 ${item.name} 失败: ${error.message}`)
+                    }
+                  }
+
+                  // 重新从数据库加载数据以确保一致性
+                  if (successCount > 0) {
+                    const experimentTypesData = await window.electronAPI.systemConfig.getExperimentTypes()
+                    experimentTypes.value = experimentTypesData || []
+                  }
+                } else {
+                  // 浏览器环境：添加到内存并保存到localStorage
+                  validItems.forEach(item => {
+                    experimentTypes.value.push(item)
+                  })
+                  saveExperimentData()
+                }
                 updatePaginationTotals()
               }
 
@@ -2545,16 +3050,19 @@ export default {
       speciesOptions,
       regionOptions,
       sourceOptions,
+      projectOptions,
       experimentTypes,
       // 选中项管理
       selectedSpecies,
       selectedRegions,
       selectedSources,
+      selectedProjects,
       selectedExperiments,
       // 对话框状态
       speciesDialogVisible,
       regionDialogVisible,
       sourceDialogVisible,
+      projectDialogVisible,
       experimentDialogVisible,
       thresholdDialogVisible,
       batchAddDialogVisible,
@@ -2566,6 +3074,7 @@ export default {
       speciesForm,
       regionForm,
       sourceForm,
+      projectForm,
       experimentForm,
       // NCBI相关状态和方法
       ncbiLoading,
@@ -2592,6 +3101,12 @@ export default {
       saveSource,
       deleteSource,
       toggleSourceStatus,
+      // 来源管理方法
+      addProject,
+      editProject,
+      saveProject,
+      deleteProject,
+      toggleProjectStatus,
       // 实验类型管理方法
       addExperiment,
       editExperiment,
@@ -2621,39 +3136,47 @@ export default {
       speciesPagination,
       regionPagination,
       sourcePagination,
+      projectPagination,
       experimentPagination,
       paginatedSpecies,
       paginatedRegions,
       paginatedSources,
+      paginatedProjects,
       paginatedExperiments,
       updatePaginationTotals,
       handleSpeciesPageChange,
       handleRegionPageChange,
       handleSourcePageChange,
+      handleProjectPageChange,
       handleExperimentPageChange,
       handleSpeciesSizeChange,
       handleRegionSizeChange,
       handleSourceSizeChange,
+      handleProjectSizeChange,
       handleExperimentSizeChange,
       // 选择变化处理方法
       handleSpeciesSelectionChange,
       handleRegionsSelectionChange,
       handleSourcesSelectionChange,
+      handleProjectSelectionChange,
       handleExperimentsSelectionChange,
       // 导出方法
       exportSelectedSpecies,
       exportSelectedRegions,
       exportSelectedSources,
+      exportSelectedProjects,
       exportSelectedExperiments,
       // 导入方法
       importSpecies,
       importRegions,
       importSources,
+      importProjects,
       importExperiments,
       // 验证方法
       validateSpeciesData,
       validateRegionData,
       validateSourceData,
+      validateProjectData,
       validateExperimentData,
       validateExperimentDataItem
     }

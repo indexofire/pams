@@ -14,6 +14,9 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import en from 'element-plus/dist/locale/en.mjs'
 
+// 第三方图标库
+import { FontAwesomeIcon } from './plugins/icons'
+
 // 国际化
 import i18n from './i18n'
 
@@ -127,6 +130,9 @@ const app = createApp(App)
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
+
+// 注册Font Awesome图标
+app.component('font-awesome-icon', FontAwesomeIcon)
 
 // 注册ECharts组件
 app.component('v-chart', ECharts)

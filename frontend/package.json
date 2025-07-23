@@ -9,6 +9,10 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.1.0",
+    "@fortawesome/fontawesome-svg-core": "^7.0.0",
+    "@fortawesome/free-solid-svg-icons": "^7.0.0",
+    "@fortawesome/vue-fontawesome": "^3.1.0",
+    "@icon-park/vue-next": "^1.4.2",
     "axios": "^1.5.0",
     "biojs-io-fasta": "^0.1.17",
     "echarts": "^5.4.3",

@@ -24,6 +24,7 @@ const store = createStore({
       species: [], // 菌种选项
       regions: [], // 地区选项
       sources: [], // 样本来源选项
+      projects: [], // 项目来源选项
       experimentTypes: [] // 实验类型选项
     },
     // 加载状态
@@ -114,6 +115,9 @@ const store = createStore({
     SET_SOURCE_OPTIONS (state, sources) {
       state.systemConfig.sources = sources
     },
+    SET_PROJECT_OPTIONS (state, projects) {
+      state.systemConfig.projects = projects
+    },
     SET_EXPERIMENT_TYPE_OPTIONS (state, experimentTypes) {
       state.systemConfig.experimentTypes = experimentTypes
     },
@@ -153,6 +157,26 @@ const store = createStore({
     DELETE_SOURCE_OPTION (state, id) {
       state.systemConfig.sources = state.systemConfig.sources.filter(item => item.id !== id)
     },
+    ADD_PROJECT_OPTION (state, project) {
+      if (!state.systemConfig.projects) {
+        state.systemConfig.projects = []
+      }
+      state.systemConfig.projects.push(project)
+    },
+    UPDATE_PROJECT_OPTION (state, { id, project }) {
+      if (!state.systemConfig.projects) {
+        state.systemConfig.projects = []
+      }
+      const index = state.systemConfig.projects.findIndex(item => item.id === id)
+      if (index !== -1) {
+        state.systemConfig.projects[index] = { ...state.systemConfig.projects[index], ...project }
+      }
+    },
+    DELETE_PROJECT_OPTION (state, id) {
+      if (state.systemConfig.projects) {
+        state.systemConfig.projects = state.systemConfig.projects.filter(item => item.id !== id)
+      }
+    },
     ADD_EXPERIMENT_TYPE_OPTION (state, experimentType) {
       state.systemConfig.experimentTypes.push(experimentType)
     },
@@ -175,6 +199,7 @@ const store = createStore({
           const species = await electronAPI.systemConfig.getSpecies()
           const regions = await electronAPI.systemConfig.getRegions()
           const sources = await electronAPI.systemConfig.getSampleSources()
+          const projects = await electronAPI.systemConfig.getProjects()
           const experimentTypes = await electronAPI.systemConfig.getExperimentTypes()
 
           // 转换数据格式以适配前端需求
@@ -215,21 +240,32 @@ const store = createStore({
             status: item.status
           }))
 
+          const formattedProjects = projects.map(item => ({
+            id: item.id,
+            value: item.name,
+            label: item.name,
+            description: item.description,
+            status: item.status
+          }))
+
           commit('SET_SPECIES_OPTIONS', formattedSpecies)
           commit('SET_REGION_OPTIONS', formattedRegions)
           commit('SET_SOURCE_OPTIONS', formattedSources)
+          commit('SET_PROJECT_OPTIONS', formattedProjects)
           commit('SET_EXPERIMENT_TYPE_OPTIONS', formattedExperimentTypes)
         } else {
           // 开发环境：从localStorage加载或使用默认模拟数据
           const savedSpecies = localStorage.getItem('pams_species')
           const savedRegions = localStorage.getItem('pams_regions')
           const savedSources = localStorage.getItem('pams_sources')
+          const savedProjects = localStorage.getItem('pams_projects')
           const savedExperimentTypes = localStorage.getItem('pams_experiment_types')
 
           // 默认空数据 - 对应实验设置中的相关字段
           const defaultSpecies = []
           const defaultRegions = []
           const defaultSources = []
+          const defaultProjects = []
 
           // 处理菌种数据
           const species = savedSpecies ? JSON.parse(savedSpecies) : defaultSpecies
@@ -266,6 +302,17 @@ const store = createStore({
             status: item.status
           }))
           commit('SET_SOURCE_OPTIONS', formattedSources)
+
+          // 处理项目数据
+          const projects = savedProjects ? JSON.parse(savedProjects) : defaultProjects
+          const formattedProjects = projects.map(item => ({
+            id: item.id,
+            value: item.name,
+            label: item.name,
+            description: item.description,
+            status: item.status
+          }))
+          commit('SET_PROJECT_OPTIONS', formattedProjects)
 
           // 处理实验类型数据（如果有的话）
           if (savedExperimentTypes) {
@@ -638,6 +685,36 @@ const store = createStore({
       }
     },
 
+    async saveProjectOption ({ commit }, projectData) {
+      try {
+        if (electronAPI && electronAPI.systemConfig) {
+          const result = await electronAPI.systemConfig.saveProject(projectData)
+          if (projectData.id) {
+            commit('UPDATE_PROJECT_OPTION', { id: projectData.id, project: result })
+          } else {
+            commit('ADD_PROJECT_OPTION', result)
+          }
+          return result
+        } else {
+          // 开发环境模拟
+          const project = {
+            id: projectData.id || Date.now(),
+            ...projectData,
+            status: projectData.status || 'active'
+          }
+          if (projectData.id) {
+            commit('UPDATE_PROJECT_OPTION', { id: projectData.id, project })
+          } else {
+            commit('ADD_PROJECT_OPTION', project)
+          }
+          return project
+        }
+      } catch (error) {
+        console.error('保存项目选项失败:', error)
+        throw error
+      }
+    },
+
     async saveExperimentTypeOption ({ commit }, experimentTypeData) {
       try {
         if (electronAPI && electronAPI.systemConfig) {
@@ -702,6 +779,16 @@ const store = createStore({
 
     activeSourceOptions: (state) => {
       return state.systemConfig.sources
+        .filter(item => item.status === 'active')
+        .map(item => ({
+          value: item.value,
+          label: item.label,
+          description: item.description
+        }))
+    },
+
+    activeProjectOptions: (state) => {
+      return (state.systemConfig.projects || [])
         .filter(item => item.status === 'active')
         .map(item => ({
           value: item.value,

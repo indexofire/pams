@@ -129,15 +129,19 @@ class DatabaseService {
     this.db.run(`
       CREATE TABLE IF NOT EXISTS strains (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sequence_number INTEGER,
         strain_id TEXT UNIQUE NOT NULL,
         species TEXT NOT NULL,
         sample_id TEXT,
         sample_source TEXT,
         region TEXT,
+        project_source TEXT,
         experiment_type TEXT,
         onset_date TEXT,
         sampling_date TEXT,
         isolation_date TEXT,
+        submission_date TEXT,
+        patient_name TEXT,
         uploaded_by TEXT,
         virulence_genes TEXT,
         antibiotic_resistance TEXT,
@@ -149,9 +153,70 @@ class DatabaseService {
       )
     `)
 
-    // 为现有菌株表添加实验类型字段（如果不存在）
+    // 为现有菌株表添加新字段（如果不存在）
     try {
       this.db.run(`ALTER TABLE strains ADD COLUMN experiment_type TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN sequence_number INTEGER`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN project_source TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    // 添加患者信息字段
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN patient_gender TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN patient_age INTEGER`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN patient_id_number TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN submission_date TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN patient_name TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN patient_gender TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN patient_age INTEGER`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN patient_id_number TEXT`)
     } catch (e) {
       // 字段已存在，忽略错误
     }
@@ -545,26 +610,68 @@ class DatabaseService {
     }
   }
 
+  getNextSequenceNumber() {
+    try {
+      const stmt = this.db.prepare('SELECT MAX(sequence_number) as max_seq FROM strains')
+      if (stmt.step()) {
+        const result = stmt.getAsObject()
+        stmt.free()
+        return (result.max_seq || 0) + 1
+      }
+      stmt.free()
+      return 1
+    } catch (error) {
+      console.error('获取下一个序号失败:', error)
+      return 1
+    }
+  }
+
+  getNextAvailableId() {
+    try {
+      const stmt = this.db.prepare('SELECT MAX(id) as max_id FROM strains')
+      if (stmt.step()) {
+        const result = stmt.getAsObject()
+        stmt.free()
+        return (result.max_id || 0) + 1
+      }
+      stmt.free()
+      return 1
+    } catch (error) {
+      console.error('获取下一个可用ID失败:', error)
+      return 1
+    }
+  }
+
   async createStrain(strainData) {
     try {
+      // 生成序号
+      const sequenceNumber = this.getNextSequenceNumber()
+
       const stmt = this.db.prepare(`
         INSERT INTO strains (
-          strain_id, species, sample_id, sample_source, region, experiment_type,
-          onset_date, sampling_date, isolation_date, uploaded_by,
+          sequence_number, strain_id, species, sample_id, sample_source, region, project_source, experiment_type,
+          onset_date, sampling_date, isolation_date, submission_date, patient_name, patient_gender, patient_age, patient_id_number, uploaded_by,
           virulence_genes, antibiotic_resistance, st_type, serotype, molecular_serotype
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
 
       stmt.bind([
+        sequenceNumber,
         strainData.strain_id || null,
         strainData.species || null,
         strainData.sample_id || null,
         strainData.sample_source || null,
         strainData.region || null,
+        strainData.project_source || null,
         strainData.experiment_type || null,
         strainData.onset_date || null,
         strainData.sampling_date || null,
         strainData.isolation_date || null,
+        strainData.submission_date || null,
+        strainData.patient_name || null,
+        strainData.patient_gender || null,
+        strainData.patient_age || null,
+        strainData.patient_id_number || null,
         strainData.uploaded_by || null,
         strainData.virulence_genes || null,
         strainData.antibiotic_resistance || null,
@@ -614,8 +721,8 @@ class DatabaseService {
   async updateStrain(id, strainData) {
     const stmt = this.db.prepare(`
       UPDATE strains SET
-        strain_id = ?, species = ?, sample_id = ?, sample_source = ?, region = ?, experiment_type = ?,
-        onset_date = ?, sampling_date = ?, isolation_date = ?, uploaded_by = ?,
+        strain_id = ?, species = ?, sample_id = ?, sample_source = ?, region = ?, project_source = ?, experiment_type = ?,
+        onset_date = ?, sampling_date = ?, isolation_date = ?, submission_date = ?, patient_name = ?, patient_gender = ?, patient_age = ?, patient_id_number = ?, uploaded_by = ?,
         virulence_genes = ?, antibiotic_resistance = ?, st_type = ?, serotype = ?,
         molecular_serotype = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
@@ -623,12 +730,13 @@ class DatabaseService {
 
     stmt.run([
       strainData.strain_id, strainData.species, strainData.sample_id,
-      strainData.sample_source, strainData.region, strainData.experiment_type,
+      strainData.sample_source, strainData.region, strainData.project_source, strainData.experiment_type,
       strainData.onset_date, strainData.sampling_date, strainData.isolation_date,
-      strainData.uploaded_by, strainData.virulence_genes, strainData.antibiotic_resistance,
+      strainData.submission_date, strainData.patient_name, strainData.patient_gender, strainData.patient_age, strainData.patient_id_number, strainData.uploaded_by,
+      strainData.virulence_genes, strainData.antibiotic_resistance,
       strainData.st_type, strainData.serotype, strainData.molecular_serotype, id
     ])
-    
+
     await this.saveDatabase()
     return this.getStrainById(id)
   }
@@ -1143,6 +1251,23 @@ class DatabaseService {
       return results
     } catch (error) {
       console.error('获取样本来源配置失败:', error)
+      return []
+    }
+  }
+
+  // 获取项目配置
+  getProjectsConfig() {
+    try {
+      const stmt = this.db.prepare('SELECT * FROM projects_config WHERE status = ? ORDER BY sort_order, name')
+      stmt.bind(['active'])
+      const results = []
+      while (stmt.step()) {
+        results.push(stmt.getAsObject())
+      }
+      stmt.free()
+      return results
+    } catch (error) {
+      console.error('获取项目配置失败:', error)
       return []
     }
   }
