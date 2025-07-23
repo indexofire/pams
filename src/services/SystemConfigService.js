@@ -73,6 +73,9 @@ class SystemConfigService {
         stmt.step()
         stmt.free()
 
+        // 保存数据库到磁盘
+        await this.db.saveDatabase()
+
         return { ...speciesData, updated_at: new Date().toISOString() }
       } else {
         // 创建新菌种
@@ -104,6 +107,9 @@ class SystemConfigService {
           throw new Error('无法获取插入记录的ID')
         }
 
+        // 保存数据库到磁盘
+        await this.db.saveDatabase()
+
         return {
           id: result.id,
           ...speciesData,
@@ -128,6 +134,10 @@ class SystemConfigService {
       stmt.bind(['inactive', id])
       stmt.step()
       stmt.free()
+
+      // 保存数据库到磁盘
+      await this.db.saveDatabase()
+
       return true
     } catch (error) {
       console.error('删除菌种配置失败:', error)
@@ -170,7 +180,10 @@ class SystemConfigService {
         ])
         stmt.step()
         stmt.free()
-        
+
+        // 保存数据库到磁盘
+        await this.db.saveDatabase()
+
         return { ...regionData, updated_at: new Date().toISOString() }
       } else {
         // 创建新地区
@@ -202,6 +215,9 @@ class SystemConfigService {
           throw new Error('无法获取插入记录的ID')
         }
 
+        // 保存数据库到磁盘
+        await this.db.saveDatabase()
+
         return {
           id: result.id,
           ...regionData,
@@ -227,6 +243,10 @@ class SystemConfigService {
       stmt.bind(['inactive', id])
       stmt.step()
       stmt.free()
+
+      // 保存数据库到磁盘
+      await this.db.saveDatabase()
+
       return true
     } catch (error) {
       console.error('删除地区配置失败:', error)
@@ -259,6 +279,91 @@ class SystemConfigService {
   }
 
   /**
+   * 保存项目配置
+   */
+  async saveProject(projectData) {
+    try {
+      if (projectData.id) {
+        // 更新现有项目
+        const stmt = this.db.db.prepare(`
+          UPDATE projects_config
+          SET name = ?, description = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `)
+        stmt.bind([projectData.name, projectData.description, projectData.status, projectData.id])
+        stmt.step()
+        stmt.free()
+
+        // 保存数据库到磁盘
+        await this.db.saveDatabase()
+
+        return { ...projectData, updated_at: new Date().toISOString() }
+      } else {
+        // 创建新项目
+        const stmt = this.db.db.prepare(`
+          INSERT INTO projects_config (name, description, status, sort_order)
+          VALUES (?, ?, ?, ?)
+        `)
+        stmt.bind([
+          projectData.name,
+          projectData.description,
+          projectData.status || 'active',
+          projectData.sort_order || 999
+        ])
+        stmt.step()
+        stmt.free()
+
+        // 获取插入的ID
+        const idStmt = this.db.db.prepare('SELECT last_insert_rowid() as id')
+        let result = null
+        if (idStmt.step()) {
+          result = idStmt.getAsObject()
+        }
+        idStmt.free()
+
+        if (!result || !result.id) {
+          throw new Error('无法获取插入记录的ID')
+        }
+
+        // 保存数据库到磁盘
+        await this.db.saveDatabase()
+
+        return {
+          id: result.id,
+          ...projectData,
+          status: projectData.status || 'active',
+          sort_order: projectData.sort_order || 999,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      }
+    } catch (error) {
+      console.error('保存项目配置失败:', error)
+      throw new Error('保存项目配置失败: ' + error.message)
+    }
+  }
+
+  /**
+   * 删除项目配置
+   */
+  async deleteProject(id) {
+    try {
+      const stmt = this.db.db.prepare('UPDATE projects_config SET status = ? WHERE id = ?')
+      stmt.bind(['inactive', id])
+      stmt.step()
+      stmt.free()
+
+      // 保存数据库到磁盘
+      await this.db.saveDatabase()
+
+      return true
+    } catch (error) {
+      console.error('删除项目配置失败:', error)
+      throw new Error('删除项目配置失败')
+    }
+  }
+
+  /**
    * 保存样本来源配置
    */
   async saveSampleSource(sourceData) {
@@ -273,7 +378,10 @@ class SystemConfigService {
         stmt.bind([sourceData.name, sourceData.category, sourceData.description, sourceData.status, sourceData.id])
         stmt.step()
         stmt.free()
-        
+
+        // 保存数据库到磁盘
+        await this.db.saveDatabase()
+
         return { ...sourceData, updated_at: new Date().toISOString() }
       } else {
         // 创建新样本来源
@@ -303,6 +411,9 @@ class SystemConfigService {
           throw new Error('无法获取插入记录的ID')
         }
 
+        // 保存数据库到磁盘
+        await this.db.saveDatabase()
+
         return {
           id: result.id,
           ...sourceData,
@@ -327,6 +438,10 @@ class SystemConfigService {
       stmt.bind(['inactive', id])
       stmt.step()
       stmt.free()
+
+      // 保存数据库到磁盘
+      await this.db.saveDatabase()
+
       return true
     } catch (error) {
       console.error('删除样本来源配置失败:', error)
@@ -369,6 +484,9 @@ class SystemConfigService {
         stmt.step()
         stmt.free()
 
+        // 保存数据库到磁盘
+        await this.db.saveDatabase()
+
         return { ...typeData, updated_at: new Date().toISOString() }
       } else {
         // 创建新实验类型
@@ -399,6 +517,9 @@ class SystemConfigService {
           throw new Error('无法获取插入记录的ID')
         }
 
+        // 保存数据库到磁盘
+        await this.db.saveDatabase()
+
         return {
           id: result.id,
           ...typeData,
@@ -424,6 +545,10 @@ class SystemConfigService {
       stmt.bind(['inactive', id])
       stmt.step()
       stmt.free()
+
+      // 保存数据库到磁盘
+      await this.db.saveDatabase()
+
       return true
     } catch (error) {
       console.error('删除实验类型配置失败:', error)

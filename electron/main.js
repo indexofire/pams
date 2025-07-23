@@ -742,6 +742,16 @@ function registerIpcHandlers() {
     return await systemConfigService.getProjectsConfig()
   })
 
+  ipcMain.handle('systemConfig:saveProject', async (event, projectData) => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.saveProject(projectData)
+  })
+
+  ipcMain.handle('systemConfig:deleteProject', async (event, id) => {
+    const systemConfigService = new SystemConfigService(dbService)
+    return await systemConfigService.deleteProject(id)
+  })
+
   ipcMain.handle('systemConfig:saveSampleSource', async (event, sourceData) => {
     const systemConfigService = new SystemConfigService(dbService)
     return await systemConfigService.saveSampleSource(sourceData)

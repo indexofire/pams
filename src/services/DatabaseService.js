@@ -352,6 +352,19 @@ class DatabaseService {
         category TEXT,
         description TEXT,
         status TEXT DEFAULT 'active',
+        sort_order INTEGER DEFAULT 999,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // 项目配置表
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS projects_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        status TEXT DEFAULT 'active',
         sort_order INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -426,15 +439,6 @@ class DatabaseService {
 
     // 创建默认系统配置
     await this.createDefaultSystemConfig()
-
-    // 创建默认菌种配置
-    await this.createDefaultSpeciesConfig()
-
-    // 创建默认地区配置
-    await this.createDefaultRegionsConfig()
-
-    // 创建默认样本来源配置
-    await this.createDefaultSampleSourcesConfig()
   }
 
   async saveDatabase() {
@@ -971,6 +975,8 @@ class DatabaseService {
     }
   }
 
+
+
   // 系统配置相关方法
   async createDefaultSystemConfig() {
     const defaultConfigs = [
@@ -1004,186 +1010,6 @@ class DatabaseService {
         }
       } catch (error) {
         console.error('创建系统配置失败:', error)
-      }
-    }
-  }
-
-  async createDefaultSpeciesConfig() {
-    const defaultSpecies = [
-      {
-        name: '大肠杆菌',
-        scientific_name: 'Escherichia coli',
-        abbreviation: 'E. coli',
-        ncbi_txid: '562',
-        description: '常见的肠道细菌，重要的食源性病原菌',
-        sort_order: 1
-      },
-      {
-        name: '沙门氏菌',
-        scientific_name: 'Salmonella enterica',
-        abbreviation: 'S. enterica',
-        ncbi_txid: '28901',
-        description: '重要的食源性病原菌，引起肠胃炎',
-        sort_order: 2
-      },
-      {
-        name: '志贺氏菌',
-        scientific_name: 'Shigella flexneri',
-        abbreviation: 'S. flexneri',
-        ncbi_txid: '623',
-        description: '引起细菌性痢疾的病原菌',
-        sort_order: 3
-      },
-      {
-        name: '霍乱弧菌',
-        scientific_name: 'Vibrio cholerae',
-        abbreviation: 'V. cholerae',
-        ncbi_txid: '666',
-        description: '引起霍乱的水生细菌',
-        sort_order: 4
-      },
-      {
-        name: '金黄色葡萄球菌',
-        scientific_name: 'Staphylococcus aureus',
-        abbreviation: 'S. aureus',
-        ncbi_txid: '1280',
-        description: '常见的致病菌，可引起多种感染',
-        sort_order: 5
-      }
-    ]
-
-    for (const species of defaultSpecies) {
-      try {
-        const checkStmt = this.db.prepare('SELECT * FROM species_config WHERE name = ?')
-        checkStmt.bind([species.name])
-        let existing = null
-        if (checkStmt.step()) {
-          existing = checkStmt.getAsObject()
-        }
-        checkStmt.free()
-
-        if (!existing) {
-          const insertStmt = this.db.prepare(`
-            INSERT INTO species_config (name, scientific_name, abbreviation, ncbi_txid, description, sort_order)
-            VALUES (?, ?, ?, ?, ?, ?)
-          `)
-          insertStmt.bind([
-            species.name,
-            species.scientific_name,
-            species.abbreviation || null,
-            species.ncbi_txid || null,
-            species.description,
-            species.sort_order
-          ])
-          insertStmt.step()
-          insertStmt.free()
-        }
-      } catch (error) {
-        console.error('创建菌种配置失败:', error)
-      }
-    }
-  }
-
-  async createDefaultRegionsConfig() {
-    const defaultRegions = [
-      { name: '北京市', code: '110000', level: 'province', sort_order: 1 },
-      { name: '上海市', code: '310000', level: 'province', sort_order: 2 },
-      { name: '广东省', code: '440000', level: 'province', sort_order: 3 },
-      { name: '江苏省', code: '320000', level: 'province', sort_order: 4 },
-      { name: '浙江省', code: '330000', level: 'province', sort_order: 5 }
-    ]
-
-    for (const region of defaultRegions) {
-      try {
-        const checkStmt = this.db.prepare('SELECT * FROM regions_config WHERE name = ? AND level = ?')
-        checkStmt.bind([region.name, region.level])
-        let existing = null
-        if (checkStmt.step()) {
-          existing = checkStmt.getAsObject()
-        }
-        checkStmt.free()
-
-        if (!existing) {
-          const insertStmt = this.db.prepare(`
-            INSERT INTO regions_config (name, code, level, sort_order)
-            VALUES (?, ?, ?, ?)
-          `)
-          insertStmt.bind([region.name, region.code, region.level, region.sort_order])
-          insertStmt.step()
-          insertStmt.free()
-        }
-      } catch (error) {
-        console.error('创建地区配置失败:', error)
-      }
-    }
-  }
-
-  async createDefaultSampleSourcesConfig() {
-    const defaultSources = [
-      { name: '血液', category: 'clinical', description: '临床血液样本', sort_order: 1 },
-      { name: '粪便', category: 'clinical', description: '临床粪便样本', sort_order: 2 },
-      { name: '尿液', category: 'clinical', description: '临床尿液样本', sort_order: 3 },
-      { name: '肉类', category: 'food', description: '肉类食品样本', sort_order: 4 },
-      { name: '蔬菜', category: 'food', description: '蔬菜食品样本', sort_order: 5 }
-    ]
-
-    for (const source of defaultSources) {
-      try {
-        const checkStmt = this.db.prepare('SELECT * FROM sample_sources_config WHERE name = ?')
-        checkStmt.bind([source.name])
-        let existing = null
-        if (checkStmt.step()) {
-          existing = checkStmt.getAsObject()
-        }
-        checkStmt.free()
-
-        if (!existing) {
-          const insertStmt = this.db.prepare(`
-            INSERT INTO sample_sources_config (name, category, description, sort_order)
-            VALUES (?, ?, ?, ?)
-          `)
-          insertStmt.bind([source.name, source.category, source.description, source.sort_order])
-          insertStmt.step()
-          insertStmt.free()
-        }
-      } catch (error) {
-        console.error('创建样本来源配置失败:', error)
-      }
-    }
-
-    // 初始化默认实验类型
-    const defaultExperimentTypes = [
-      { name: 'MLST分析', code: 'mlst', description: '多位点序列分型分析', category: 'typing', sort_order: 1 },
-      { name: '血清分型', code: 'serotyping', description: '血清学分型分析', category: 'typing', sort_order: 2 },
-      { name: '毒力基因检测', code: 'virulence', description: '毒力基因分析', category: 'gene_analysis', sort_order: 3 },
-      { name: '耐药基因检测', code: 'resistance', description: '耐药基因分析', category: 'gene_analysis', sort_order: 4 },
-      { name: '全基因组测序', code: 'wgs', description: '全基因组序列分析', category: 'sequencing', sort_order: 5 },
-      { name: '比较基因组学', code: 'comparative', description: '比较基因组分析', category: 'analysis', sort_order: 6 },
-      { name: '系统发育分析', code: 'phylogeny', description: '系统发育树构建', category: 'analysis', sort_order: 7 },
-      { name: '基因组注释', code: 'annotation', description: '基因组功能注释', category: 'annotation', sort_order: 8 }
-    ]
-
-    for (const type of defaultExperimentTypes) {
-      try {
-        const checkStmt = this.db.prepare('SELECT * FROM experiment_types_config WHERE code = ?')
-        checkStmt.bind([type.code])
-        let existing = null
-        if (checkStmt.step()) {
-          existing = checkStmt.getAsObject()
-        }
-        checkStmt.free()
-
-        if (!existing) {
-          const insertStmt = this.db.prepare(`
-            INSERT INTO experiment_types_config (name, code, description, category, sort_order)
-            VALUES (?, ?, ?, ?, ?)
-          `)
-          insertStmt.bind([type.name, type.code, type.description, type.category, type.sort_order])
-          insertStmt.step()
-          insertStmt.free()
-        }
-      } catch (error) {
-        console.error('创建实验类型配置失败:', error)
       }
     }
   }

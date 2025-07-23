@@ -25,12 +25,20 @@
                     :disabled="selectedSpecies.length === 0"
                     @click="exportSelectedSpecies"
                   >
-                    <el-icon><Download /></el-icon>
+                    <el-icon><Upload /></el-icon>
                     导出选中 ({{ selectedSpecies.length }})
                   </el-button>
                   <el-button type="warning" @click="importSpecies">
-                    <el-icon><Upload /></el-icon>
+                    <el-icon><Download /></el-icon>
                     导入菌种
+                  </el-button>
+                  <el-button
+                    type="danger"
+                    :disabled="selectedSpecies.length === 0"
+                    @click="batchDeleteSpecies"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    批量删除 ({{ selectedSpecies.length }})
                   </el-button>
                 </div>
               </div>
@@ -127,12 +135,20 @@
                     :disabled="selectedRegions.length === 0"
                     @click="exportSelectedRegions"
                   >
-                    <el-icon><Download /></el-icon>
+                    <el-icon><Upload /></el-icon>
                     导出选中 ({{ selectedRegions.length }})
                   </el-button>
                   <el-button type="warning" @click="importRegions">
-                    <el-icon><Upload /></el-icon>
+                    <el-icon><Download /></el-icon>
                     导入地区
+                  </el-button>
+                  <el-button
+                    type="danger"
+                    :disabled="selectedRegions.length === 0"
+                    @click="batchDeleteRegions"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    批量删除 ({{ selectedRegions.length }})
                   </el-button>
                 </div>
               </div>
@@ -206,7 +222,7 @@
           </el-tab-pane>
 
           <!-- 样本来源管理 -->
-          <el-tab-pane label="样本来源管理" name="sources">
+          <el-tab-pane label="样本类型管理" name="sources">
             <div class="source-management">
               <div class="toolbar">
                 <div class="toolbar-left">
@@ -221,12 +237,20 @@
                     :disabled="selectedSources.length === 0"
                     @click="exportSelectedSources"
                   >
-                    <el-icon><Download /></el-icon>
+                    <el-icon><Upload /></el-icon>
                     导出选中 ({{ selectedSources.length }})
                   </el-button>
                   <el-button type="warning" @click="importSources">
-                    <el-icon><Upload /></el-icon>
+                    <el-icon><Download /></el-icon>
                     导入样本来源
+                  </el-button>
+                  <el-button
+                    type="danger"
+                    :disabled="selectedSources.length === 0"
+                    @click="batchDeleteSources"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    批量删除 ({{ selectedSources.length }})
                   </el-button>
                 </div>
               </div>
@@ -315,12 +339,20 @@
                     :disabled="selectedProjects.length === 0"
                     @click="exportSelectedProjects"
                   >
-                    <el-icon><Download /></el-icon>
+                    <el-icon><Upload /></el-icon>
                     导出选中 ({{ selectedProjects.length }})
                   </el-button>
                   <el-button type="warning" @click="importProjects">
-                    <el-icon><Upload /></el-icon>
+                    <el-icon><Download /></el-icon>
                     导入来源
+                  </el-button>
+                  <el-button
+                    type="danger"
+                    :disabled="selectedProjects.length === 0"
+                    @click="batchDeleteProjects"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    批量删除 ({{ selectedProjects.length }})
                   </el-button>
                 </div>
               </div>
@@ -401,12 +433,20 @@
                     :disabled="selectedExperiments.length === 0"
                     @click="exportSelectedExperiments"
                   >
-                    <el-icon><Download /></el-icon>
+                    <el-icon><Upload /></el-icon>
                     导出选中 ({{ selectedExperiments.length }})
                   </el-button>
                   <el-button type="warning" @click="importExperiments">
-                    <el-icon><Upload /></el-icon>
+                    <el-icon><Download /></el-icon>
                     导入实验类型
+                  </el-button>
+                  <el-button
+                    type="danger"
+                    :disabled="selectedExperiments.length === 0"
+                    @click="batchDeleteExperiments"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    批量删除 ({{ selectedExperiments.length }})
                   </el-button>
                 </div>
               </div>
@@ -585,7 +625,7 @@
     </el-dialog>
 
     <!-- 样本来源编辑对话框 -->
-    <el-dialog v-model="sourceDialogVisible" title="样本来源管理" width="600px">
+    <el-dialog v-model="sourceDialogVisible" title="样本类型管理" width="600px">
       <el-form :model="sourceForm" label-width="80px">
         <el-form-item label="来源名称">
           <el-input v-model="sourceForm.name" placeholder="请输入样本来源名称" />
@@ -978,14 +1018,15 @@
 <script>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Download, Upload } from '@element-plus/icons-vue'
+import { Plus, Download, Upload, Delete } from '@element-plus/icons-vue'
 import { useStore } from 'vuex'
 export default {
   name: 'ExperimentSettings',
   components: {
     Plus,
     Download,
-    Upload
+    Upload,
+    Delete
   },
   setup () {
     const store = useStore()
@@ -1147,12 +1188,13 @@ export default {
           const species = await window.electronAPI.systemConfig.getSpecies()
           const regions = await window.electronAPI.systemConfig.getRegions()
           const sources = await window.electronAPI.systemConfig.getSampleSources()
+          const projects = await window.electronAPI.systemConfig.getProjects()
           const experimentTypesData = await window.electronAPI.systemConfig.getExperimentTypes()
 
           speciesOptions.value = species || []
           regionOptions.value = regions || []
           sourceOptions.value = sources || []
-          projectOptions.value = [] // 项目数据暂时为空，后续可以从API获取
+          projectOptions.value = projects || []
           experimentTypes.value = experimentTypesData || []
         } else {
           // 开发环境：从localStorage加载数据
@@ -1424,6 +1466,68 @@ export default {
       }
     }
 
+    // 批量删除菌种
+    const batchDeleteSpecies = async () => {
+      if (selectedSpecies.value.length === 0) {
+        ElMessage.warning('请先选择要删除的菌种')
+        return
+      }
+
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除选中的 ${selectedSpecies.value.length} 个菌种吗？此操作不可恢复。`,
+          '批量删除确认',
+          {
+            confirmButtonText: '确定删除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // 客户端环境：逐个调用API删除
+          let successCount = 0
+          for (const species of selectedSpecies.value) {
+            try {
+              await window.electronAPI.systemConfig.deleteSpecies(species.id)
+              successCount++
+            } catch (error) {
+              console.error(`删除菌种 ${species.name} 失败:`, error)
+              ElMessage.error(`删除菌种 ${species.name} 失败: ${error.message}`)
+            }
+          }
+
+          if (successCount > 0) {
+            // 重新从数据库加载数据
+            const speciesData = await window.electronAPI.systemConfig.getSpecies()
+            speciesOptions.value = speciesData || []
+            ElMessage.success(`成功删除 ${successCount} 个菌种`)
+          }
+        } else {
+          // 浏览器环境：从内存中删除并保存到localStorage
+          const idsToDelete = selectedSpecies.value.map(item => item.id)
+          speciesOptions.value = speciesOptions.value.filter(item => !idsToDelete.includes(item.id))
+
+          // 同步删除store中的数据
+          idsToDelete.forEach(id => {
+            store.commit('DELETE_SPECIES_OPTION', id)
+          })
+
+          saveExperimentData()
+          ElMessage.success(`成功删除 ${selectedSpecies.value.length} 个菌种`)
+        }
+
+        // 清空选择
+        selectedSpecies.value = []
+        updatePaginationTotals()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除菌种失败:', error)
+          ElMessage.error('批量删除失败：' + error.message)
+        }
+      }
+    }
+
     const toggleSpeciesStatus = (species) => {
       species.status = species.status === 'active' ? 'inactive' : 'active'
       ElMessage.success(`菌种已${species.status === 'active' ? '启用' : '禁用'}`)
@@ -1528,6 +1632,68 @@ export default {
         if (error !== 'cancel') {
           console.error('删除地区失败:', error)
           ElMessage.error('删除失败：' + error.message)
+        }
+      }
+    }
+
+    // 批量删除地区
+    const batchDeleteRegions = async () => {
+      if (selectedRegions.value.length === 0) {
+        ElMessage.warning('请先选择要删除的地区')
+        return
+      }
+
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除选中的 ${selectedRegions.value.length} 个地区吗？此操作不可恢复。`,
+          '批量删除确认',
+          {
+            confirmButtonText: '确定删除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // 客户端环境：逐个调用API删除
+          let successCount = 0
+          for (const region of selectedRegions.value) {
+            try {
+              await window.electronAPI.systemConfig.deleteRegion(region.id)
+              successCount++
+            } catch (error) {
+              console.error(`删除地区 ${region.name} 失败:`, error)
+              ElMessage.error(`删除地区 ${region.name} 失败: ${error.message}`)
+            }
+          }
+
+          if (successCount > 0) {
+            // 重新从数据库加载数据
+            const regionsData = await window.electronAPI.systemConfig.getRegions()
+            regionOptions.value = regionsData || []
+            ElMessage.success(`成功删除 ${successCount} 个地区`)
+          }
+        } else {
+          // 浏览器环境：从内存中删除并保存到localStorage
+          const idsToDelete = selectedRegions.value.map(item => item.id)
+          regionOptions.value = regionOptions.value.filter(item => !idsToDelete.includes(item.id))
+
+          // 同步删除store中的数据
+          idsToDelete.forEach(id => {
+            store.commit('DELETE_REGION_OPTION', id)
+          })
+
+          saveExperimentData()
+          ElMessage.success(`成功删除 ${selectedRegions.value.length} 个地区`)
+        }
+
+        // 清空选择
+        selectedRegions.value = []
+        updatePaginationTotals()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除地区失败:', error)
+          ElMessage.error('批量删除失败：' + error.message)
         }
       }
     }
@@ -1638,6 +1804,68 @@ export default {
       }
     }
 
+    // 批量删除样本来源
+    const batchDeleteSources = async () => {
+      if (selectedSources.value.length === 0) {
+        ElMessage.warning('请先选择要删除的样本来源')
+        return
+      }
+
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除选中的 ${selectedSources.value.length} 个样本来源吗？此操作不可恢复。`,
+          '批量删除确认',
+          {
+            confirmButtonText: '确定删除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // 客户端环境：逐个调用API删除
+          let successCount = 0
+          for (const source of selectedSources.value) {
+            try {
+              await window.electronAPI.systemConfig.deleteSampleSource(source.id)
+              successCount++
+            } catch (error) {
+              console.error(`删除样本来源 ${source.name} 失败:`, error)
+              ElMessage.error(`删除样本来源 ${source.name} 失败: ${error.message}`)
+            }
+          }
+
+          if (successCount > 0) {
+            // 重新从数据库加载数据
+            const sourcesData = await window.electronAPI.systemConfig.getSampleSources()
+            sourceOptions.value = sourcesData || []
+            ElMessage.success(`成功删除 ${successCount} 个样本来源`)
+          }
+        } else {
+          // 浏览器环境：从内存中删除并保存到localStorage
+          const idsToDelete = selectedSources.value.map(item => item.id)
+          sourceOptions.value = sourceOptions.value.filter(item => !idsToDelete.includes(item.id))
+
+          // 同步删除store中的数据
+          idsToDelete.forEach(id => {
+            store.commit('DELETE_SOURCE_OPTION', id)
+          })
+
+          saveExperimentData()
+          ElMessage.success(`成功删除 ${selectedSources.value.length} 个样本来源`)
+        }
+
+        // 清空选择
+        selectedSources.value = []
+        updatePaginationTotals()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除样本来源失败:', error)
+          ElMessage.error('批量删除失败：' + error.message)
+        }
+      }
+    }
+
     const toggleSourceStatus = (source) => {
       source.status = source.status === 'active' ? 'inactive' : 'active'
       ElMessage.success(`样本来源已${source.status === 'active' ? '启用' : '禁用'}`)
@@ -1661,29 +1889,49 @@ export default {
       }
 
       try {
-        if (projectForm.id) {
-          // 更新现有项目
-          const index = projectOptions.value.findIndex(item => item.id === projectForm.id)
-          if (index !== -1) {
-            projectOptions.value[index] = { ...projectForm }
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // Electron环境：调用API保存到数据库
+          const result = await window.electronAPI.systemConfig.saveProject(projectForm)
+
+          if (projectForm.id) {
+            // 更新现有项目
+            const index = projectOptions.value.findIndex(item => item.id === projectForm.id)
+            if (index !== -1) {
+              projectOptions.value[index] = result
+            }
+            ElMessage.success('项目更新成功')
+          } else {
+            // 重新从数据库加载数据以确保一致性
+            const projects = await window.electronAPI.systemConfig.getProjects()
+            projectOptions.value = projects || []
+            ElMessage.success('项目添加成功')
           }
-          ElMessage.success('项目更新成功')
         } else {
-          // 添加新项目
-          const newProject = {
-            ...projectForm,
-            id: generateNewId(projectOptions.value)
+          // 浏览器环境：保存到内存和localStorage
+          if (projectForm.id) {
+            // 更新现有项目
+            const index = projectOptions.value.findIndex(item => item.id === projectForm.id)
+            if (index !== -1) {
+              projectOptions.value[index] = { ...projectForm }
+            }
+            ElMessage.success('项目更新成功')
+          } else {
+            // 添加新项目
+            const newProject = {
+              ...projectForm,
+              id: generateNewId(projectOptions.value)
+            }
+            projectOptions.value.push(newProject)
+            ElMessage.success('项目添加成功')
           }
-          projectOptions.value.push(newProject)
-          ElMessage.success('项目添加成功')
+          saveExperimentData()
         }
 
         projectDialogVisible.value = false
-        saveExperimentData()
         updatePaginationTotals()
       } catch (error) {
         console.error('保存项目失败:', error)
-        ElMessage.error('保存项目失败')
+        ElMessage.error('保存项目失败: ' + error.message)
       }
     }
 
@@ -1695,14 +1943,80 @@ export default {
           type: 'warning'
         })
 
-        projectOptions.value = projectOptions.value.filter(item => item.id !== id)
-        ElMessage.success('项目删除成功')
-        saveExperimentData()
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // Electron环境：调用API删除数据库中的数据
+          await window.electronAPI.systemConfig.deleteProject(id)
+          // 重新从数据库加载数据以确保一致性
+          const projects = await window.electronAPI.systemConfig.getProjects()
+          projectOptions.value = projects || []
+          ElMessage.success('项目删除成功')
+        } else {
+          // 浏览器环境：从内存中删除并保存到localStorage
+          projectOptions.value = projectOptions.value.filter(item => item.id !== id)
+          ElMessage.success('项目删除成功')
+          saveExperimentData()
+        }
         updatePaginationTotals()
       } catch (error) {
         if (error !== 'cancel') {
           console.error('删除项目失败:', error)
           ElMessage.error('删除项目失败')
+        }
+      }
+    }
+
+    // 批量删除项目
+    const batchDeleteProjects = async () => {
+      if (selectedProjects.value.length === 0) {
+        ElMessage.warning('请先选择要删除的项目')
+        return
+      }
+
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除选中的 ${selectedProjects.value.length} 个项目吗？此操作不可恢复。`,
+          '批量删除确认',
+          {
+            confirmButtonText: '确定删除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // 客户端环境：逐个调用API删除
+          let successCount = 0
+          for (const project of selectedProjects.value) {
+            try {
+              await window.electronAPI.systemConfig.deleteProject(project.id)
+              successCount++
+            } catch (error) {
+              console.error(`删除项目 ${project.name} 失败:`, error)
+              ElMessage.error(`删除项目 ${project.name} 失败: ${error.message}`)
+            }
+          }
+
+          if (successCount > 0) {
+            // 重新从数据库加载数据
+            const projects = await window.electronAPI.systemConfig.getProjects()
+            projectOptions.value = projects || []
+            ElMessage.success(`成功删除 ${successCount} 个项目`)
+          }
+        } else {
+          // 浏览器环境：从内存中删除并保存到localStorage
+          const idsToDelete = selectedProjects.value.map(item => item.id)
+          projectOptions.value = projectOptions.value.filter(item => !idsToDelete.includes(item.id))
+          ElMessage.success(`成功删除 ${selectedProjects.value.length} 个项目`)
+          saveExperimentData()
+        }
+
+        // 清空选择
+        selectedProjects.value = []
+        updatePaginationTotals()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除项目失败:', error)
+          ElMessage.error('批量删除失败：' + error.message)
         }
       }
     }
@@ -2065,6 +2379,68 @@ export default {
         if (error !== 'cancel') {
           console.error('删除实验类型失败:', error)
           ElMessage.error('删除失败：' + error.message)
+        }
+      }
+    }
+
+    // 批量删除实验类型
+    const batchDeleteExperiments = async () => {
+      if (selectedExperiments.value.length === 0) {
+        ElMessage.warning('请先选择要删除的实验类型')
+        return
+      }
+
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除选中的 ${selectedExperiments.value.length} 个实验类型吗？此操作不可恢复。`,
+          '批量删除确认',
+          {
+            confirmButtonText: '确定删除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        if (window.electronAPI && window.electronAPI.systemConfig) {
+          // 客户端环境：逐个调用API删除
+          let successCount = 0
+          for (const experiment of selectedExperiments.value) {
+            try {
+              await window.electronAPI.systemConfig.deleteExperimentType(experiment.id)
+              successCount++
+            } catch (error) {
+              console.error(`删除实验类型 ${experiment.name} 失败:`, error)
+              ElMessage.error(`删除实验类型 ${experiment.name} 失败: ${error.message}`)
+            }
+          }
+
+          if (successCount > 0) {
+            // 重新从数据库加载数据
+            const experimentTypesData = await window.electronAPI.systemConfig.getExperimentTypes()
+            experimentTypes.value = experimentTypesData || []
+            ElMessage.success(`成功删除 ${successCount} 个实验类型`)
+          }
+        } else {
+          // 浏览器环境：从内存中删除并保存到localStorage
+          const idsToDelete = selectedExperiments.value.map(item => item.id)
+          experimentTypes.value = experimentTypes.value.filter(item => !idsToDelete.includes(item.id))
+
+          // 同步删除store中的数据
+          idsToDelete.forEach(id => {
+            store.commit('DELETE_EXPERIMENT_TYPE_OPTION', id)
+          })
+
+          saveExperimentData()
+          ElMessage.success(`成功删除 ${selectedExperiments.value.length} 个实验类型`)
+        }
+
+        // 清空选择
+        selectedExperiments.value = []
+        updatePaginationTotals()
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除实验类型失败:', error)
+          ElMessage.error('批量删除失败：' + error.message)
         }
       }
     }
@@ -2795,7 +3171,7 @@ export default {
         const file = event.target.files[0]
         if (file) {
           const reader = new FileReader()
-          reader.onload = (e) => {
+          reader.onload = async (e) => {
             try {
               const importData = JSON.parse(e.target.result)
 
@@ -2828,8 +3204,32 @@ export default {
 
               // 添加有效的项目
               if (validItems.length > 0) {
-                projectOptions.value.push(...validItems)
-                saveExperimentData()
+                if (window.electronAPI && window.electronAPI.systemConfig) {
+                  // Electron环境：逐个保存到数据库，然后重新加载数据
+                  let successCount = 0
+                  for (const item of validItems) {
+                    try {
+                      // 移除手动设置的ID，让数据库自动分配
+                      const cleanItem = { ...item }
+                      delete cleanItem.id
+                      await window.electronAPI.systemConfig.saveProject(cleanItem)
+                      successCount++
+                    } catch (error) {
+                      console.error('保存项目到数据库失败:', error)
+                      ElMessage.error(`保存项目 ${item.name} 失败: ${error.message}`)
+                    }
+                  }
+
+                  // 重新从数据库加载数据以确保一致性
+                  if (successCount > 0) {
+                    const projects = await window.electronAPI.systemConfig.getProjects()
+                    projectOptions.value = projects || []
+                  }
+                } else {
+                  // 浏览器环境：添加到内存并保存到localStorage
+                  projectOptions.value.push(...validItems)
+                  saveExperimentData()
+                }
                 updatePaginationTotals()
               }
 
@@ -3103,30 +3503,35 @@ export default {
       editSpecies,
       saveSpecies,
       deleteSpecies,
+      batchDeleteSpecies,
       toggleSpeciesStatus,
       // 地区管理方法
       addRegion,
       editRegion,
       saveRegion,
       deleteRegion,
+      batchDeleteRegions,
       toggleRegionStatus,
       // 样本来源管理方法
       addSource,
       editSource,
       saveSource,
       deleteSource,
+      batchDeleteSources,
       toggleSourceStatus,
       // 来源管理方法
       addProject,
       editProject,
       saveProject,
       deleteProject,
+      batchDeleteProjects,
       toggleProjectStatus,
       // 实验类型管理方法
       addExperiment,
       editExperiment,
       saveExperiment,
       deleteExperiment,
+      batchDeleteExperiments,
       toggleExperimentStatus,
       // 实验数据管理方法
       addExperimentData,

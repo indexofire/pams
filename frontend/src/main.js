@@ -151,7 +151,7 @@ const getElementPlusLocale = (locale) => {
 app.use(store)
 app.use(router)
 app.use(ElementPlus, {
-  locale: getElementPlusLocale(i18n.global.locale)
+  locale: getElementPlusLocale(i18n.global.locale.value)
 })
 app.use(i18n)
 

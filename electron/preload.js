@@ -74,6 +74,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getSampleSources: () => ipcRenderer.invoke('systemConfig:getSampleSources'),
     saveSampleSource: (sourceData) => ipcRenderer.invoke('systemConfig:saveSampleSource', sourceData),
     deleteSampleSource: (id) => ipcRenderer.invoke('systemConfig:deleteSampleSource', id),
+    getProjects: () => ipcRenderer.invoke('systemConfig:getProjects'),
+    saveProject: (projectData) => ipcRenderer.invoke('systemConfig:saveProject', projectData),
+    deleteProject: (id) => ipcRenderer.invoke('systemConfig:deleteProject', id),
     getExperimentTypes: () => ipcRenderer.invoke('systemConfig:getExperimentTypes'),
     saveExperimentType: (typeData) => ipcRenderer.invoke('systemConfig:saveExperimentType', typeData),
     deleteExperimentType: (id) => ipcRenderer.invoke('systemConfig:deleteExperimentType', id)

@@ -185,7 +185,7 @@ export default {
     systemSettings: '系统相关设置',
     speciesManagement: '菌种管理',
     regionManagement: '地区管理',
-    sampleSourceManagement: '样本来源管理',
+    sampleSourceManagement: '样本类型管理',
     experimentTypeManagement: '实验类型管理',
     databaseManagement: '数据库管理',
     permissionManagement: '权限管理',

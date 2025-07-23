@@ -80,7 +80,7 @@ const defaultLocale = getDefaultLocale()
 const validLocale = (defaultLocale === 'zh-CN' || defaultLocale === 'en-US') ? defaultLocale : 'zh-CN'
 
 const i18n = createI18n({
-  legacy: true, // 使用 Legacy API 模式
+  legacy: false, // 使用 Composition API 模式
   locale: validLocale, // 使用验证过的locale
   fallbackLocale: 'zh-CN', // 回退语言
   messages,
@@ -93,8 +93,8 @@ const i18n = createI18n({
 
 // 切换语言的函数（临时切换，不保存到系统设置）
 export function setLocale (locale) {
-  // 设置i18n的locale (Legacy API模式)
-  i18n.global.locale = locale
+  // 设置i18n的locale (Composition API模式)
+  i18n.global.locale.value = locale
 
   // 临时保存到localStorage（不影响系统设置）
   localStorage.setItem('pams-temp-locale', locale)
