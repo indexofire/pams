@@ -100,6 +100,10 @@ class SystemConfigService {
         }
         idStmt.free()
 
+        if (!result || !result.id) {
+          throw new Error('无法获取插入记录的ID')
+        }
+
         return {
           id: result.id,
           ...speciesData,
@@ -193,6 +197,10 @@ class SystemConfigService {
           result = idStmt.getAsObject()
         }
         idStmt.free()
+
+        if (!result || !result.id) {
+          throw new Error('无法获取插入记录的ID')
+        }
 
         return {
           id: result.id,
@@ -290,7 +298,11 @@ class SystemConfigService {
           result = idStmt.getAsObject()
         }
         idStmt.free()
-        
+
+        if (!result || !result.id) {
+          throw new Error('无法获取插入记录的ID')
+        }
+
         return {
           id: result.id,
           ...sourceData,
@@ -382,6 +394,10 @@ class SystemConfigService {
           result = idStmt.getAsObject()
         }
         idStmt.free()
+
+        if (!result || !result.id) {
+          throw new Error('无法获取插入记录的ID')
+        }
 
         return {
           id: result.id,

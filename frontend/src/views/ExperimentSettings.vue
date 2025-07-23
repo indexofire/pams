@@ -2455,7 +2455,10 @@ export default {
                   let successCount = 0
                   for (const item of validItems) {
                     try {
-                      await window.electronAPI.systemConfig.saveSpecies(item)
+                      // 移除手动设置的ID，让数据库自动分配
+                      const cleanItem = { ...item }
+                      delete cleanItem.id
+                      await window.electronAPI.systemConfig.saveSpecies(cleanItem)
                       successCount++
                     } catch (error) {
                       console.error('保存菌种到数据库失败:', error)
@@ -2566,6 +2569,7 @@ export default {
                     name: item.name.trim(),
                     code: item.code ? item.code.trim() : '',
                     level: item.level || 'province',
+                    parent_id: item.parent_id || null,
                     description: item.description ? item.description.trim() : '',
                     status: item.status || 'active'
                   }
@@ -2586,7 +2590,10 @@ export default {
                   let successCount = 0
                   for (const item of validItems) {
                     try {
-                      await window.electronAPI.systemConfig.saveRegion(item)
+                      // 移除手动设置的ID，让数据库自动分配
+                      const cleanItem = { ...item }
+                      delete cleanItem.id
+                      await window.electronAPI.systemConfig.saveRegion(cleanItem)
                       successCount++
                     } catch (error) {
                       console.error('保存地区到数据库失败:', error)
@@ -2733,7 +2740,10 @@ export default {
                   let successCount = 0
                   for (const item of validItems) {
                     try {
-                      await window.electronAPI.systemConfig.saveSampleSource(item)
+                      // 移除手动设置的ID，让数据库自动分配
+                      const cleanItem = { ...item }
+                      delete cleanItem.id
+                      await window.electronAPI.systemConfig.saveSampleSource(cleanItem)
                       successCount++
                     } catch (error) {
                       console.error('保存样本来源到数据库失败:', error)
@@ -2969,7 +2979,9 @@ export default {
                   const newExperiment = {
                     id: nextId++, // 使用递增ID确保唯一性
                     name: item.name.trim(),
+                    code: item.code ? item.code.trim() : '',
                     description: item.description ? item.description.trim() : '',
+                    category: item.category || 'analysis',
                     experimentData: item.experimentData || [],
                     status: item.status || 'active'
                   }
@@ -2990,7 +3002,10 @@ export default {
                   let successCount = 0
                   for (const item of validItems) {
                     try {
-                      await window.electronAPI.systemConfig.saveExperimentType(item)
+                      // 移除手动设置的ID，让数据库自动分配
+                      const cleanItem = { ...item }
+                      delete cleanItem.id
+                      await window.electronAPI.systemConfig.saveExperimentType(cleanItem)
                       successCount++
                     } catch (error) {
                       console.error('保存实验类型到数据库失败:', error)
