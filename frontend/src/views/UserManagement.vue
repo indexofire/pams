@@ -53,14 +53,16 @@
 
       <div class="table-section">
         <el-table
-          :data="users"
+          :data="sortedUsers"
           v-loading="loading"
           element-loading-text="加载中..."
           border
+          @sort-change="handleSortChange"
+          :default-sort="{ prop: 'id', order: 'ascending' }"
         >
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="username" label="用户名" width="120" />
-          <el-table-column prop="role" label="角色" width="100">
+          <el-table-column prop="id" label="ID" width="80" sortable="custom" />
+          <el-table-column prop="username" label="用户名" width="120" sortable="custom" />
+          <el-table-column prop="role" label="角色" width="100" sortable="custom">
             <template #default="scope">
               <el-tag
                 :type="getRoleTagType(scope.row.role)"
@@ -70,9 +72,9 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="created_at" label="创建时间" width="180" />
-          <el-table-column prop="last_login" label="最后登录" width="180" />
-          <el-table-column prop="status" label="状态" width="100">
+          <el-table-column prop="created_at" label="创建时间" width="180" sortable="custom" />
+          <el-table-column prop="last_login" label="最后登录" width="180" sortable="custom" />
+          <el-table-column prop="status" label="状态" width="100" sortable="custom">
             <template #default="scope">
               <el-tag
                 :type="scope.row.status === 'active' ? 'success' : 'danger'"
@@ -236,7 +238,60 @@ export default {
       total: 0
     })
 
+    // 排序相关数据
+    const sortConfig = reactive({
+      prop: 'id',
+      order: 'ascending'
+    })
+
     const currentUser = computed(() => store.getters['auth/user'])
+
+    // 排序后的用户数据
+    const sortedUsers = computed(() => {
+      const data = [...users.value]
+
+      if (!sortConfig.prop) {
+        return data
+      }
+
+      return data.sort((a, b) => {
+        let aVal = a[sortConfig.prop]
+        let bVal = b[sortConfig.prop]
+
+        // 处理空值
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return sortConfig.order === 'ascending' ? 1 : -1
+        if (bVal == null) return sortConfig.order === 'ascending' ? -1 : 1
+
+        // 数字类型排序
+        if (sortConfig.prop === 'id') {
+          aVal = Number(aVal) || 0
+          bVal = Number(bVal) || 0
+          return sortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 日期类型排序
+        if (sortConfig.prop.includes('_at') || sortConfig.prop.includes('_login')) {
+          aVal = new Date(aVal).getTime() || 0
+          bVal = new Date(bVal).getTime() || 0
+          return sortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 字符串类型排序
+        aVal = String(aVal).toLowerCase()
+        bVal = String(bVal).toLowerCase()
+
+        if (aVal < bVal) return sortConfig.order === 'ascending' ? -1 : 1
+        if (aVal > bVal) return sortConfig.order === 'ascending' ? 1 : -1
+        return 0
+      })
+    })
+
+    // 处理排序变化
+    const handleSortChange = ({ prop, order }) => {
+      sortConfig.prop = prop
+      sortConfig.order = order
+    }
 
     const loadUsers = async () => {
       loading.value = true
@@ -409,6 +464,7 @@ export default {
     return {
       loading,
       users,
+      sortedUsers,
       filterForm,
       userForm,
       userFormRules,
@@ -417,6 +473,8 @@ export default {
       userDialogVisible,
       isEdit,
       currentUser,
+      sortConfig,
+      handleSortChange,
       searchUsers,
       resetFilter,
       refreshUsers,

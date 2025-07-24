@@ -79,15 +79,18 @@
 
       <div class="table-section">
         <el-table
-          :data="paginatedGenomes"
+          :data="sortedGenomes"
           v-loading="loading"
           border
           style="width: 100%"
+          @sort-change="handleSortChange"
+          :default-sort="{ prop: 'id', order: 'ascending' }"
         >
-          <el-table-column prop="sequenceNumber" label="序号" width="80" />
-          <el-table-column prop="strainName" label="菌株名称" min-width="120" />
-          <el-table-column prop="originalName" label="数据文件" min-width="150" />
-          <el-table-column prop="md5Hash" label="MD5校验值" min-width="120">
+          <el-table-column prop="id" label="ID" width="80" sortable="custom" />
+          <el-table-column prop="sequenceNumber" label="序号" width="80" sortable="custom" />
+          <el-table-column prop="strainName" label="菌株名称" min-width="120" sortable="custom" />
+          <el-table-column prop="originalName" label="数据文件" min-width="150" sortable="custom" />
+          <el-table-column prop="md5Hash" label="MD5校验值" min-width="120" sortable="custom">
             <template #default="scope">
               <span v-if="scope.row.md5Hash" class="md5-hash">{{ scope.row.md5Hash.substring(0, 8) }}...</span>
               <span v-else>-</span>
@@ -114,12 +117,12 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="测序平台" width="120">
+          <el-table-column prop="sequencingPlatform" label="测序平台" width="120" sortable="custom">
             <template #default="scope">
               <span>{{ scope.row.sequencingPlatform || '-' }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="组装软件" width="120">
+          <el-table-column prop="assemblySoftware" label="组装软件" width="120" sortable="custom">
             <template #default="scope">
               <span v-if="scope.row.assemblySoftware">
                 {{ scope.row.assemblySoftware }}
@@ -130,7 +133,7 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="质量" width="80">
+          <el-table-column label="质量" width="80" sortable="custom" :sort-by="(row) => row.qualityReport?.overall || 'unknown'">
             <template #default="scope">
               <el-tag
                 v-if="scope.row.qualityReport"
@@ -142,7 +145,7 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="uploadDate" label="上传日期" width="120">
+          <el-table-column prop="uploadDate" label="上传日期" width="120" sortable="custom">
             <template #default="scope">
               {{ formatDate(scope.row.uploadDate) }}
             </template>
@@ -477,6 +480,12 @@ export default {
       total: 0
     })
 
+    // 排序相关数据
+    const sortConfig = reactive({
+      prop: 'id',
+      order: 'ascending'
+    })
+
     // 生成流水号
     const generateSequenceNumber = (genomes) => {
       return genomes.map((genome, index) => {
@@ -495,13 +504,69 @@ export default {
       })
     }
 
+    // 排序后的基因组数据
+    const sortedGenomes = computed(() => {
+      const genomesWithSequence = generateSequenceNumber(genomes.value)
+
+      if (!sortConfig.prop) {
+        return genomesWithSequence
+      }
+
+      return genomesWithSequence.sort((a, b) => {
+        let aVal = a[sortConfig.prop]
+        let bVal = b[sortConfig.prop]
+
+        // 处理空值
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return sortConfig.order === 'ascending' ? 1 : -1
+        if (bVal == null) return sortConfig.order === 'ascending' ? -1 : 1
+
+        // 数字类型排序
+        if (sortConfig.prop === 'id' || sortConfig.prop === 'sequenceNumber') {
+          aVal = Number(aVal) || 0
+          bVal = Number(bVal) || 0
+          return sortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 日期类型排序
+        if (sortConfig.prop.includes('Date') || sortConfig.prop.includes('_at')) {
+          aVal = new Date(aVal).getTime() || 0
+          bVal = new Date(bVal).getTime() || 0
+          return sortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 质量排序（特殊处理）
+        if (sortConfig.prop === 'qualityReport') {
+          aVal = a.qualityReport?.overall || 'unknown'
+          bVal = b.qualityReport?.overall || 'unknown'
+          const qualityOrder = { excellent: 4, good: 3, fair: 2, poor: 1, unknown: 0 }
+          aVal = qualityOrder[aVal] || 0
+          bVal = qualityOrder[bVal] || 0
+          return sortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 字符串类型排序
+        aVal = String(aVal).toLowerCase()
+        bVal = String(bVal).toLowerCase()
+
+        if (aVal < bVal) return sortConfig.order === 'ascending' ? -1 : 1
+        if (aVal > bVal) return sortConfig.order === 'ascending' ? 1 : -1
+        return 0
+      })
+    })
+
     // 分页数据计算属性
     const paginatedGenomes = computed(() => {
       const start = (pagination.current - 1) * pagination.size
       const end = start + pagination.size
-      const genomesWithSequence = generateSequenceNumber(genomes.value)
-      return genomesWithSequence.slice(start, end)
+      return sortedGenomes.value.slice(start, end)
     })
+
+    // 处理排序变化
+    const handleSortChange = ({ prop, order }) => {
+      sortConfig.prop = prop
+      sortConfig.order = order
+    }
 
     const loadGenomes = async () => {
       loading.value = true
@@ -1169,9 +1234,12 @@ export default {
     return {
       loading,
       genomes,
+      sortedGenomes,
       paginatedGenomes,
       filterForm,
       pagination,
+      sortConfig,
+      handleSortChange,
       searchGenomes,
       resetFilter,
       uploadGenome,

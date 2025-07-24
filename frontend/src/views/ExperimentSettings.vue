@@ -50,17 +50,19 @@
                 :height="400"
                 :table-layout="'fixed'"
                 @selection-change="handleSpeciesSelectionChange"
+                @sort-change="handleSpeciesSortChange"
+                :default-sort="{ prop: 'id', order: 'ascending' }"
               >
                 <el-table-column type="selection" width="55" />
-                <el-table-column prop="id" label="ID" width="80" />
-                <el-table-column prop="name" label="菌种名称" min-width="120" />
-                <el-table-column prop="scientific_name" label="学名" width="180">
+                <el-table-column prop="id" label="ID" width="80" sortable="custom" />
+                <el-table-column prop="name" label="菌种名称" min-width="120" sortable="custom" />
+                <el-table-column prop="scientific_name" label="学名" width="180" sortable="custom">
                   <template #default="scope">
                     <em>{{ scope.row.scientific_name }}</em>
                   </template>
                 </el-table-column>
-                <el-table-column prop="abbreviation" label="缩写" width="80" />
-                <el-table-column prop="ncbi_txid" label="NCBI物种ID" width="100">
+                <el-table-column prop="abbreviation" label="缩写" width="80" sortable="custom" />
+                <el-table-column prop="ncbi_txid" label="NCBI物种ID" width="100" sortable="custom">
                   <template #default="scope">
                     <span v-if="scope.row.ncbi_txid">
                       <a :href="`https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=${scope.row.ncbi_txid}`"
@@ -72,8 +74,8 @@
                     <span v-else style="color: #909399;">-</span>
                   </template>
                 </el-table-column>
-                <el-table-column prop="description" label="描述" min-width="150" />
-                <el-table-column prop="status" label="状态" width="100">
+                <el-table-column prop="description" label="描述" min-width="150" sortable="custom" />
+                <el-table-column prop="status" label="状态" width="100" sortable="custom">
                   <template #default="scope">
                     <el-tag
                       :type="scope.row.status === 'active' ? 'success' : 'danger'"
@@ -160,12 +162,14 @@
                 :height="400"
                 :table-layout="'fixed'"
                 @selection-change="handleRegionsSelectionChange"
+                @sort-change="handleRegionsSortChange"
+                :default-sort="{ prop: 'id', order: 'ascending' }"
               >
                 <el-table-column type="selection" width="55" />
-                <el-table-column prop="id" label="ID" width="80" />
-                <el-table-column prop="name" label="地区名称" min-width="150" />
-                <el-table-column prop="code" label="地区代码" width="120" />
-                <el-table-column prop="level" label="级别" width="100">
+                <el-table-column prop="id" label="ID" width="80" sortable="custom" />
+                <el-table-column prop="name" label="地区名称" min-width="150" sortable="custom" />
+                <el-table-column prop="code" label="地区代码" width="120" sortable="custom" />
+                <el-table-column prop="level" label="级别" width="100" sortable="custom">
                   <template #default="scope">
                     <el-tag
                       :type="scope.row.level === 'province' ? 'danger' : scope.row.level === 'city' ? 'warning' : 'primary'"
@@ -175,7 +179,7 @@
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column prop="status" label="状态" width="100">
+                <el-table-column prop="status" label="状态" width="100" sortable="custom">
                   <template #default="scope">
                     <el-tag
                       :type="scope.row.status === 'active' ? 'success' : 'danger'"
@@ -262,11 +266,13 @@
                 :height="400"
                 :table-layout="'fixed'"
                 @selection-change="handleSourcesSelectionChange"
+                @sort-change="handleSourcesSortChange"
+                :default-sort="{ prop: 'id', order: 'ascending' }"
               >
                 <el-table-column type="selection" width="55" />
-                <el-table-column prop="id" label="ID" width="80" />
-                <el-table-column prop="name" label="来源名称" min-width="150" />
-                <el-table-column prop="category" label="类别" width="120">
+                <el-table-column prop="id" label="ID" width="80" sortable="custom" />
+                <el-table-column prop="name" label="来源名称" min-width="150" sortable="custom" />
+                <el-table-column prop="category" label="类别" width="120" sortable="custom">
                   <template #default="scope">
                     <el-tag
                       :type="scope.row.category === 'clinical' ? 'danger' : scope.row.category === 'environmental' ? 'warning' : 'primary'"
@@ -276,8 +282,8 @@
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column prop="description" label="描述" min-width="200" />
-                <el-table-column prop="status" label="状态" width="100">
+                <el-table-column prop="description" label="描述" min-width="200" sortable="custom" />
+                <el-table-column prop="status" label="状态" width="100" sortable="custom">
                   <template #default="scope">
                     <el-tag
                       :type="scope.row.status === 'active' ? 'success' : 'danger'"
@@ -364,12 +370,14 @@
                 :height="400"
                 :table-layout="'fixed'"
                 @selection-change="handleProjectSelectionChange"
+                @sort-change="handleProjectsSortChange"
+                :default-sort="{ prop: 'id', order: 'ascending' }"
               >
                 <el-table-column type="selection" width="55" />
-                <el-table-column prop="id" label="ID" width="80" />
-                <el-table-column prop="name" label="项目名称" min-width="150" />
-                <el-table-column prop="description" label="描述" min-width="200" />
-                <el-table-column prop="status" label="状态" width="100">
+                <el-table-column prop="id" label="ID" width="80" sortable="custom" />
+                <el-table-column prop="name" label="项目名称" min-width="150" sortable="custom" />
+                <el-table-column prop="description" label="描述" min-width="200" sortable="custom" />
+                <el-table-column prop="status" label="状态" width="100" sortable="custom">
                   <template #default="scope">
                     <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'">
                       {{ scope.row.status === 'active' ? '启用' : '禁用' }}
@@ -458,10 +466,12 @@
                 :height="400"
                 :table-layout="'fixed'"
                 @selection-change="handleExperimentsSelectionChange"
+                @sort-change="handleExperimentsSortChange"
+                :default-sort="{ prop: 'id', order: 'ascending' }"
               >
                 <el-table-column type="selection" width="55" />
-                <el-table-column prop="id" label="ID" width="80" />
-                <el-table-column prop="name" label="实验名称" min-width="150" />
+                <el-table-column prop="id" label="ID" width="80" sortable="custom" />
+                <el-table-column prop="name" label="实验名称" min-width="150" sortable="custom" />
                 <el-table-column label="实验数据" min-width="200">
                   <template #default="scope">
                     <div v-if="scope.row.experimentData && scope.row.experimentData.length > 0">
@@ -478,8 +488,8 @@
                     <span v-else style="color: #909399;">-</span>
                   </template>
                 </el-table-column>
-                <el-table-column prop="description" label="实验描述" min-width="180" />
-                <el-table-column prop="status" label="状态" width="100">
+                <el-table-column prop="description" label="实验描述" min-width="180" sortable="custom" />
+                <el-table-column prop="status" label="状态" width="100" sortable="custom">
                   <template #default="scope">
                     <el-tag
                       :type="scope.row.status === 'active' ? 'success' : 'danger'"
@@ -1107,6 +1117,32 @@ export default {
       current: 1,
       size: 10,
       total: 0
+    })
+
+    // 排序配置
+    const speciesSortConfig = reactive({
+      prop: 'id',
+      order: 'ascending'
+    })
+
+    const regionsSortConfig = reactive({
+      prop: 'id',
+      order: 'ascending'
+    })
+
+    const sourcesSortConfig = reactive({
+      prop: 'id',
+      order: 'ascending'
+    })
+
+    const projectsSortConfig = reactive({
+      prop: 'id',
+      order: 'ascending'
+    })
+
+    const experimentsSortConfig = reactive({
+      prop: 'id',
+      order: 'ascending'
     })
 
     // NCBI相关状态
@@ -2801,35 +2837,217 @@ export default {
       experimentPagination.total = experimentTypes.value.length
     }
 
+    // 排序数据计算属性
+    const sortedSpecies = computed(() => {
+      const data = [...speciesOptions.value]
+
+      if (!speciesSortConfig.prop) {
+        return data
+      }
+
+      return data.sort((a, b) => {
+        let aVal = a[speciesSortConfig.prop]
+        let bVal = b[speciesSortConfig.prop]
+
+        // 处理空值
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return speciesSortConfig.order === 'ascending' ? 1 : -1
+        if (bVal == null) return speciesSortConfig.order === 'ascending' ? -1 : 1
+
+        // 数字类型排序
+        if (speciesSortConfig.prop === 'id' || speciesSortConfig.prop === 'ncbi_txid') {
+          aVal = Number(aVal) || 0
+          bVal = Number(bVal) || 0
+          return speciesSortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 字符串类型排序
+        aVal = String(aVal).toLowerCase()
+        bVal = String(bVal).toLowerCase()
+
+        if (aVal < bVal) return speciesSortConfig.order === 'ascending' ? -1 : 1
+        if (aVal > bVal) return speciesSortConfig.order === 'ascending' ? 1 : -1
+        return 0
+      })
+    })
+
     // 分页数据计算属性
     const paginatedSpecies = computed(() => {
       const start = (speciesPagination.current - 1) * speciesPagination.size
       const end = start + speciesPagination.size
-      return speciesOptions.value.slice(start, end)
+      return sortedSpecies.value.slice(start, end)
+    })
+
+    const sortedRegions = computed(() => {
+      const data = [...regionOptions.value]
+
+      if (!regionsSortConfig.prop) {
+        return data
+      }
+
+      return data.sort((a, b) => {
+        let aVal = a[regionsSortConfig.prop]
+        let bVal = b[regionsSortConfig.prop]
+
+        // 处理空值
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return regionsSortConfig.order === 'ascending' ? 1 : -1
+        if (bVal == null) return regionsSortConfig.order === 'ascending' ? -1 : 1
+
+        // 数字类型排序
+        if (regionsSortConfig.prop === 'id') {
+          aVal = Number(aVal) || 0
+          bVal = Number(bVal) || 0
+          return regionsSortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 级别排序（特殊处理）
+        if (regionsSortConfig.prop === 'level') {
+          const levelOrder = { province: 3, city: 2, district: 1 }
+          aVal = levelOrder[aVal] || 0
+          bVal = levelOrder[bVal] || 0
+          return regionsSortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 字符串类型排序
+        aVal = String(aVal).toLowerCase()
+        bVal = String(bVal).toLowerCase()
+
+        if (aVal < bVal) return regionsSortConfig.order === 'ascending' ? -1 : 1
+        if (aVal > bVal) return regionsSortConfig.order === 'ascending' ? 1 : -1
+        return 0
+      })
     })
 
     const paginatedRegions = computed(() => {
       const start = (regionPagination.current - 1) * regionPagination.size
       const end = start + regionPagination.size
-      return regionOptions.value.slice(start, end)
+      return sortedRegions.value.slice(start, end)
+    })
+
+    const sortedSources = computed(() => {
+      const data = [...sourceOptions.value]
+
+      if (!sourcesSortConfig.prop) {
+        return data
+      }
+
+      return data.sort((a, b) => {
+        let aVal = a[sourcesSortConfig.prop]
+        let bVal = b[sourcesSortConfig.prop]
+
+        // 处理空值
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return sourcesSortConfig.order === 'ascending' ? 1 : -1
+        if (bVal == null) return sourcesSortConfig.order === 'ascending' ? -1 : 1
+
+        // 数字类型排序
+        if (sourcesSortConfig.prop === 'id') {
+          aVal = Number(aVal) || 0
+          bVal = Number(bVal) || 0
+          return sourcesSortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 类别排序（特殊处理）
+        if (sourcesSortConfig.prop === 'category') {
+          const categoryOrder = { clinical: 3, environmental: 2, other: 1 }
+          aVal = categoryOrder[aVal] || 0
+          bVal = categoryOrder[bVal] || 0
+          return sourcesSortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 字符串类型排序
+        aVal = String(aVal).toLowerCase()
+        bVal = String(bVal).toLowerCase()
+
+        if (aVal < bVal) return sourcesSortConfig.order === 'ascending' ? -1 : 1
+        if (aVal > bVal) return sourcesSortConfig.order === 'ascending' ? 1 : -1
+        return 0
+      })
     })
 
     const paginatedSources = computed(() => {
       const start = (sourcePagination.current - 1) * sourcePagination.size
       const end = start + sourcePagination.size
-      return sourceOptions.value.slice(start, end)
+      return sortedSources.value.slice(start, end)
+    })
+
+    const sortedProjects = computed(() => {
+      const data = [...projectOptions.value]
+
+      if (!projectsSortConfig.prop) {
+        return data
+      }
+
+      return data.sort((a, b) => {
+        let aVal = a[projectsSortConfig.prop]
+        let bVal = b[projectsSortConfig.prop]
+
+        // 处理空值
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return projectsSortConfig.order === 'ascending' ? 1 : -1
+        if (bVal == null) return projectsSortConfig.order === 'ascending' ? -1 : 1
+
+        // 数字类型排序
+        if (projectsSortConfig.prop === 'id') {
+          aVal = Number(aVal) || 0
+          bVal = Number(bVal) || 0
+          return projectsSortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 字符串类型排序
+        aVal = String(aVal).toLowerCase()
+        bVal = String(bVal).toLowerCase()
+
+        if (aVal < bVal) return projectsSortConfig.order === 'ascending' ? -1 : 1
+        if (aVal > bVal) return projectsSortConfig.order === 'ascending' ? 1 : -1
+        return 0
+      })
     })
 
     const paginatedProjects = computed(() => {
       const start = (projectPagination.current - 1) * projectPagination.size
       const end = start + projectPagination.size
-      return projectOptions.value.slice(start, end)
+      return sortedProjects.value.slice(start, end)
+    })
+
+    const sortedExperiments = computed(() => {
+      const data = [...experimentTypes.value]
+
+      if (!experimentsSortConfig.prop) {
+        return data
+      }
+
+      return data.sort((a, b) => {
+        let aVal = a[experimentsSortConfig.prop]
+        let bVal = b[experimentsSortConfig.prop]
+
+        // 处理空值
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return experimentsSortConfig.order === 'ascending' ? 1 : -1
+        if (bVal == null) return experimentsSortConfig.order === 'ascending' ? -1 : 1
+
+        // 数字类型排序
+        if (experimentsSortConfig.prop === 'id') {
+          aVal = Number(aVal) || 0
+          bVal = Number(bVal) || 0
+          return experimentsSortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 字符串类型排序
+        aVal = String(aVal).toLowerCase()
+        bVal = String(bVal).toLowerCase()
+
+        if (aVal < bVal) return experimentsSortConfig.order === 'ascending' ? -1 : 1
+        if (aVal > bVal) return experimentsSortConfig.order === 'ascending' ? 1 : -1
+        return 0
+      })
     })
 
     const paginatedExperiments = computed(() => {
       const start = (experimentPagination.current - 1) * experimentPagination.size
       const end = start + experimentPagination.size
-      return experimentTypes.value.slice(start, end)
+      return sortedExperiments.value.slice(start, end)
     })
 
     // 分页处理方法
@@ -2876,6 +3094,32 @@ export default {
     const handleExperimentSizeChange = (size) => {
       experimentPagination.size = size
       experimentPagination.current = 1
+    }
+
+    // 排序处理方法
+    const handleSpeciesSortChange = ({ prop, order }) => {
+      speciesSortConfig.prop = prop
+      speciesSortConfig.order = order
+    }
+
+    const handleRegionsSortChange = ({ prop, order }) => {
+      regionsSortConfig.prop = prop
+      regionsSortConfig.order = order
+    }
+
+    const handleSourcesSortChange = ({ prop, order }) => {
+      sourcesSortConfig.prop = prop
+      sourcesSortConfig.order = order
+    }
+
+    const handleProjectsSortChange = ({ prop, order }) => {
+      projectsSortConfig.prop = prop
+      projectsSortConfig.order = order
+    }
+
+    const handleExperimentsSortChange = ({ prop, order }) => {
+      experimentsSortConfig.prop = prop
+      experimentsSortConfig.order = order
     }
 
     // 页面加载时初始化数据
@@ -3827,6 +4071,22 @@ export default {
       paginatedProjects,
       paginatedExperiments,
       updatePaginationTotals,
+      // 排序相关
+      speciesSortConfig,
+      regionsSortConfig,
+      sourcesSortConfig,
+      projectsSortConfig,
+      experimentsSortConfig,
+      sortedSpecies,
+      sortedRegions,
+      sortedSources,
+      sortedProjects,
+      sortedExperiments,
+      handleSpeciesSortChange,
+      handleRegionsSortChange,
+      handleSourcesSortChange,
+      handleProjectsSortChange,
+      handleExperimentsSortChange,
       handleSpeciesPageChange,
       handleRegionPageChange,
       handleSourcePageChange,

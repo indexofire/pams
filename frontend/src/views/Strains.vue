@@ -146,27 +146,35 @@
 
       <div class="table-section">
         <el-table
-          :data="filteredStrains"
+          :data="sortedStrains"
           v-loading="loading"
           border
           style="width: 100%"
           @selection-change="handleSelectionChange"
+          @sort-change="handleSortChange"
           empty-text="暂无菌株数据"
-          :default-sort="{ prop: 'created_at', order: 'descending' }"
+          :default-sort="{ prop: 'id', order: 'ascending' }"
         >
           <el-table-column
             type="selection"
             width="55"
             :selectable="(row) => canUpload"
           />
-          <el-table-column label="序号" width="80" align="center">
+          <el-table-column prop="id" label="ID" width="80" align="center" sortable="custom">
+            <template #default="scope">
+              <span class="id-number">
+                {{ scope.row.id || '-' }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="sequence_number" label="序号" width="80" align="center" sortable="custom">
             <template #default="scope">
               <span class="sequence-number">
                 {{ scope.row.sequence_number || '-' }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="菌株编号" width="140">
+          <el-table-column prop="strain_id" label="菌株编号" width="140" sortable="custom">
             <template #default="scope">
               <div class="strain-id-cell">
                 <div class="strain-id-content">
@@ -183,10 +191,10 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="species" label="菌种（属）" width="120" />
-          <el-table-column prop="sample_id" label="样本编号" width="120" />
-          <el-table-column prop="sample_source" label="样本" width="100" />
-          <el-table-column label="地区" width="100">
+          <el-table-column prop="species" label="菌种（属）" width="120" sortable="custom" />
+          <el-table-column prop="sample_id" label="样本编号" width="120" sortable="custom" />
+          <el-table-column prop="sample_source" label="样本" width="100" sortable="custom" />
+          <el-table-column prop="region" label="地区" width="100" sortable="custom">
             <template #default="scope">
               <div style="display: flex; align-items: center;">
                 <el-icon style="margin-right: 4px; color: #67C23A;"><Location /></el-icon>
@@ -194,8 +202,28 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="project_source" label="来源" width="100" />
-          <el-table-column label="日期" width="120" align="center">
+          <el-table-column prop="project_source" label="来源" width="100" sortable="custom" />
+          <el-table-column prop="onset_date" label="发病日期" width="120" align="center" sortable="custom">
+            <template #default="scope">
+              <span>{{ formatDate(scope.row.onset_date) || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="sampling_date" label="采样日期" width="120" align="center" sortable="custom">
+            <template #default="scope">
+              <span>{{ formatDate(scope.row.sampling_date) || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="isolation_date" label="分离日期" width="120" align="center" sortable="custom">
+            <template #default="scope">
+              <span>{{ formatDate(scope.row.isolation_date) || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="submission_date" label="上送日期" width="120" align="center" sortable="custom">
+            <template #default="scope">
+              <span>{{ formatDate(scope.row.submission_date) || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="日期图标" width="120" align="center">
             <template #default="scope">
               <div class="date-icons">
                 <!-- 发病日期 -->
@@ -264,7 +292,22 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="样本信息" width="140" align="center">
+          <el-table-column prop="patient_name" label="患者姓名" width="100" sortable="custom">
+            <template #default="scope">
+              <span>{{ scope.row.patient_name || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="patient_gender" label="性别" width="80" sortable="custom">
+            <template #default="scope">
+              <span>{{ scope.row.patient_gender || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="patient_age" label="年龄" width="80" sortable="custom">
+            <template #default="scope">
+              <span>{{ scope.row.patient_age ? scope.row.patient_age + '岁' : '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="样本信息图标" width="140" align="center">
             <template #default="scope">
               <div class="patient-info-icons">
                 <!-- 姓名 -->
@@ -333,7 +376,17 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="uploaded_by" label="上传用户" width="100" />
+          <el-table-column prop="uploaded_by" label="上传用户" width="100" sortable="custom" />
+          <el-table-column prop="created_at" label="创建时间" width="160" sortable="custom">
+            <template #default="scope">
+              <span>{{ formatDateTime(scope.row.created_at) || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="updated_at" label="更新时间" width="160" sortable="custom">
+            <template #default="scope">
+              <span>{{ formatDateTime(scope.row.updated_at) || '-' }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="180" fixed="right" align="center">
             <template #default="scope">
               <div class="action-buttons">
@@ -1100,6 +1153,12 @@ export default {
       total: 0
     })
 
+    // 排序相关数据
+    const sortConfig = reactive({
+      prop: 'id',
+      order: 'ascending'
+    })
+
     // 对话框相关
     const strainDialogVisible = ref(false)
     const isEditMode = ref(false)
@@ -1367,6 +1426,53 @@ export default {
 
       return filtered
     })
+
+    // 排序后的菌株数据
+    const sortedStrains = computed(() => {
+      const data = [...filteredStrains.value]
+
+      if (!sortConfig.prop) {
+        return data
+      }
+
+      return data.sort((a, b) => {
+        let aVal = a[sortConfig.prop]
+        let bVal = b[sortConfig.prop]
+
+        // 处理空值
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return sortConfig.order === 'ascending' ? 1 : -1
+        if (bVal == null) return sortConfig.order === 'ascending' ? -1 : 1
+
+        // 数字类型排序
+        if (sortConfig.prop === 'id' || sortConfig.prop === 'sequence_number' || sortConfig.prop === 'patient_age') {
+          aVal = Number(aVal) || 0
+          bVal = Number(bVal) || 0
+          return sortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 日期类型排序
+        if (sortConfig.prop.includes('_date') || sortConfig.prop.includes('_at')) {
+          aVal = new Date(aVal).getTime() || 0
+          bVal = new Date(bVal).getTime() || 0
+          return sortConfig.order === 'ascending' ? aVal - bVal : bVal - aVal
+        }
+
+        // 字符串类型排序
+        aVal = String(aVal).toLowerCase()
+        bVal = String(bVal).toLowerCase()
+
+        if (aVal < bVal) return sortConfig.order === 'ascending' ? -1 : 1
+        if (aVal > bVal) return sortConfig.order === 'ascending' ? 1 : -1
+        return 0
+      })
+    })
+
+    // 处理排序变化
+    const handleSortChange = ({ prop, order }) => {
+      sortConfig.prop = prop
+      sortConfig.order = order
+    }
 
     const searchStrains = () => {
       pagination.current = 1
@@ -2440,6 +2546,24 @@ export default {
       }
     }
 
+    const formatDateTime = (dateString) => {
+      if (!dateString) return '-'
+      try {
+        const date = new Date(dateString)
+        if (isNaN(date.getTime())) return '-'
+        return date.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
+      } catch (error) {
+        return '-'
+      }
+    }
+
     const getGenderColor = (gender) => {
       switch (gender) {
       case '男':
@@ -2522,8 +2646,11 @@ export default {
       loading,
       strains,
       filteredStrains,
+      sortedStrains,
       selectedStrains,
       quickSearchText,
+      sortConfig,
+      handleSortChange,
       handleQuickSearch,
       filterForm,
       pagination,
@@ -2588,6 +2715,7 @@ export default {
       performExport,
       // 工具方法
       formatDate,
+      formatDateTime,
       getGenderColor,
       getGenderIcon,
       getFontAwesomeGenderIcon,
