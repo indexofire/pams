@@ -437,11 +437,7 @@ class StrainService {
       }
     }
 
-    // 样本编号验证
-    if (isCreate && !strainData.sample_id) {
-      throw new Error('样本编号不能为空')
-    }
-
+    // 样本编号验证（可选字段）
     if (strainData.sample_id) {
       if (typeof strainData.sample_id !== 'string') {
         throw new Error('样本编号必须是字符串')
@@ -449,24 +445,25 @@ class StrainService {
 
       const trimmedSampleId = strainData.sample_id.trim()
       if (trimmedSampleId.length === 0) {
-        throw new Error('样本编号不能为空')
-      }
-
-      if (trimmedSampleId.length > 255) {
-        throw new Error('样本编号长度不能超过255个字符')
-      }
-
-      // 验证多个样本编号（逗号分隔）
-      const sampleIds = trimmedSampleId.split(',')
-      const sampleIdPattern = /^[a-zA-Z0-9_-]+$/
-
-      for (const sampleId of sampleIds) {
-        const cleanSampleId = sampleId.trim()
-        if (cleanSampleId.length === 0) {
-          throw new Error('样本编号不能为空')
+        // 如果用户输入了空字符串，将其设置为null
+        strainData.sample_id = null
+      } else {
+        if (trimmedSampleId.length > 255) {
+          throw new Error('样本编号长度不能超过255个字符')
         }
-        if (!sampleIdPattern.test(cleanSampleId)) {
-          throw new Error('样本编号只能包含数字、大小写英文字母、下划线和连字符')
+
+        // 验证多个样本编号（逗号分隔）
+        const sampleIds = trimmedSampleId.split(',')
+        const sampleIdPattern = /^[a-zA-Z0-9_-]+$/
+
+        for (const sampleId of sampleIds) {
+          const cleanSampleId = sampleId.trim()
+          if (cleanSampleId.length === 0) {
+            throw new Error('样本编号不能为空')
+          }
+          if (!sampleIdPattern.test(cleanSampleId)) {
+            throw new Error('样本编号只能包含数字、大小写英文字母、下划线和连字符')
+          }
         }
       }
     }

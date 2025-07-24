@@ -172,7 +172,6 @@ class DatabaseService {
       // 字段已存在，忽略错误
     }
 
-    // 添加患者信息字段
     try {
       this.db.run(`ALTER TABLE strains ADD COLUMN patient_gender TEXT`)
     } catch (e) {
@@ -190,6 +189,8 @@ class DatabaseService {
     } catch (e) {
       // 字段已存在，忽略错误
     }
+
+
 
     try {
       this.db.run(`ALTER TABLE strains ADD COLUMN submission_date TEXT`)
@@ -630,6 +631,41 @@ class DatabaseService {
     }
   }
 
+  // 检查菌株表结构
+  checkStrainsTableStructure() {
+    try {
+      const stmt = this.db.prepare('PRAGMA table_info(strains)')
+      const columns = []
+      while (stmt.step()) {
+        const row = stmt.getAsObject()
+        columns.push(row.name)
+      }
+      stmt.free()
+
+      console.log('菌株表当前字段:', columns)
+
+      // 检查必需字段是否存在
+      const requiredFields = [
+        'id', 'sequence_number', 'strain_id', 'species', 'sample_id', 'sample_source',
+        'region', 'project_source', 'experiment_type', 'onset_date', 'sampling_date',
+        'isolation_date', 'submission_date', 'patient_name', 'patient_gender',
+        'patient_age', 'patient_id_number', 'uploaded_by', 'virulence_genes',
+        'antibiotic_resistance', 'st_type', 'serotype', 'molecular_serotype',
+        'created_at', 'updated_at'
+      ]
+
+      const missingFields = requiredFields.filter(field => !columns.includes(field))
+      if (missingFields.length > 0) {
+        console.warn('菌株表缺少字段:', missingFields)
+      }
+
+      return { columns, missingFields }
+    } catch (error) {
+      console.error('检查表结构失败:', error)
+      return { columns: [], missingFields: [] }
+    }
+  }
+
   getNextAvailableId() {
     try {
       const stmt = this.db.prepare('SELECT MAX(id) as max_id FROM strains')
@@ -648,8 +684,22 @@ class DatabaseService {
 
   async createStrain(strainData) {
     try {
+      console.log('创建菌株，输入数据:', strainData)
+
+      // 检查表结构
+      this.checkStrainsTableStructure()
+
+      // 验证必填字段
+      if (!strainData.strain_id) {
+        throw new Error('菌株编号不能为空')
+      }
+      if (!strainData.species) {
+        throw new Error('菌种不能为空')
+      }
+
       // 生成序号
       const sequenceNumber = this.getNextSequenceNumber()
+      console.log('生成序号:', sequenceNumber)
 
       const stmt = this.db.prepare(`
         INSERT INTO strains (
@@ -659,7 +709,7 @@ class DatabaseService {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
 
-      stmt.bind([
+      const bindValues = [
         sequenceNumber,
         strainData.strain_id || null,
         strainData.species || null,
@@ -682,16 +732,24 @@ class DatabaseService {
         strainData.st_type || null,
         strainData.serotype || null,
         strainData.molecular_serotype || null
-      ])
-      
-      // 检查执行结果
-      const success = stmt.step()
-      stmt.free()
-      
-      if (!success) {
-        throw new Error('数据库插入失败，可能是数据重复或格式错误')
+      ]
+
+      console.log('绑定参数:', bindValues)
+      stmt.bind(bindValues)
+
+      // 执行插入 - 对于INSERT语句，step()执行后不需要检查返回值
+      // 如果有错误，会抛出异常
+      try {
+        stmt.step()
+        console.log('插入执行成功')
+      } catch (execError) {
+        stmt.free()
+        console.error('SQL执行错误:', execError)
+        throw execError
       }
-      
+
+      stmt.free()
+
       // 获取插入的ID
       const idStmt = this.db.prepare('SELECT last_insert_rowid() as id')
       const idSuccess = idStmt.step()
@@ -699,23 +757,40 @@ class DatabaseService {
         idStmt.free()
         throw new Error('无法获取插入记录的ID')
       }
-      
+
       const result = idStmt.getAsObject()
       idStmt.free()
-      
+
+      console.log('插入结果ID:', result.id)
+
       if (!result.id || result.id <= 0) {
         throw new Error('插入记录失败，未获得有效ID')
       }
-      
+
       await this.saveDatabase()
       return { id: result.id, ...strainData }
     } catch (error) {
       console.error('创建菌株失败:', error)
+      console.error('错误详情:', error.message)
+      console.error('错误堆栈:', error.stack)
+
       // 提供更详细的错误信息
       if (error.message.includes('UNIQUE constraint failed')) {
-        throw new Error('菌株编号已存在，请使用不同的编号')
+        if (error.message.includes('strain_id')) {
+          throw new Error('菌株编号已存在，请使用不同的编号')
+        } else {
+          throw new Error('数据重复，请检查输入信息')
+        }
       } else if (error.message.includes('NOT NULL constraint failed')) {
-        throw new Error('必填字段不能为空')
+        const field = error.message.match(/NOT NULL constraint failed: strains\.(\w+)/)?.[1]
+        if (field) {
+          throw new Error(`字段 ${field} 不能为空`)
+        } else {
+          throw new Error('必填字段不能为空')
+        }
+      } else if (error.message.includes('no such column')) {
+        const column = error.message.match(/no such column: (\w+)/)?.[1]
+        throw new Error(`数据库字段 ${column} 不存在，请联系管理员`)
       } else {
         throw error
       }

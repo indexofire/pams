@@ -160,13 +160,6 @@
             width="55"
             :selectable="(row) => canUpload"
           />
-          <el-table-column prop="id" label="ID" width="80" align="center" sortable="custom">
-            <template #default="scope">
-              <span class="id-number">
-                {{ scope.row.id || '-' }}
-              </span>
-            </template>
-          </el-table-column>
           <el-table-column prop="sequence_number" label="序号" width="80" align="center" sortable="custom">
             <template #default="scope">
               <span class="sequence-number">
@@ -203,27 +196,7 @@
             </template>
           </el-table-column>
           <el-table-column prop="project_source" label="来源" width="100" sortable="custom" />
-          <el-table-column prop="onset_date" label="发病日期" width="120" align="center" sortable="custom">
-            <template #default="scope">
-              <span>{{ formatDate(scope.row.onset_date) || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="sampling_date" label="采样日期" width="120" align="center" sortable="custom">
-            <template #default="scope">
-              <span>{{ formatDate(scope.row.sampling_date) || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="isolation_date" label="分离日期" width="120" align="center" sortable="custom">
-            <template #default="scope">
-              <span>{{ formatDate(scope.row.isolation_date) || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="submission_date" label="上送日期" width="120" align="center" sortable="custom">
-            <template #default="scope">
-              <span>{{ formatDate(scope.row.submission_date) || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="日期图标" width="120" align="center">
+          <el-table-column label="日期" width="120" align="center">
             <template #default="scope">
               <div class="date-icons">
                 <!-- 发病日期 -->
@@ -290,21 +263,6 @@
                   />
                 </el-tooltip>
               </div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="patient_name" label="患者姓名" width="100" sortable="custom">
-            <template #default="scope">
-              <span>{{ scope.row.patient_name || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="patient_gender" label="性别" width="80" sortable="custom">
-            <template #default="scope">
-              <span>{{ scope.row.patient_gender || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="patient_age" label="年龄" width="80" sortable="custom">
-            <template #default="scope">
-              <span>{{ scope.row.patient_age ? scope.row.patient_age + '岁' : '-' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="样本信息图标" width="140" align="center">
@@ -1122,7 +1080,7 @@ export default {
     const fieldMappingData = ref([
       { systemField: 'strain_id', systemFieldLabel: '菌株编号', fileField: '', required: true, description: '唯一标识菌株的编号' },
       { systemField: 'species', systemFieldLabel: '菌种(属)', fileField: '', required: true, description: '菌种类型' },
-      { systemField: 'sample_id', systemFieldLabel: '样本编号', fileField: '', required: true, description: '样本的唯一编号' },
+      { systemField: 'sample_id', systemFieldLabel: '样本编号', fileField: '', required: false, description: '样本的唯一编号' },
       { systemField: 'sample_source', systemFieldLabel: '样本', fileField: '', required: false, description: '样本的来源类型' },
       { systemField: 'region', systemFieldLabel: '地区', fileField: '', required: true, description: '地理位置' },
       { systemField: 'project_source', systemFieldLabel: '来源', fileField: '', required: false, description: '项目来源' },
@@ -1266,7 +1224,7 @@ export default {
         { required: true, message: '请选择菌种', trigger: 'change' }
       ],
       sample_id: [
-        { required: true, message: '请输入样本编号', trigger: 'blur' },
+        { required: false, message: '请输入样本编号', trigger: 'blur' },
         { max: 255, message: '样本编号长度不能超过255个字符', trigger: 'blur' },
         { validator: validateSampleId, trigger: 'blur' }
       ],
