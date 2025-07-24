@@ -162,7 +162,7 @@
           <el-table-column label="序号" width="80" align="center">
             <template #default="scope">
               <span class="sequence-number">
-                {{ (pagination.current - 1) * pagination.size + scope.$index + 1 }}
+                {{ scope.row.sequence_number || '-' }}
               </span>
             </template>
           </el-table-column>

@@ -583,7 +583,7 @@ class DatabaseService {
     try {
       const stmt = this.db.prepare(`
         SELECT * FROM strains
-        ORDER BY created_at DESC
+        ORDER BY sequence_number ASC
       `)
       const results = []
       while (stmt.step()) {
