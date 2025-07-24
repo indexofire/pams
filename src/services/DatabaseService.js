@@ -1115,6 +1115,122 @@ class DatabaseService {
     }
   }
 
+  /**
+   * 清空所有数据表（保留表结构）
+   */
+  async clearAllData() {
+    try {
+      console.log('开始清空所有数据表...')
+
+      // 禁用外键约束
+      this.db.run('PRAGMA foreign_keys = OFF')
+
+      // 获取所有表名
+      const stmt = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+      const tables = []
+      while (stmt.step()) {
+        const row = stmt.getAsObject()
+        tables.push(row.name)
+      }
+      stmt.free()
+
+      // 清空所有表
+      for (const tableName of tables) {
+        try {
+          this.db.run(`DELETE FROM ${tableName}`)
+          console.log(`已清空表: ${tableName}`)
+        } catch (error) {
+          console.warn(`清空表 ${tableName} 失败:`, error.message)
+        }
+      }
+
+      // 重置自增ID
+      this.db.run("DELETE FROM sqlite_sequence")
+
+      // 重新启用外键约束
+      this.db.run('PRAGMA foreign_keys = ON')
+
+      // 重新创建默认数据
+      await this.createDefaultData()
+
+      // 保存数据库
+      await this.saveDatabase()
+
+      console.log('所有数据表已清空并重新初始化')
+      return { success: true, message: '数据库已重置' }
+    } catch (error) {
+      console.error('清空数据库失败:', error)
+      throw new Error('清空数据库失败: ' + error.message)
+    }
+  }
+
+  /**
+   * 完全重置数据库（删除文件重新创建）
+   */
+  async resetDatabase() {
+    try {
+      console.log('开始重置数据库...')
+
+      // 关闭当前数据库连接
+      if (this.db) {
+        this.db.close()
+      }
+
+      // 删除数据库文件
+      if (await fs.pathExists(this.dbPath)) {
+        await fs.remove(this.dbPath)
+        console.log('数据库文件已删除')
+      }
+
+      // 重新初始化数据库
+      await this.initialize()
+
+      console.log('数据库重置完成')
+      return { success: true, message: '数据库已完全重置' }
+    } catch (error) {
+      console.error('重置数据库失败:', error)
+      throw new Error('重置数据库失败: ' + error.message)
+    }
+  }
+
+  /**
+   * 获取数据库统计信息
+   */
+  getDatabaseStats() {
+    try {
+      const stats = {}
+
+      // 获取所有表名
+      const stmt = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+      const tables = []
+      while (stmt.step()) {
+        const row = stmt.getAsObject()
+        tables.push(row.name)
+      }
+      stmt.free()
+
+      // 获取每个表的记录数
+      for (const tableName of tables) {
+        try {
+          const countStmt = this.db.prepare(`SELECT COUNT(*) as count FROM ${tableName}`)
+          let result = null
+          if (countStmt.step()) {
+            result = countStmt.getAsObject()
+          }
+          countStmt.free()
+          stats[tableName] = result ? result.count : 0
+        } catch (error) {
+          stats[tableName] = 'error'
+        }
+      }
+
+      return stats
+    } catch (error) {
+      console.error('获取数据库统计信息失败:', error)
+      return {}
+    }
+  }
+
   async close() {
     if (this.db) {
       await this.saveDatabase()

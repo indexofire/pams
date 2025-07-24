@@ -17,7 +17,8 @@
     "preelectron-pack": "npm run build:electron",
     "dist": "npm run build:electron && electron-builder --publish=never",
     "test": "jest",
-    "rebuild": "echo 'No native modules to rebuild'"
+    "rebuild": "echo 'No native modules to rebuild'",
+    "clear-db": "node scripts/clear-database.js"
   },
   "keywords": [
     "bioinformatics",

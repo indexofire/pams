@@ -1,0 +1,62 @@
+[
+  {
+    "name": "粪便",
+    "category": "clinical",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "肛拭子",
+    "category": "clinical",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "咽拭子",
+    "category": "clinical",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "血液",
+    "category": "clinical",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "脑脊液",
+    "category": "clinical",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "呕吐物",
+    "category": "clinical",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "食品",
+    "category": "food",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "涂抹物",
+    "category": "environmental",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "肺泡灌洗液",
+    "category": "clinical",
+    "description": "",
+    "status": "active"
+  },
+  {
+    "name": "血清",
+    "category": "clinical",
+    "description": "",
+    "status": "active"
+  }
+]

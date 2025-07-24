@@ -395,6 +395,30 @@ function registerIpcHandlers() {
     return '0.0.0'
   })
 
+  ipcMain.handle('database:clearAllData', async () => {
+    try {
+      return await dbService.clearAllData()
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('database:resetDatabase', async () => {
+    try {
+      return await dbService.resetDatabase()
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('database:getStats', async () => {
+    try {
+      return dbService.getDatabaseStats()
+    } catch (error) {
+      return {}
+    }
+  })
+
   // 权限管理相关
   ipcMain.handle('permissions:getRoles', async () => {
     if (dbService.permissionService) {

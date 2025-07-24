@@ -1372,7 +1372,17 @@ export default {
     }
 
     const editSpecies = (species) => {
-      Object.assign(speciesForm, species)
+      // 只复制需要的属性，避免不可克隆的属性
+      Object.assign(speciesForm, {
+        id: species.id,
+        name: species.name || '',
+        scientific_name: species.scientific_name || '',
+        abbreviation: species.abbreviation || '',
+        ncbi_txid: species.ncbi_txid || '',
+        description: species.description || '',
+        status: species.status || 'active'
+      })
+      ncbiSearchResult.value = null
       speciesDialogVisible.value = true
     }
 
@@ -1380,50 +1390,108 @@ export default {
       try {
         if (speciesForm.id && speciesForm.id !== null) {
           // 更新菌种
-          const index = speciesOptions.value.findIndex(s => s.id === speciesForm.id)
-          if (index !== -1) {
-            speciesOptions.value[index] = { ...speciesForm }
-          }
+          if (window.electronAPI && window.electronAPI.systemConfig) {
+            // Electron环境：保存到数据库
+            try {
+              // 创建一个干净的数据对象，只包含需要的属性
+              const cleanSpeciesData = {
+                id: speciesForm.id,
+                name: speciesForm.name?.trim() || '',
+                scientific_name: speciesForm.scientific_name?.trim() || '',
+                abbreviation: speciesForm.abbreviation?.trim() || '',
+                ncbi_txid: speciesForm.ncbi_txid?.trim() || '',
+                description: speciesForm.description?.trim() || '',
+                status: speciesForm.status || 'active'
+              }
+              await window.electronAPI.systemConfig.saveSpecies(cleanSpeciesData)
 
-          // 同步更新store
-          const storeData = {
-            id: speciesForm.id,
-            value: speciesForm.scientific_name || speciesForm.name,
-            label: speciesForm.name,
-            scientific_name: speciesForm.scientific_name,
-            description: speciesForm.description,
-            status: speciesForm.status
+              // 重新从数据库加载数据以确保一致性
+              const species = await window.electronAPI.systemConfig.getSpecies()
+              speciesOptions.value = species || []
+
+              ElMessage.success('菌种更新成功')
+            } catch (error) {
+              console.error('保存菌种到数据库失败:', error)
+              ElMessage.error('保存到数据库失败: ' + error.message)
+              return
+            }
+          } else {
+            // 浏览器环境：更新内存数据
+            const index = speciesOptions.value.findIndex(s => s.id === speciesForm.id)
+            if (index !== -1) {
+              speciesOptions.value[index] = { ...speciesForm }
+            }
+
+            // 同步更新store
+            const storeData = {
+              id: speciesForm.id,
+              value: speciesForm.scientific_name || speciesForm.name,
+              label: speciesForm.name,
+              scientific_name: speciesForm.scientific_name,
+              description: speciesForm.description,
+              status: speciesForm.status
+            }
+            store.commit('UPDATE_SPECIES_OPTION', { id: speciesForm.id, species: storeData })
+            ElMessage.success('菌种更新成功')
           }
-          store.commit('UPDATE_SPECIES_OPTION', { id: speciesForm.id, species: storeData })
-          ElMessage.success('菌种更新成功')
         } else {
-          // 添加菌种 - 使用新的ID生成逻辑
-          const newId = generateNewId(speciesOptions.value)
-          const newSpecies = {
-            ...speciesForm,
-            id: newId
-          }
-          // 确保删除可能存在的null id
-          delete newSpecies.id
-          newSpecies.id = newId
+          // 添加菌种
+          if (window.electronAPI && window.electronAPI.systemConfig) {
+            // Electron环境：保存到数据库
+            try {
+              // 创建一个干净的数据对象，只包含需要的属性
+              const cleanSpeciesData = {
+                name: speciesForm.name?.trim() || '',
+                scientific_name: speciesForm.scientific_name?.trim() || '',
+                abbreviation: speciesForm.abbreviation?.trim() || '',
+                ncbi_txid: speciesForm.ncbi_txid?.trim() || '',
+                description: speciesForm.description?.trim() || '',
+                status: speciesForm.status || 'active'
+              }
+              const savedSpecies = await window.electronAPI.systemConfig.saveSpecies(cleanSpeciesData)
 
-          speciesOptions.value.push(newSpecies)
+              // 重新从数据库加载数据以确保一致性
+              const species = await window.electronAPI.systemConfig.getSpecies()
+              speciesOptions.value = species || []
 
-          // 同步添加到store
-          const storeData = {
-            id: newSpecies.id,
-            value: newSpecies.scientific_name || newSpecies.name,
-            label: newSpecies.name,
-            scientific_name: newSpecies.scientific_name,
-            description: newSpecies.description,
-            status: newSpecies.status
+              ElMessage.success(`菌种添加成功，ID: ${savedSpecies.id}`)
+            } catch (error) {
+              console.error('保存菌种到数据库失败:', error)
+              ElMessage.error('保存到数据库失败: ' + error.message)
+              return
+            }
+          } else {
+            // 浏览器环境：添加到内存
+            const newId = generateNewId(speciesOptions.value)
+            const newSpecies = {
+              ...speciesForm,
+              id: newId
+            }
+            // 确保删除可能存在的null id
+            delete newSpecies.id
+            newSpecies.id = newId
+
+            speciesOptions.value.push(newSpecies)
+
+            // 同步添加到store
+            const storeData = {
+              id: newSpecies.id,
+              value: newSpecies.scientific_name || newSpecies.name,
+              label: newSpecies.name,
+              scientific_name: newSpecies.scientific_name,
+              description: newSpecies.description,
+              status: newSpecies.status
+            }
+            store.commit('ADD_SPECIES_OPTION', storeData)
+            ElMessage.success(`菌种添加成功，ID: ${newId}`)
           }
-          store.commit('ADD_SPECIES_OPTION', storeData)
-          ElMessage.success(`菌种添加成功，ID: ${newId}`)
         }
 
-        // 保存到localStorage
-        saveExperimentData()
+        // 浏览器环境下保存到localStorage
+        if (!window.electronAPI) {
+          saveExperimentData()
+        }
+
         speciesDialogVisible.value = false
       } catch (error) {
         ElMessage.error('保存失败: ' + error.message)
@@ -1540,7 +1608,15 @@ export default {
     }
 
     const editRegion = (region) => {
-      Object.assign(regionForm, region)
+      // 只复制需要的属性，避免不可克隆的属性
+      Object.assign(regionForm, {
+        id: region.id,
+        name: region.name || '',
+        code: region.code || '',
+        level: region.level || 'province',
+        description: region.description || '',
+        status: region.status || 'active'
+      })
       regionDialogVisible.value = true
     }
 
@@ -1548,52 +1624,108 @@ export default {
       try {
         if (regionForm.id && regionForm.id !== null) {
           // 更新地区
-          const index = regionOptions.value.findIndex(r => r.id === regionForm.id)
-          if (index !== -1) {
-            regionOptions.value[index] = { ...regionForm }
-          }
+          if (window.electronAPI && window.electronAPI.systemConfig) {
+            // Electron环境：保存到数据库
+            try {
+              // 创建一个干净的数据对象，只包含需要的属性
+              const cleanRegionData = {
+                id: regionForm.id,
+                name: regionForm.name?.trim() || '',
+                code: regionForm.code?.trim() || '',
+                level: regionForm.level || 'province',
+                description: regionForm.description?.trim() || '',
+                status: regionForm.status || 'active'
+              }
+              await window.electronAPI.systemConfig.saveRegion(cleanRegionData)
 
-          // 同步更新store
-          const storeData = {
-            id: regionForm.id,
-            value: regionForm.name,
-            label: regionForm.name,
-            code: regionForm.code,
-            level: regionForm.level,
-            description: regionForm.description || '',
-            status: regionForm.status
+              // 重新从数据库加载数据以确保一致性
+              const regions = await window.electronAPI.systemConfig.getRegions()
+              regionOptions.value = regions || []
+
+              ElMessage.success('地区更新成功')
+            } catch (error) {
+              console.error('保存地区到数据库失败:', error)
+              ElMessage.error('保存到数据库失败: ' + error.message)
+              return
+            }
+          } else {
+            // 浏览器环境：更新内存数据
+            const index = regionOptions.value.findIndex(r => r.id === regionForm.id)
+            if (index !== -1) {
+              regionOptions.value[index] = { ...regionForm }
+            }
+
+            // 同步更新store
+            const storeData = {
+              id: regionForm.id,
+              value: regionForm.name,
+              label: regionForm.name,
+              code: regionForm.code,
+              level: regionForm.level,
+              description: regionForm.description || '',
+              status: regionForm.status
+            }
+            store.commit('UPDATE_REGION_OPTION', { id: regionForm.id, region: storeData })
+            ElMessage.success('地区更新成功')
           }
-          store.commit('UPDATE_REGION_OPTION', { id: regionForm.id, region: storeData })
-          ElMessage.success('地区更新成功')
         } else {
-          // 添加地区 - 使用新的ID生成逻辑
-          const newId = generateNewId(regionOptions.value)
-          const newRegion = {
-            ...regionForm,
-            id: newId
-          }
-          // 确保删除可能存在的null id
-          delete newRegion.id
-          newRegion.id = newId
+          // 添加地区
+          if (window.electronAPI && window.electronAPI.systemConfig) {
+            // Electron环境：保存到数据库
+            try {
+              // 创建一个干净的数据对象，只包含需要的属性
+              const cleanRegionData = {
+                name: regionForm.name?.trim() || '',
+                code: regionForm.code?.trim() || '',
+                level: regionForm.level || 'province',
+                description: regionForm.description?.trim() || '',
+                status: regionForm.status || 'active'
+              }
+              const savedRegion = await window.electronAPI.systemConfig.saveRegion(cleanRegionData)
 
-          regionOptions.value.push(newRegion)
+              // 重新从数据库加载数据以确保一致性
+              const regions = await window.electronAPI.systemConfig.getRegions()
+              regionOptions.value = regions || []
 
-          // 同步添加到store
-          const storeData = {
-            id: newRegion.id,
-            value: newRegion.name,
-            label: newRegion.name,
-            code: newRegion.code,
-            level: newRegion.level,
-            description: newRegion.description || '',
-            status: newRegion.status
+              ElMessage.success(`地区添加成功，ID: ${savedRegion.id}`)
+            } catch (error) {
+              console.error('保存地区到数据库失败:', error)
+              ElMessage.error('保存到数据库失败: ' + error.message)
+              return
+            }
+          } else {
+            // 浏览器环境：添加到内存
+            const newId = generateNewId(regionOptions.value)
+            const newRegion = {
+              ...regionForm,
+              id: newId
+            }
+            // 确保删除可能存在的null id
+            delete newRegion.id
+            newRegion.id = newId
+
+            regionOptions.value.push(newRegion)
+
+            // 同步添加到store
+            const storeData = {
+              id: newRegion.id,
+              value: newRegion.name,
+              label: newRegion.name,
+              code: newRegion.code,
+              level: newRegion.level,
+              description: newRegion.description || '',
+              status: newRegion.status
+            }
+            store.commit('ADD_REGION_OPTION', storeData)
+            ElMessage.success(`地区添加成功，ID: ${newId}`)
           }
-          store.commit('ADD_REGION_OPTION', storeData)
-          ElMessage.success(`地区添加成功，ID: ${newId}`)
         }
 
-        // 保存到localStorage
-        saveExperimentData()
+        // 浏览器环境下保存到localStorage
+        if (!window.electronAPI) {
+          saveExperimentData()
+        }
+
         regionDialogVisible.value = false
       } catch (error) {
         ElMessage.error('保存失败: ' + error.message)
@@ -1710,7 +1842,14 @@ export default {
     }
 
     const editSource = (source) => {
-      Object.assign(sourceForm, source)
+      // 只复制需要的属性，避免不可克隆的属性
+      Object.assign(sourceForm, {
+        id: source.id,
+        name: source.name || '',
+        category: source.category || 'clinical',
+        description: source.description || '',
+        status: source.status || 'active'
+      })
       sourceDialogVisible.value = true
     }
 
@@ -1718,50 +1857,104 @@ export default {
       try {
         if (sourceForm.id && sourceForm.id !== null) {
           // 更新样本来源
-          const index = sourceOptions.value.findIndex(s => s.id === sourceForm.id)
-          if (index !== -1) {
-            sourceOptions.value[index] = { ...sourceForm }
-          }
+          if (window.electronAPI && window.electronAPI.systemConfig) {
+            // Electron环境：保存到数据库
+            try {
+              // 创建一个干净的数据对象，只包含需要的属性
+              const cleanSourceData = {
+                id: sourceForm.id,
+                name: sourceForm.name?.trim() || '',
+                category: sourceForm.category || 'clinical',
+                description: sourceForm.description?.trim() || '',
+                status: sourceForm.status || 'active'
+              }
+              await window.electronAPI.systemConfig.saveSampleSource(cleanSourceData)
 
-          // 同步更新store
-          const storeData = {
-            id: sourceForm.id,
-            value: sourceForm.name,
-            label: sourceForm.name,
-            category: sourceForm.category,
-            description: sourceForm.description,
-            status: sourceForm.status
+              // 重新从数据库加载数据以确保一致性
+              const sources = await window.electronAPI.systemConfig.getSampleSources()
+              sourceOptions.value = sources || []
+
+              ElMessage.success('样本来源更新成功')
+            } catch (error) {
+              console.error('保存样本来源到数据库失败:', error)
+              ElMessage.error('保存到数据库失败: ' + error.message)
+              return
+            }
+          } else {
+            // 浏览器环境：更新内存数据
+            const index = sourceOptions.value.findIndex(s => s.id === sourceForm.id)
+            if (index !== -1) {
+              sourceOptions.value[index] = { ...sourceForm }
+            }
+
+            // 同步更新store
+            const storeData = {
+              id: sourceForm.id,
+              value: sourceForm.name,
+              label: sourceForm.name,
+              category: sourceForm.category,
+              description: sourceForm.description,
+              status: sourceForm.status
+            }
+            store.commit('UPDATE_SOURCE_OPTION', { id: sourceForm.id, source: storeData })
+            ElMessage.success('样本来源更新成功')
           }
-          store.commit('UPDATE_SOURCE_OPTION', { id: sourceForm.id, source: storeData })
-          ElMessage.success('样本来源更新成功')
         } else {
-          // 添加样本来源 - 使用新的ID生成逻辑
-          const newId = generateNewId(sourceOptions.value)
-          const newSource = {
-            ...sourceForm,
-            id: newId
-          }
-          // 确保删除可能存在的null id
-          delete newSource.id
-          newSource.id = newId
+          // 添加样本来源
+          if (window.electronAPI && window.electronAPI.systemConfig) {
+            // Electron环境：保存到数据库
+            try {
+              // 创建一个干净的数据对象，只包含需要的属性
+              const cleanSourceData = {
+                name: sourceForm.name?.trim() || '',
+                category: sourceForm.category || 'clinical',
+                description: sourceForm.description?.trim() || '',
+                status: sourceForm.status || 'active'
+              }
+              const savedSource = await window.electronAPI.systemConfig.saveSampleSource(cleanSourceData)
 
-          sourceOptions.value.push(newSource)
+              // 重新从数据库加载数据以确保一致性
+              const sources = await window.electronAPI.systemConfig.getSampleSources()
+              sourceOptions.value = sources || []
 
-          // 同步添加到store
-          const storeData = {
-            id: newSource.id,
-            value: newSource.name,
-            label: newSource.name,
-            category: newSource.category,
-            description: newSource.description,
-            status: newSource.status
+              ElMessage.success(`样本来源添加成功，ID: ${savedSource.id}`)
+            } catch (error) {
+              console.error('保存样本来源到数据库失败:', error)
+              ElMessage.error('保存到数据库失败: ' + error.message)
+              return
+            }
+          } else {
+            // 浏览器环境：添加到内存
+            const newId = generateNewId(sourceOptions.value)
+            const newSource = {
+              ...sourceForm,
+              id: newId
+            }
+            // 确保删除可能存在的null id
+            delete newSource.id
+            newSource.id = newId
+
+            sourceOptions.value.push(newSource)
+
+            // 同步添加到store
+            const storeData = {
+              id: newSource.id,
+              value: newSource.name,
+              label: newSource.name,
+              category: newSource.category,
+              description: newSource.description,
+              status: newSource.status
+            }
+            store.commit('ADD_SOURCE_OPTION', storeData)
+            ElMessage.success(`样本来源添加成功，ID: ${newId}`)
           }
-          store.commit('ADD_SOURCE_OPTION', storeData)
-          ElMessage.success(`样本来源添加成功，ID: ${newId}`)
         }
 
-        // 保存到localStorage
-        saveExperimentData()
+        // 浏览器环境下保存到localStorage
+        if (!window.electronAPI) {
+          saveExperimentData()
+        }
+
         sourceDialogVisible.value = false
       } catch (error) {
         ElMessage.error('保存失败: ' + error.message)
@@ -1878,7 +2071,13 @@ export default {
     }
 
     const editProject = (project) => {
-      Object.assign(projectForm, project)
+      // 只复制需要的属性，避免不可克隆的属性
+      Object.assign(projectForm, {
+        id: project.id,
+        name: project.name || '',
+        description: project.description || '',
+        status: project.status || 'active'
+      })
       projectDialogVisible.value = true
     }
 
@@ -1891,7 +2090,14 @@ export default {
       try {
         if (window.electronAPI && window.electronAPI.systemConfig) {
           // Electron环境：调用API保存到数据库
-          const result = await window.electronAPI.systemConfig.saveProject(projectForm)
+          // 创建一个干净的数据对象，只包含需要的属性
+          const cleanProjectData = {
+            id: projectForm.id,
+            name: projectForm.name.trim(),
+            description: projectForm.description || '',
+            status: projectForm.status || 'active'
+          }
+          const result = await window.electronAPI.systemConfig.saveProject(cleanProjectData)
 
           if (projectForm.id) {
             // 更新现有项目
@@ -2063,32 +2269,37 @@ export default {
     }
 
     const editExperiment = (experiment) => {
+      // 只复制需要的属性，避免不可克隆的属性
       Object.assign(experimentForm, {
-        ...experiment,
+        id: experiment.id,
+        name: experiment.name || '',
+        description: experiment.description || '',
+        status: experiment.status || 'active',
         experimentData: experiment.experimentData
-          ? [...experiment.experimentData]
-          : [
-            {
-              name: '',
-              type: 'boolean',
-              description: '',
-              positiveLabel: '阳性',
-              negativeLabel: '阴性',
-              unit: '',
-              precision: 0,
-              hasThreshold: false,
-              thresholds: [
-                {
-                  operator: 'lt',
-                  value: 2,
-                  result: 'S',
-                  resultDescription: '敏感'
-                }
-              ],
-              maxLength: 255,
-              format: 'none'
-            }
-          ]
+          ? JSON.parse(JSON.stringify(experiment.experimentData)) // 深拷贝避免引用问题
+          : [{
+            name: '',
+            type: 'boolean',
+            description: '',
+            // 布尔型配置
+            positiveLabel: '阳性',
+            negativeLabel: '阴性',
+            // 数值型配置
+            unit: '',
+            precision: 0,
+            hasThreshold: false,
+            thresholds: [
+              {
+                operator: 'lt',
+                value: 2,
+                result: 'S',
+                resultDescription: '敏感'
+              }
+            ],
+            // 字符型配置
+            maxLength: 255,
+            format: 'none'
+          }]
       })
       experimentDialogVisible.value = true
     }
@@ -2297,50 +2508,102 @@ export default {
       try {
         if (experimentForm.id && experimentForm.id !== null) {
           // 更新实验类型
-          const index = experimentTypes.value.findIndex(e => e.id === experimentForm.id)
-          if (index !== -1) {
-            experimentTypes.value[index] = { ...experimentForm }
-          }
+          if (window.electronAPI && window.electronAPI.systemConfig) {
+            // Electron环境：保存到数据库
+            try {
+              const updateData = {
+                id: experimentForm.id,
+                name: experimentForm.name,
+                description: experimentForm.description,
+                status: experimentForm.status,
+                experimentData: experimentForm.experimentData
+              }
+              await window.electronAPI.systemConfig.saveExperimentType(updateData)
 
-          // 同步更新store
-          const storeData = {
-            id: experimentForm.id,
-            value: experimentForm.name,
-            label: experimentForm.name,
-            description: experimentForm.description,
-            protocol: experimentForm.protocol,
-            status: experimentForm.status
+              // 重新从数据库加载数据以确保一致性
+              const experimentTypesData = await window.electronAPI.systemConfig.getExperimentTypes()
+              experimentTypes.value = experimentTypesData || []
+
+              ElMessage.success('实验类型更新成功')
+            } catch (error) {
+              console.error('保存实验类型到数据库失败:', error)
+              ElMessage.error('保存到数据库失败: ' + error.message)
+              return
+            }
+          } else {
+            // 浏览器环境：更新内存数据
+            const index = experimentTypes.value.findIndex(e => e.id === experimentForm.id)
+            if (index !== -1) {
+              experimentTypes.value[index] = { ...experimentForm }
+            }
+
+            // 同步更新store
+            const storeData = {
+              id: experimentForm.id,
+              value: experimentForm.name,
+              label: experimentForm.name,
+              description: experimentForm.description,
+              protocol: experimentForm.protocol,
+              status: experimentForm.status
+            }
+            store.commit('UPDATE_EXPERIMENT_TYPE_OPTION', { id: experimentForm.id, experimentType: storeData })
+            ElMessage.success('实验类型更新成功')
           }
-          store.commit('UPDATE_EXPERIMENT_TYPE_OPTION', { id: experimentForm.id, experimentType: storeData })
-          ElMessage.success('实验类型更新成功')
         } else {
-          // 添加实验类型 - 使用新的ID生成逻辑
-          const newId = generateNewId(experimentTypes.value)
-          const newExperiment = {
-            ...experimentForm,
-            id: newId
-          }
-          // 确保删除可能存在的null id
-          delete newExperiment.id
-          newExperiment.id = newId
+          // 添加实验类型
+          if (window.electronAPI && window.electronAPI.systemConfig) {
+            // Electron环境：保存到数据库
+            try {
+              const newData = {
+                name: experimentForm.name,
+                description: experimentForm.description,
+                status: experimentForm.status || 'active',
+                experimentData: experimentForm.experimentData
+              }
+              const savedExperiment = await window.electronAPI.systemConfig.saveExperimentType(newData)
 
-          experimentTypes.value.push(newExperiment)
+              // 重新从数据库加载数据以确保一致性
+              const experimentTypesData = await window.electronAPI.systemConfig.getExperimentTypes()
+              experimentTypes.value = experimentTypesData || []
 
-          // 同步添加到store
-          const storeData = {
-            id: newExperiment.id,
-            value: newExperiment.name,
-            label: newExperiment.name,
-            description: newExperiment.description,
-            protocol: newExperiment.protocol,
-            status: newExperiment.status
+              ElMessage.success(`实验类型添加成功，ID: ${savedExperiment.id}`)
+            } catch (error) {
+              console.error('保存实验类型到数据库失败:', error)
+              ElMessage.error('保存到数据库失败: ' + error.message)
+              return
+            }
+          } else {
+            // 浏览器环境：添加到内存
+            const newId = generateNewId(experimentTypes.value)
+            const newExperiment = {
+              ...experimentForm,
+              id: newId
+            }
+            // 确保删除可能存在的null id
+            delete newExperiment.id
+            newExperiment.id = newId
+
+            experimentTypes.value.push(newExperiment)
+
+            // 同步添加到store
+            const storeData = {
+              id: newExperiment.id,
+              value: newExperiment.name,
+              label: newExperiment.name,
+              description: newExperiment.description,
+              protocol: newExperiment.protocol,
+              status: newExperiment.status
+            }
+            store.commit('ADD_EXPERIMENT_TYPE_OPTION', storeData)
+            ElMessage.success(`实验类型添加成功，ID: ${newId}`)
           }
-          store.commit('ADD_EXPERIMENT_TYPE_OPTION', storeData)
-          ElMessage.success(`实验类型添加成功，ID: ${newId}`)
         }
 
-        // 保存到localStorage
-        saveExperimentData()
+        // 浏览器环境下保存到localStorage
+        if (!window.electronAPI) {
+          saveExperimentData()
+        }
+
         experimentDialogVisible.value = false
       } catch (error) {
         ElMessage.error('保存失败: ' + error.message)

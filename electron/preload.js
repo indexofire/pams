@@ -114,7 +114,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     healthCheck: () => ipcRenderer.invoke('database:healthCheck'),
     optimize: () => ipcRenderer.invoke('database:optimize'),
     getMigrationHistory: () => ipcRenderer.invoke('database:getMigrationHistory'),
-    getCurrentVersion: () => ipcRenderer.invoke('database:getCurrentVersion')
+    getCurrentVersion: () => ipcRenderer.invoke('database:getCurrentVersion'),
+    clearAllData: () => ipcRenderer.invoke('database:clearAllData'),
+    resetDatabase: () => ipcRenderer.invoke('database:resetDatabase'),
+    getStats: () => ipcRenderer.invoke('database:getStats')
   },
 
   // 权限管理
