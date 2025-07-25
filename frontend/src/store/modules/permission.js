@@ -285,16 +285,6 @@ function getMockMenus (role) {
     })
   }
 
-  // 系统设置
-  if (permissions.includes('settings.view')) {
-    menus.push({
-      path: '/settings',
-      name: '系统设置',
-      icon: 'Setting',
-      component: 'AdminSettings'
-    })
-  }
-
   // 用户管理
   if (permissions.includes('users.view')) {
     menus.push({
