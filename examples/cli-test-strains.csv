@@ -1,0 +1,11 @@
+菌株编号,菌种,地区,样本来源,ST型,血清型,毒力基因,耐药谱
+CLI001,Salmonella enterica,北京,临床,ST19,Typhimurium,invA;hilA,AMP;TET
+CLI002,Escherichia coli,上海,食品,ST131,O157:H7,stx1;stx2,AMP;CHL;TET
+CLI003,Listeria monocytogenes,广州,环境,ST1,1/2a,hlyA;prfA,PEN;ERY
+CLI004,Campylobacter jejuni,深圳,临床,ST21,HS:19,cdtA;cdtB,CIP;ERY;TET
+CLI005,Vibrio parahaemolyticus,青岛,食品,ST3,O3:K6,tdh;trh,AMP;STR
+CLI006,Shigella flexneri,成都,临床,ST245,2a,ipaH;virF,AMP;CHL;SXT;TET
+CLI007,Staphylococcus aureus,西安,临床,ST239,CC8,mecA;pvl,OXA;VAN;LIN
+CLI008,Enterococcus faecium,杭州,临床,ST17,vanA,esp;hyl,VAN;AMP;HLG
+CLI009,Klebsiella pneumoniae,南京,临床,ST11,K47,blaKPC;blaCTX-M,CTX;CAZ;FEP
+CLI010,Acinetobacter baumannii,武汉,临床,ST195,GC1,blaOXA-23;blaOXA-51,IMP;MEM;COL

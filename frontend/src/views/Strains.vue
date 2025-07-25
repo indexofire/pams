@@ -146,7 +146,7 @@
 
       <div class="table-section">
         <el-table
-          :data="sortedStrains"
+          :data="paginatedStrains"
           v-loading="loading"
           border
           style="width: 100%"
@@ -154,6 +154,8 @@
           @sort-change="handleSortChange"
           empty-text="暂无菌株数据"
           :default-sort="{ prop: 'id', order: 'ascending' }"
+          height="600"
+          :scrollbar-always-on="true"
         >
           <el-table-column
             type="selection"
@@ -383,7 +385,7 @@
           <el-pagination
             v-model:current-page="pagination.current"
             v-model:page-size="pagination.size"
-            :page-sizes="[10, 20, 50, 100]"
+            :page-sizes="[20, 50, 100, 200, 500]"
             :total="pagination.total"
             layout="total, sizes, prev, pager, next, jumper"
             @size-change="handleSizeChange"
@@ -508,11 +510,31 @@
       <!-- 第四步：导入完成 -->
       <div v-if="importStep === 3" class="import-step-content">
         <div class="import-result">
-          <div class="result-icon">
-            <el-icon size="60" color="#67c23a"><CircleCheck /></el-icon>
+          <!-- 导入进行中 -->
+          <div v-if="isImporting" class="importing-status">
+            <div class="progress-icon">
+              <el-icon size="60" color="#409EFF" class="rotating"><Loading /></el-icon>
+            </div>
+            <h4>正在导入数据...</h4>
+            <div class="progress-container">
+              <el-progress
+                :percentage="importProgress"
+                :stroke-width="8"
+                :show-text="true"
+                :format="(percentage) => `${percentage}%`"
+              />
+              <p class="progress-text">已处理 {{ Math.round(validRecords.length * importProgress / 100) }} / {{ validRecords.length }} 条记录</p>
+            </div>
           </div>
-          <h4>导入完成</h4>
-          <p>成功导入 {{ importedCount }} 条菌株记录</p>
+
+          <!-- 导入完成 -->
+          <div v-else class="import-completed">
+            <div class="result-icon">
+              <el-icon size="60" color="#67c23a"><CircleCheck /></el-icon>
+            </div>
+            <h4>导入完成</h4>
+            <p>成功导入 {{ importedCount }} 条菌株记录</p>
+          </div>
         </div>
       </div>
 
@@ -1021,10 +1043,10 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useStore } from 'vuex'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, Close, CircleCheck, QuestionFilled, User, Location, Calendar, Files, Edit, InfoFilled, Clock, Timer, Finished, Top, Male, Female, Avatar } from '@element-plus/icons-vue'
+import { Document, Close, CircleCheck, QuestionFilled, User, Location, Calendar, Files, Edit, InfoFilled, Clock, Timer, Finished, Top, Male, Female, Avatar, Loading } from '@element-plus/icons-vue'
 // 引入IconPark图标
 import {
   AddOne,
@@ -1069,6 +1091,8 @@ export default {
     const validRecords = ref([])
     const errorRecords = ref([])
     const importedCount = ref(0)
+    const importProgress = ref(0)
+    const isImporting = ref(false)
 
     // 导出相关数据
     const exportDialogVisible = ref(false)
@@ -1425,6 +1449,20 @@ export default {
         return 0
       })
     })
+
+    // 分页后的菌株数据
+    const paginatedStrains = computed(() => {
+      const sorted = sortedStrains.value
+      const start = (pagination.current - 1) * pagination.size
+      const end = start + pagination.size
+
+      return sorted.slice(start, end)
+    })
+
+    // 监听排序数据变化，更新分页总数
+    watch(sortedStrains, (newSorted) => {
+      pagination.total = newSorted.length
+    }, { immediate: true })
 
     // 处理排序变化
     const handleSortChange = ({ prop, order }) => {
@@ -1980,128 +2018,160 @@ export default {
       })
     }
 
+    // 优化的批量导入函数
     const performImport = async () => {
+      const BATCH_SIZE = 100 // 每批处理100条记录
+      const totalRecords = validRecords.value.length
+      let processedCount = 0
+      let successCount = 0
+      const errors = []
+
+      // 初始化进度
+      isImporting.value = true
+      importProgress.value = 0
+
       try {
         if (window.electronAPI && window.electronAPI.strains) {
-          // 创建完全可序列化的数据副本
-          const serializableRecords = validRecords.value.map(record => {
-            const cleanRecord = {}
+          // 分批处理数据
+          for (let i = 0; i < totalRecords; i += BATCH_SIZE) {
+            const batch = validRecords.value.slice(i, i + BATCH_SIZE)
 
-            // 确保所有字段都是简单类型
-            Object.keys(record).forEach(key => {
-              // 跳过id字段，让数据库自动分配
-              if (key === 'id') {
-                return
-              }
+            // 创建完全可序列化的数据副本
+            const serializableRecords = batch.map(record => {
+              const cleanRecord = {}
 
-              const value = record[key]
-              if (value !== null && value !== undefined) {
-                let cleanValue = value
-
-                // 转换为基本类型
-                if (typeof value === 'string') {
-                  // 清理字符串值，移除可能导致问题的字符
-                  cleanValue = value.trim()
-                } else if (typeof value === 'number' || typeof value === 'boolean') {
-                  cleanValue = value
-                } else {
-                  // 对象或其他类型转换为字符串
-                  cleanValue = String(value).trim()
+              // 确保所有字段都是简单类型
+              Object.keys(record).forEach(key => {
+                // 跳过id字段，让数据库自动分配
+                if (key === 'id') {
+                  return
                 }
 
-                // 只有非空值才添加
-                if (cleanValue !== '') {
-                  cleanRecord[key] = cleanValue
+                const value = record[key]
+                if (value !== null && value !== undefined) {
+                  let cleanValue = value
+
+                  // 转换为基本类型
+                  if (typeof value === 'string') {
+                    // 清理字符串值，移除可能导致问题的字符
+                    cleanValue = value.trim()
+                  } else if (typeof value === 'number' || typeof value === 'boolean') {
+                    cleanValue = value
+                  } else {
+                    // 对象或其他类型转换为字符串
+                    cleanValue = String(value).trim()
+                  }
+
+                  // 只有非空值才添加
+                  if (cleanValue !== '') {
+                    cleanRecord[key] = cleanValue
+                  }
+                }
+              })
+
+              return cleanRecord
+            })
+
+            try {
+              // 使用批量创建API
+              const result = await window.electronAPI.strains.batchCreate(serializableRecords)
+
+              if (result.success) {
+                successCount += result.created
+                if (result.errors && result.errors.length > 0) {
+                  errors.push(...result.errors)
+                }
+              } else {
+                errors.push(`批次 ${Math.floor(i / BATCH_SIZE) + 1} 导入失败`)
+              }
+            } catch (batchError) {
+              console.warn(`批次 ${Math.floor(i / BATCH_SIZE) + 1} 批量导入失败，尝试逐条导入:`, batchError)
+
+              // 如果批量导入失败，回退到逐条导入
+              for (let j = 0; j < serializableRecords.length; j++) {
+                try {
+                  await window.electronAPI.strains.create(serializableRecords[j])
+                  successCount++
+                } catch (error) {
+                  errors.push(`第${i + j + 1}条记录导入失败: ${error.message}`)
                 }
               }
-            })
-
-            return cleanRecord
-          })
-
-          // 使用批量创建API提高效率
-          try {
-            const result = await window.electronAPI.strains.batchCreate(serializableRecords)
-
-            if (result.success) {
-              importedCount.value = result.created
-              ElMessage.success(`成功导入 ${result.created} 条记录`)
-            } else {
-              ElMessage.warning(`导入完成，但有 ${result.errors.length} 条记录失败`)
-              importedCount.value = result.created
             }
-          } catch (batchError) {
-            console.warn('批量导入失败，尝试逐条导入:', batchError)
 
-            // 如果批量导入失败，回退到逐条导入
-            const createPromises = serializableRecords.map(async (record, index) => {
-              try {
-                return await window.electronAPI.strains.create(record)
-              } catch (error) {
-                console.error(`创建菌株失败 (第${index + 1}条):`, error)
-                throw new Error(`第${index + 1}条记录导入失败: ${error.message}`)
-              }
-            })
+            processedCount += batch.length
 
-            const results = await Promise.allSettled(createPromises)
+            // 更新进度
+            importProgress.value = Math.round((processedCount / totalRecords) * 100)
+            console.log(`导入进度: ${importProgress.value}% (${processedCount}/${totalRecords})`)
 
-            // 统计成功和失败的数量
-            const successful = results.filter(result => result.status === 'fulfilled')
-            const failed = results.filter(result => result.status === 'rejected')
-
-            importedCount.value = successful.length
-
-            if (failed.length > 0) {
-              console.warn('部分记录导入失败:', failed.map(f => f.reason.message))
-              ElMessage.warning(`成功导入 ${successful.length} 条记录，${failed.length} 条记录失败`)
-            } else {
-              ElMessage.success(`成功导入 ${successful.length} 条记录`)
-            }
+            // 让出控制权，避免阻塞UI
+            await new Promise(resolve => setTimeout(resolve, 10))
           }
 
+          importedCount.value = successCount
+
+          if (errors.length > 0) {
+            console.warn('部分记录导入失败:', errors)
+            ElMessage.warning(`成功导入 ${successCount} 条记录，${errors.length} 条记录失败`)
+          } else {
+            ElMessage.success(`成功导入 ${successCount} 条记录`)
+          }
+
+          // 重新加载数据
           await loadStrains()
         } else {
-          // 开发环境的localStorage导入
-          let successCount = 0
-          const errors = []
-
+          // 开发环境的localStorage导入 - 优化版本
           // 获取当前最大ID，确保新ID不重复
           let nextId = strains.value.length > 0
             ? Math.max(...strains.value.map(s => s.id || 0)) + 1
             : 1
 
-          validRecords.value.forEach((record, index) => {
-            try {
-              // 检查菌株编号是否重复
-              const existingStrain = strains.value.find(strain =>
-                strain.strain_id === record.strain_id
-              )
+          // 分批处理避免阻塞UI
+          for (let i = 0; i < totalRecords; i += BATCH_SIZE) {
+            const batch = validRecords.value.slice(i, i + BATCH_SIZE)
 
-              if (existingStrain) {
-                errors.push(`第${index + 1}条记录：菌株编号 ${record.strain_id} 已存在`)
-                return
+            batch.forEach((record, batchIndex) => {
+              const globalIndex = i + batchIndex
+              try {
+                // 检查菌株编号是否重复
+                const existingStrain = strains.value.find(strain =>
+                  strain.strain_id === record.strain_id
+                )
+
+                if (existingStrain) {
+                  errors.push(`第${globalIndex + 1}条记录：菌株编号 ${record.strain_id} 已存在`)
+                  return
+                }
+
+                // 移除原有的id字段，生成新的唯一ID
+                const cleanRecord = { ...record }
+                delete cleanRecord.id
+
+                const strainData = {
+                  ...cleanRecord,
+                  id: nextId++, // 使用递增的ID确保唯一性
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }
+                strains.value.push(strainData)
+                successCount++
+              } catch (error) {
+                errors.push(`第${globalIndex + 1}条记录导入失败: ${error.message}`)
               }
+            })
 
-              // 移除原有的id字段，生成新的唯一ID
-              const cleanRecord = { ...record }
-              delete cleanRecord.id
+            processedCount += batch.length
 
-              const strainData = {
-                ...cleanRecord,
-                id: nextId++, // 使用递增的ID确保唯一性
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-              strains.value.push(strainData)
-              successCount++
-            } catch (error) {
-              errors.push(`第${index + 1}条记录导入失败: ${error.message}`)
-            }
-          })
+            // 更新进度
+            importProgress.value = Math.round((processedCount / totalRecords) * 100)
+            console.log(`导入进度: ${importProgress.value}% (${processedCount}/${totalRecords})`)
+
+            // 让出控制权，避免阻塞UI
+            await new Promise(resolve => setTimeout(resolve, 10))
+          }
 
           // 保存到localStorage
           localStorage.setItem('pams_strains', JSON.stringify(strains.value))
-          pagination.total = strains.value.length
           importedCount.value = successCount
 
           if (errors.length > 0) {
@@ -2115,6 +2185,10 @@ export default {
         console.error('导入菌株失败:', error)
         ElMessage.error('导入失败：' + error.message)
         throw error
+      } finally {
+        // 重置进度状态
+        isImporting.value = false
+        importProgress.value = 0
       }
     }
 
@@ -2233,12 +2307,11 @@ export default {
 
     const handleSizeChange = (size) => {
       pagination.size = size
-      loadStrains()
+      pagination.current = 1 // 重置到第一页
     }
 
     const handleCurrentChange = (current) => {
       pagination.current = current
-      loadStrains()
     }
 
     // 对话框相关方法
@@ -2605,6 +2678,7 @@ export default {
       strains,
       filteredStrains,
       sortedStrains,
+      paginatedStrains,
       selectedStrains,
       quickSearchText,
       sortConfig,
@@ -2659,6 +2733,8 @@ export default {
       validRecords,
       errorRecords,
       importedCount,
+      importProgress,
+      isImporting,
       uploadRef,
       handleFileChange,
       clearFile,
@@ -2710,7 +2786,8 @@ export default {
       Top,
       Male,
       Female,
-      Avatar
+      Avatar,
+      Loading
     }
   }
 }
@@ -3127,8 +3204,33 @@ export default {
   text-align: center;
   padding: 40px;
 
-  .result-icon {
-    margin-bottom: 20px;
+  .importing-status {
+    .progress-icon {
+      margin-bottom: 20px;
+
+      .rotating {
+        animation: rotate 2s linear infinite;
+      }
+    }
+
+    .progress-container {
+      margin-top: 30px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+
+      .progress-text {
+        margin-top: 10px;
+        font-size: 14px;
+        color: #606266;
+      }
+    }
+  }
+
+  .import-completed {
+    .result-icon {
+      margin-bottom: 20px;
+    }
   }
 
   h4 {
@@ -3138,6 +3240,15 @@ export default {
 
   p {
     color: #606266;
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 

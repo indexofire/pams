@@ -1,0 +1,101 @@
+{
+  "strain_id": [
+    "菌株编号",
+    "strain_id",
+    "strainid",
+    "编号",
+    "Strain ID",
+    "ID"
+  ],
+  "species": [
+    "菌种(属)",
+    "菌种类型",
+    "菌种",
+    "species",
+    "种类",
+    "Species",
+    "Organism"
+  ],
+  "sample_id": [
+    "样本编号",
+    "sample_id",
+    "sampleid",
+    "样本号",
+    "Sample ID",
+    "Sample Number"
+  ],
+  "sample_source": [
+    "样本",
+    "样本来源",
+    "sample_source",
+    "来源",
+    "源",
+    "Sample Source",
+    "Source"
+  ],
+  "region": [
+    "地区",
+    "采集地区",
+    "region",
+    "地点",
+    "位置",
+    "Region",
+    "Location",
+    "Geographic Location"
+  ],
+  "project_source": [
+    "来源",
+    "项目来源",
+    "project_source",
+    "项目",
+    "Project Source",
+    "Project"
+  ],
+  "experiment_type": [
+    "实验类型",
+    "experiment_type",
+    "实验",
+    "类型",
+    "Experiment Type",
+    "Type"
+  ],
+  "st_type": [
+    "ST型",
+    "st_type",
+    "st",
+    "ST",
+    "ST Type",
+    "Sequence Type"
+  ],
+  "serotype": [
+    "血清型",
+    "serotype",
+    "血清",
+    "Serotype",
+    "Serovar"
+  ],
+  "virulence_genes": [
+    "毒力基因",
+    "virulence_genes",
+    "毒力",
+    "Virulence Genes",
+    "Virulence",
+    "VF"
+  ],
+  "antibiotic_resistance": [
+    "耐药谱",
+    "antibiotic_resistance",
+    "耐药",
+    "抗药性",
+    "Antibiotic Resistance",
+    "Resistance",
+    "AMR"
+  ],
+  "molecular_serotype": [
+    "分子血清型",
+    "molecular_serotype",
+    "分子血清",
+    "Molecular Serotype",
+    "Molecular Serovar"
+  ]
+}

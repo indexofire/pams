@@ -1,10 +1,20 @@
 const initSqlJs = require('sql.js')
 const path = require('path')
 const fs = require('fs-extra')
-const { app } = require('electron')
+const os = require('os')
 const bcrypt = require('bcryptjs')
 const MigrationService = require('./MigrationService')
 const PermissionService = require('./PermissionService')
+
+// 动态导入electron，支持CLI模式
+let app = null
+try {
+  if (!process.env.CLI_MODE) {
+    app = require('electron').app
+  }
+} catch (error) {
+  // 在CLI模式下忽略electron导入错误
+}
 
 class DatabaseService {
   constructor() {
@@ -16,9 +26,16 @@ class DatabaseService {
   async initialize() {
     // 初始化sql.js
     this.SQL = await initSqlJs()
-    
+
     // 确定数据库路径
-    const userDataPath = app.getPath('userData')
+    let userDataPath
+    if (process.env.CLI_MODE || !app) {
+      // CLI模式：使用用户主目录下的.config/pams
+      userDataPath = path.join(os.homedir(), '.config', 'pams')
+    } else {
+      // Electron模式：使用app.getPath('userData')
+      userDataPath = app.getPath('userData')
+    }
     this.dbPath = path.join(userDataPath, 'pams.db')
     
     // 确保目录存在
@@ -611,6 +628,23 @@ class DatabaseService {
       return null
     } catch (error) {
       console.error('获取菌株详情失败:', error)
+      return null
+    }
+  }
+
+  getStrainByStrainId(strainId) {
+    try {
+      const stmt = this.db.prepare('SELECT * FROM strains WHERE strain_id = ?')
+      stmt.bind([strainId])
+      if (stmt.step()) {
+        const result = stmt.getAsObject()
+        stmt.free()
+        return result
+      }
+      stmt.free()
+      return null
+    } catch (error) {
+      console.error('根据菌株编号获取菌株失败:', error)
       return null
     }
   }

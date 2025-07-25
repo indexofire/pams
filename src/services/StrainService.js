@@ -473,14 +473,13 @@ class StrainService {
       throw new Error('地区不能为空')
     }
 
-    // 分离日期验证
-    if (isCreate && !strainData.isolation_date) {
-      throw new Error('分离日期不能为空')
+    // 日期字段验证（可选）
+    if (strainData.isolation_date && !this.isValidDate(strainData.isolation_date)) {
+      throw new Error('分离日期格式无效')
     }
 
-    // 上送日期验证
-    if (isCreate && !strainData.submission_date) {
-      throw new Error('上送日期不能为空')
+    if (strainData.submission_date && !this.isValidDate(strainData.submission_date)) {
+      throw new Error('上送日期格式无效')
     }
 
     // 名称验证
@@ -529,6 +528,57 @@ class StrainService {
   isValidDate(dateString) {
     const date = new Date(dateString)
     return !isNaN(date.getTime())
+  }
+
+  /**
+   * 批量创建菌株
+   */
+  async batchCreate(strainsData) {
+    try {
+      const results = {
+        success: true,
+        created: 0,
+        errors: []
+      }
+
+      for (const strainData of strainsData) {
+        try {
+          await this.createStrain(strainData)
+          results.created++
+        } catch (error) {
+          results.errors.push({
+            strain_id: strainData.strain_id || 'unknown',
+            error: error.message
+          })
+        }
+      }
+
+      if (results.errors.length > 0) {
+        results.success = false
+      }
+
+      return results
+    } catch (error) {
+      console.error('批量创建菌株失败:', error)
+      throw new Error('批量创建菌株失败')
+    }
+  }
+
+  /**
+   * 根据菌株编号删除菌株
+   */
+  async deleteStrainByStrainId(strainId) {
+    try {
+      const strain = await this.db.getStrainByStrainId(strainId)
+      if (!strain) {
+        throw new Error('菌株不存在')
+      }
+
+      return this.db.deleteStrain(strain.id)
+    } catch (error) {
+      console.error('根据菌株编号删除菌株失败:', error)
+      throw new Error('删除菌株失败')
+    }
   }
 }
 
