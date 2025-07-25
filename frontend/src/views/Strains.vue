@@ -402,27 +402,30 @@
                   <el-button
                     size="small"
                     @click="viewStrain(scope.row)"
-                    :icon="Document"
                     circle
-                  />
+                  >
+                    <el-icon><Document /></el-icon>
+                  </el-button>
                 </el-tooltip>
                 <el-tooltip content="编辑菌株信息" placement="top" v-if="canUpload">
                   <el-button
                     size="small"
                     type="warning"
                     @click="editStrain(scope.row)"
-                    :icon="Edit"
                     circle
-                  />
+                  >
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
                 </el-tooltip>
                 <el-tooltip content="删除菌株" placement="top" v-if="canUpload">
                   <el-button
                     size="small"
                     type="danger"
                     @click="deleteStrain(scope.row)"
-                    :icon="Delete"
                     circle
-                  />
+                  >
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
                 </el-tooltip>
               </div>
             </template>
@@ -1094,7 +1097,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useStore } from 'vuex'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, Close, CircleCheck, QuestionFilled, User, Location, Calendar, Files, Edit, InfoFilled, Clock, Timer, Finished, Top, Male, Female, Avatar, Loading } from '@element-plus/icons-vue'
+import { Document, Close, CircleCheck, QuestionFilled, User, Location, Calendar, Files, Edit, Delete, InfoFilled, Clock, Timer, Finished, Top, Male, Female, Avatar, Loading } from '@element-plus/icons-vue'
 // 引入IconPark图标
 import {
   AddOne,
@@ -1121,6 +1124,11 @@ export default {
     Document,
     Close,
     CircleCheck,
+    Edit,
+    Delete,
+    User,
+    Clock,
+    Timer,
     DropdownInput
   },
   setup () {
