@@ -336,15 +336,63 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="uploaded_by" label="上传用户" width="100" sortable="custom" />
-          <el-table-column prop="created_at" label="创建时间" width="160" sortable="custom">
+          <el-table-column label="上传信息" width="140" align="center">
             <template #default="scope">
-              <span>{{ formatDateTime(scope.row.created_at) || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="updated_at" label="更新时间" width="160" sortable="custom">
-            <template #default="scope">
-              <span>{{ formatDateTime(scope.row.updated_at) || '-' }}</span>
+              <div class="upload-info-icons">
+                <!-- 上传用户 -->
+                <el-tooltip
+                  :content="scope.row.uploaded_by ? `上传用户: ${scope.row.uploaded_by}` : '无上传用户信息'"
+                  placement="top"
+                >
+                  <el-icon
+                    :style="{
+                      color: scope.row.uploaded_by ? '#409EFF' : '#C0C4CC',
+                      fontSize: '18px',
+                      margin: '0 4px'
+                    }"
+                    class="upload-info-icon"
+                    :class="{ 'upload-info-icon-empty': !scope.row.uploaded_by }"
+                  >
+                    <User />
+                  </el-icon>
+                </el-tooltip>
+
+                <!-- 创建时间 -->
+                <el-tooltip
+                  :content="scope.row.created_at ? `创建时间: ${formatDateTime(scope.row.created_at)}` : '无创建时间信息'"
+                  placement="top"
+                >
+                  <el-icon
+                    :style="{
+                      color: scope.row.created_at ? '#67C23A' : '#C0C4CC',
+                      fontSize: '18px',
+                      margin: '0 4px'
+                    }"
+                    class="upload-info-icon"
+                    :class="{ 'upload-info-icon-empty': !scope.row.created_at }"
+                  >
+                    <Clock />
+                  </el-icon>
+                </el-tooltip>
+
+                <!-- 更新时间 -->
+                <el-tooltip
+                  :content="scope.row.updated_at ? `更新时间: ${formatDateTime(scope.row.updated_at)}` : '无更新时间信息'"
+                  placement="top"
+                >
+                  <el-icon
+                    :style="{
+                      color: scope.row.updated_at ? '#E6A23C' : '#C0C4CC',
+                      fontSize: '18px',
+                      margin: '0 4px'
+                    }"
+                    class="upload-info-icon"
+                    :class="{ 'upload-info-icon-empty': !scope.row.updated_at }"
+                  >
+                    <Timer />
+                  </el-icon>
+                </el-tooltip>
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="180" fixed="right" align="center">
@@ -2213,12 +2261,14 @@ export default {
           样本编号: strain.sample_id || '',
           样本来源: strain.sample_source || '',
           地区: strain.region || '',
-          发病日期: strain.onset_date || '',
-          采样日期: strain.sampling_date || '',
-          分离日期: strain.isolation_date || '',
-          上传者: strain.uploaded_by || '',
-          创建时间: strain.created_at ? new Date(strain.created_at).toLocaleString() : '',
-          更新时间: strain.updated_at ? new Date(strain.updated_at).toLocaleString() : ''
+          来源: strain.project_source || '',
+          实验类型: strain.experiment_type || '',
+          毒力基因: strain.virulence_genes || '',
+          耐药谱: strain.antibiotic_resistance || '',
+          ST型: strain.st_type || '',
+          血清型: strain.serotype || '',
+          分子血清型: strain.molecular_serotype || '',
+          上传信息: `用户:${strain.uploaded_by || '未知'} | 创建:${strain.created_at ? new Date(strain.created_at).toLocaleString() : '未知'} | 更新:${strain.updated_at ? new Date(strain.updated_at).toLocaleString() : '未知'}`
         }))
 
         // 根据选择的格式导出
@@ -2254,12 +2304,14 @@ export default {
         { wch: 15 }, // 样本编号
         { wch: 12 }, // 样本来源
         { wch: 10 }, // 地区
-        { wch: 12 }, // 发病日期
-        { wch: 12 }, // 采样日期
-        { wch: 12 }, // 分离日期
-        { wch: 10 }, // 上传者
-        { wch: 18 }, // 创建时间
-        { wch: 18 } // 更新时间
+        { wch: 12 }, // 来源
+        { wch: 12 }, // 实验类型
+        { wch: 20 }, // 毒力基因
+        { wch: 20 }, // 耐药谱
+        { wch: 10 }, // ST型
+        { wch: 12 }, // 血清型
+        { wch: 15 }, // 分子血清型
+        { wch: 50 } // 上传信息
       ]
       worksheet['!cols'] = colWidths
 
@@ -3048,6 +3100,29 @@ export default {
 .action-buttons .el-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 上传信息图标样式 */
+.upload-info-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.upload-info-icon {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-info-icon:hover {
+  transform: scale(1.2);
+  filter: brightness(1.2);
+}
+
+.upload-info-icon-empty {
+  opacity: 0.5;
+  filter: grayscale(100%);
 }
 
 /* 响应式设计 */
