@@ -1350,6 +1350,18 @@ export default {
       return isEditMode.value ? '编辑菌株' : '菌株详情'
     })
 
+    // 修复现有数据的序号
+    const fixSequenceNumbers = (strainsList) => {
+      let hasChanges = false
+      strainsList.forEach((strain, index) => {
+        if (typeof strain.sequence_number === 'undefined' || strain.sequence_number === null) {
+          strain.sequence_number = index + 1
+          hasChanges = true
+        }
+      })
+      return hasChanges
+    }
+
     const loadStrains = async () => {
       loading.value = true
       try {
@@ -1364,6 +1376,13 @@ export default {
           if (savedStrains) {
             try {
               strains.value = JSON.parse(savedStrains)
+
+              // 修复序号问题
+              const needsUpdate = fixSequenceNumbers(strains.value)
+              if (needsUpdate) {
+                localStorage.setItem('pams_strains', JSON.stringify(strains.value))
+              }
+
               pagination.total = strains.value.length
             } catch (e) {
               console.error('解析保存的菌株数据失败:', e)
@@ -2177,9 +2196,13 @@ export default {
           await loadStrains()
         } else {
           // 开发环境的localStorage导入 - 优化版本
-          // 获取当前最大ID，确保新ID不重复
+          // 获取当前最大ID和序号，确保新ID和序号不重复
           let nextId = strains.value.length > 0
             ? Math.max(...strains.value.map(s => s.id || 0)) + 1
+            : 1
+
+          let nextSequenceNumber = strains.value.length > 0
+            ? Math.max(...strains.value.map(s => s.sequence_number || 0)) + 1
             : 1
 
           // 分批处理避免阻塞UI
@@ -2206,6 +2229,7 @@ export default {
                 const strainData = {
                   ...cleanRecord,
                   id: nextId++, // 使用递增的ID确保唯一性
+                  sequence_number: nextSequenceNumber++, // 使用递增的序号
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString()
                 }
@@ -2495,9 +2519,20 @@ export default {
             return
           }
 
+          // 生成序号（如果是新菌株）
+          let sequenceNumber = strainForm.basic.sequence_number
+          if (!strainForm.basic.id) {
+            // 新菌株，生成下一个序号
+            const maxSequence = strains.value.length > 0
+              ? Math.max(...strains.value.map(s => s.sequence_number || 0))
+              : 0
+            sequenceNumber = maxSequence + 1
+          }
+
           const fullStrainData = {
             ...strainData,
             id: strainForm.basic.id || Date.now(),
+            sequence_number: sequenceNumber,
             created_at: strainForm.basic.created_at || new Date().toISOString(),
             updated_at: new Date().toISOString()
           }
