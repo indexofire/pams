@@ -154,8 +154,6 @@
           @sort-change="handleSortChange"
           empty-text="暂无菌株数据"
           :default-sort="{ prop: 'id', order: 'ascending' }"
-          height="600"
-          :scrollbar-always-on="true"
         >
           <el-table-column
             type="selection"
