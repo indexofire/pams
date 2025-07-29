@@ -117,7 +117,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getCurrentVersion: () => ipcRenderer.invoke('database:getCurrentVersion'),
     clearAllData: () => ipcRenderer.invoke('database:clearAllData'),
     resetDatabase: () => ipcRenderer.invoke('database:resetDatabase'),
-    getStats: () => ipcRenderer.invoke('database:getStats')
+    getStats: () => ipcRenderer.invoke('database:getStats'),
+    getProjectsConfig: () => ipcRenderer.invoke('database:getProjectsConfig')
   },
 
   // 权限管理

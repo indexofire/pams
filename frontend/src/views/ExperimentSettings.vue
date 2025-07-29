@@ -2473,7 +2473,7 @@ export default {
       // 批量添加数据项
       names.forEach(name => {
         const newDataItem = {
-          name: name,
+          name,
           type: batchAddForm.type,
           description: ''
         }
@@ -3325,8 +3325,8 @@ export default {
                 } else {
                   invalidItems.push({
                     index: index + 1,
-                    item: item,
-                    errors: errors
+                    item,
+                    errors
                   })
                 }
               })
@@ -3460,8 +3460,8 @@ export default {
                 } else {
                   invalidItems.push({
                     index: index + 1,
-                    item: item,
-                    errors: errors
+                    item,
+                    errors
                   })
                 }
               })
@@ -3610,8 +3610,8 @@ export default {
                 } else {
                   invalidItems.push({
                     index: index + 1,
-                    item: item,
-                    errors: errors
+                    item,
+                    errors
                   })
                 }
               })
@@ -3896,8 +3896,8 @@ export default {
                 } else {
                   invalidItems.push({
                     index: index + 1,
-                    item: item,
-                    errors: errors
+                    item,
+                    errors
                   })
                 }
               })

@@ -239,6 +239,20 @@ class DatabaseService {
       // 字段已存在，忽略错误
     }
 
+    // 添加鉴定结果字段
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN identification_result TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    // 添加复核结果字段
+    try {
+      this.db.run(`ALTER TABLE strains ADD COLUMN review_result TEXT`)
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
     // 基因组表
     this.db.run(`
       CREATE TABLE IF NOT EXISTS genomes (
@@ -397,6 +411,21 @@ class DatabaseService {
         code TEXT UNIQUE NOT NULL,
         description TEXT,
         category TEXT DEFAULT 'analysis',
+        status TEXT DEFAULT 'active',
+        sort_order INTEGER DEFAULT 999,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // 项目配置表（用于样本编号项目分配）
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS projects_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        regex_pattern TEXT NOT NULL,
+        color TEXT DEFAULT 'primary',
+        description TEXT,
         status TEXT DEFAULT 'active',
         sort_order INTEGER DEFAULT 999,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -685,7 +714,7 @@ class DatabaseService {
         'isolation_date', 'submission_date', 'patient_name', 'patient_gender',
         'patient_age', 'patient_id_number', 'uploaded_by', 'virulence_genes',
         'antibiotic_resistance', 'st_type', 'serotype', 'molecular_serotype',
-        'created_at', 'updated_at'
+        'identification_result', 'review_result', 'created_at', 'updated_at'
       ]
 
       const missingFields = requiredFields.filter(field => !columns.includes(field))
@@ -739,8 +768,8 @@ class DatabaseService {
         INSERT INTO strains (
           sequence_number, strain_id, species, sample_id, sample_source, region, project_source, experiment_type,
           onset_date, sampling_date, isolation_date, submission_date, patient_name, patient_gender, patient_age, patient_id_number, uploaded_by,
-          virulence_genes, antibiotic_resistance, st_type, serotype, molecular_serotype
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          virulence_genes, antibiotic_resistance, st_type, serotype, molecular_serotype, identification_result, review_result
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
 
       const bindValues = [
@@ -765,7 +794,9 @@ class DatabaseService {
         strainData.antibiotic_resistance || null,
         strainData.st_type || null,
         strainData.serotype || null,
-        strainData.molecular_serotype || null
+        strainData.molecular_serotype || null,
+        strainData.identification_result || null,
+        strainData.review_result || null
       ]
 
       console.log('绑定参数:', bindValues)
@@ -1119,6 +1150,66 @@ class DatabaseService {
         }
       } catch (error) {
         console.error('创建系统配置失败:', error)
+      }
+    }
+
+    // 创建默认项目配置
+    await this.createDefaultProjectsConfig()
+  }
+
+  // 创建默认项目配置
+  async createDefaultProjectsConfig() {
+    const defaultProjects = [
+      {
+        name: '主动监测',
+        regex_pattern: '^ZJ-0571',
+        color: 'primary',
+        description: '主动监测项目，样本编号以ZJ-0571开头',
+        sort_order: 1
+      },
+      {
+        name: '识别网',
+        regex_pattern: '^ZJ24HZ',
+        color: 'success',
+        description: '识别网项目，样本编号以ZJ24HZ开头',
+        sort_order: 2
+      },
+      {
+        name: '传染病',
+        regex_pattern: '^(?!ZJ-0571|ZJ24HZ).+',
+        color: 'warning',
+        description: '传染病项目，其他开头的样本编号',
+        sort_order: 3
+      }
+    ]
+
+    for (const project of defaultProjects) {
+      try {
+        const checkStmt = this.db.prepare('SELECT * FROM projects_config WHERE name = ?')
+        checkStmt.bind([project.name])
+        let existing = null
+        if (checkStmt.step()) {
+          existing = checkStmt.getAsObject()
+        }
+        checkStmt.free()
+
+        if (!existing) {
+          const insertStmt = this.db.prepare(`
+            INSERT INTO projects_config (name, regex_pattern, color, description, sort_order)
+            VALUES (?, ?, ?, ?, ?)
+          `)
+          insertStmt.bind([
+            project.name,
+            project.regex_pattern,
+            project.color,
+            project.description,
+            project.sort_order
+          ])
+          insertStmt.step()
+          insertStmt.free()
+        }
+      } catch (error) {
+        console.error('创建项目配置失败:', error)
       }
     }
   }

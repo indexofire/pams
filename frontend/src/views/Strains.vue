@@ -185,7 +185,29 @@
             </template>
           </el-table-column>
           <el-table-column prop="species" label="菌种（属）" width="120" sortable="custom" />
-          <el-table-column prop="sample_id" label="样本编号" width="120" sortable="custom" />
+          <el-table-column prop="sample_id" label="样本编号" width="120" sortable="custom">
+            <template #default="scope">
+              <div class="sample-id-cell">
+                <div class="project-badges">
+                  <el-tooltip
+                    v-for="(project, index) in getProjectsFromSampleId(scope.row.sample_id)"
+                    :key="index"
+                    :content="`项目: ${project.name} | 样本编号: ${project.sampleIds.join(', ')}`"
+                    placement="top"
+                  >
+                    <el-tag
+                      :type="getProjectTagType(project.id)"
+                      size="small"
+                      class="project-badge"
+                    >
+                      {{ project.id }}
+                    </el-tag>
+                  </el-tooltip>
+                  <span v-if="!scope.row.sample_id" class="no-sample">-</span>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column prop="sample_source" label="样本" width="100" sortable="custom" />
           <el-table-column prop="region" label="地区" width="100" sortable="custom">
             <template #default="scope">
@@ -390,6 +412,19 @@
                     <Timer />
                   </el-icon>
                 </el-tooltip>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="identification_result" label="鉴定结果" width="120" sortable="custom">
+            <template #default="scope">
+              <div style="display: flex; align-items: center;">
+                <el-icon style="margin-right: 4px; color: #409EFF;" v-if="scope.row.identification_result">
+                  <CircleCheck />
+                </el-icon>
+                <el-icon style="margin-right: 4px; color: #C0C4CC;" v-else>
+                  <CircleClose />
+                </el-icon>
+                <span>{{ scope.row.identification_result || '-' }}</span>
               </div>
             </template>
           </el-table-column>
@@ -715,14 +750,14 @@
                     <span>
                       <el-icon><Files /></el-icon>
                       样本编号
-                      <el-tooltip content="样本的唯一编号，可以用逗号分隔多个编号，只能包含数字、字母、下划线和连字符" placement="top">
+                      <el-tooltip content="样本的唯一编号，可以用分号分隔多个编号，只能包含数字、字母、下划线和连字符" placement="top">
                         <el-icon style="margin-left: 4px; color: #909399;"><QuestionFilled /></el-icon>
                       </el-tooltip>
                     </span>
                   </template>
                   <el-input
                     v-model="strainForm.basic.sample_id"
-                    placeholder="请输入样本编号，多个编号用逗号分隔"
+                    placeholder="请输入样本编号，多个编号用分号分隔"
                     :disabled="!isEditMode"
                     prefix-icon="Files"
                   />
@@ -1069,6 +1104,26 @@
                 </el-form-item>
               </el-col>
             </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="鉴定结果" prop="identification_result">
+                  <el-input
+                    v-model="strainForm.characteristics.identification_result"
+                    placeholder="请输入鉴定结果"
+                    :disabled="!isEditMode"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="复核结果" prop="review_result">
+                  <el-input
+                    v-model="strainForm.characteristics.review_result"
+                    placeholder="请输入复核结果"
+                    :disabled="!isEditMode"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
           </el-form>
         </el-tab-pane>
       </el-tabs>
@@ -1095,7 +1150,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useStore } from 'vuex'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, Close, CircleCheck, QuestionFilled, User, Location, Calendar, Files, Edit, Delete, InfoFilled, Clock, Timer, Finished, Top, Male, Female, Avatar, Loading } from '@element-plus/icons-vue'
+import { Document, Close, CircleCheck, CircleClose, QuestionFilled, User, Location, Calendar, Files, Edit, Delete, InfoFilled, Clock, Timer, Finished, Top, Male, Female, Avatar, Loading } from '@element-plus/icons-vue'
 // 引入IconPark图标
 import {
   AddOne,
@@ -1122,6 +1177,7 @@ export default {
     Document,
     Close,
     CircleCheck,
+    CircleClose,
     Edit,
     Delete,
     User,
@@ -1135,6 +1191,9 @@ export default {
     const strains = ref([])
     const selectedStrains = ref([])
     const quickSearchText = ref('')
+
+    // 项目配置 - 从数据库加载
+    const projectConfigs = ref([])
 
     // 导入相关数据
     const importDialogVisible = ref(false)
@@ -1171,7 +1230,9 @@ export default {
       { systemField: 'serotype', systemFieldLabel: '血清型', fileField: '', required: false, description: '血清分型' },
       { systemField: 'virulence_genes', systemFieldLabel: '毒力基因', fileField: '', required: false, description: '毒力基因信息' },
       { systemField: 'antibiotic_resistance', systemFieldLabel: '耐药谱', fileField: '', required: false, description: '抗生素耐药性' },
-      { systemField: 'molecular_serotype', systemFieldLabel: '分子血清型', fileField: '', required: false, description: '分子血清分型' }
+      { systemField: 'molecular_serotype', systemFieldLabel: '分子血清型', fileField: '', required: false, description: '分子血清分型' },
+      { systemField: 'identification_result', systemFieldLabel: '鉴定结果', fileField: '', required: false, description: '菌株鉴定结果' },
+      { systemField: 'review_result', systemFieldLabel: '复核结果', fileField: '', required: false, description: '菌株复核结果' }
     ])
 
     const filterForm = reactive({
@@ -1229,7 +1290,9 @@ export default {
         antibiotic_resistance: '',
         st_type: '',
         serotype: '',
-        molecular_serotype: ''
+        molecular_serotype: '',
+        identification_result: '',
+        review_result: ''
       }
     })
 
@@ -1264,8 +1327,8 @@ export default {
       }
 
       try {
-        // 验证多个样本编号（逗号分隔）
-        const sampleIds = value.split(',')
+        // 验证多个样本编号（分号分隔）
+        const sampleIds = value.split(';')
         const sampleIdPattern = /^[a-zA-Z0-9_-]+$/
 
         for (const sampleId of sampleIds) {
@@ -1406,6 +1469,70 @@ export default {
       pagination.total = 0
       // 保存到localStorage
       localStorage.setItem('pams_strains', JSON.stringify(strains.value))
+    }
+
+    // 加载项目配置
+    const loadProjectConfigs = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.database) {
+          const configs = await window.electronAPI.database.getProjectsConfig()
+          projectConfigs.value = configs.map(config => ({
+            id: config.id,
+            name: config.name,
+            regex: new RegExp(config.regex_pattern),
+            color: config.color,
+            description: config.description
+          }))
+        } else {
+          // 开发环境使用默认配置
+          projectConfigs.value = [
+            {
+              id: 1,
+              name: '主动监测',
+              regex: /^ZJ-0571/,
+              color: 'primary',
+              description: '主动监测项目，样本编号以ZJ-0571开头'
+            },
+            {
+              id: 2,
+              name: '识别网',
+              regex: /^ZJ24HZ/,
+              color: 'success',
+              description: '识别网项目，样本编号以ZJ24HZ开头'
+            },
+            {
+              id: 3,
+              name: '传染病',
+              regex: /^(?!ZJ-0571|ZJ24HZ).+/,
+              color: 'warning',
+              description: '传染病项目，其他开头的样本编号'
+            }
+          ]
+        }
+      } catch (error) {
+        console.error('加载项目配置失败:', error)
+        // 使用默认配置
+        projectConfigs.value = [
+          {
+            id: 1,
+            name: '主动监测',
+            regex: /^ZJ-0571/,
+            color: 'primary'
+          },
+          {
+            id: 2,
+            name: '识别网',
+            regex: /^ZJ24HZ/,
+            color: 'success'
+          },
+          {
+            id: 3,
+            name: '传染病',
+            regex: /^(?!ZJ-0571|ZJ24HZ).+/,
+            color: 'warning'
+          }
+        ]
+      }
     }
 
     // 过滤菌株数据
@@ -1735,7 +1862,9 @@ export default {
         serotype: ['血清型', 'serotype', '血清'],
         virulence_genes: ['毒力基因', 'virulence_genes', '毒力'],
         antibiotic_resistance: ['耐药谱', 'antibiotic_resistance', '耐药', '抗药性'],
-        molecular_serotype: ['分子血清型', 'molecular_serotype', '分子血清']
+        molecular_serotype: ['分子血清型', 'molecular_serotype', '分子血清'],
+        identification_result: ['鉴定结果', 'identification_result', '鉴定', '结果'],
+        review_result: ['复核结果', 'review_result', '复核', '复查结果']
       }
 
       fieldMappingData.value.forEach(field => {
@@ -2298,6 +2427,8 @@ export default {
           ST型: strain.st_type || '',
           血清型: strain.serotype || '',
           分子血清型: strain.molecular_serotype || '',
+          鉴定结果: strain.identification_result || '',
+          复核结果: strain.review_result || '',
           上传信息: `用户:${strain.uploaded_by || '未知'} | 创建:${strain.created_at ? new Date(strain.created_at).toLocaleString() : '未知'} | 更新:${strain.updated_at ? new Date(strain.updated_at).toLocaleString() : '未知'}`
         }))
 
@@ -2422,6 +2553,8 @@ export default {
       strainForm.characteristics.st_type = ''
       strainForm.characteristics.serotype = ''
       strainForm.characteristics.molecular_serotype = ''
+      strainForm.characteristics.identification_result = ''
+      strainForm.characteristics.review_result = ''
     }
 
     const loadStrainToForm = (strain) => {
@@ -2451,6 +2584,8 @@ export default {
       strainForm.characteristics.st_type = strain.st_type || ''
       strainForm.characteristics.serotype = strain.serotype || ''
       strainForm.characteristics.molecular_serotype = strain.molecular_serotype || ''
+      strainForm.characteristics.identification_result = strain.identification_result || ''
+      strainForm.characteristics.review_result = strain.review_result || ''
     }
 
     const closeDialog = () => {
@@ -2743,10 +2878,11 @@ export default {
     }
 
     onMounted(async () => {
-      // 并行加载菌株数据和系统配置
+      // 并行加载菌株数据、系统配置和项目配置
       await Promise.all([
         loadStrains(),
-        store.dispatch('loadSystemConfig')
+        store.dispatch('loadSystemConfig'),
+        loadProjectConfigs()
       ])
 
       // 添加键盘事件监听
@@ -2757,6 +2893,39 @@ export default {
     onUnmounted(() => {
       document.removeEventListener('keydown', handleKeydown)
     })
+
+    // 样本编号处理函数
+    const getProjectsFromSampleId = (sampleId) => {
+      if (!sampleId) return []
+
+      // 按分号分割样本编号
+      const sampleIds = sampleId.split(';').map(id => id.trim()).filter(id => id)
+      const projectMap = new Map()
+
+      sampleIds.forEach(id => {
+        // 根据正则表达式匹配项目
+        const matchedProject = projectConfigs.value.find(project => project.regex.test(id))
+        if (matchedProject) {
+          if (!projectMap.has(matchedProject.id)) {
+            projectMap.set(matchedProject.id, {
+              id: matchedProject.id,
+              name: matchedProject.name,
+              color: matchedProject.color,
+              sampleIds: []
+            })
+          }
+          projectMap.get(matchedProject.id).sampleIds.push(id)
+        }
+      })
+
+      // 按ID排序返回
+      return Array.from(projectMap.values()).sort((a, b) => a.id - b.id)
+    }
+
+    const getProjectTagType = (projectId) => {
+      const project = projectConfigs.value.find(p => p.id === projectId)
+      return project ? project.color : 'info'
+    }
 
     // 权限控制
     const canUpload = computed(() => {
@@ -2793,6 +2962,11 @@ export default {
       handleCurrentChange,
       canUpload,
       isAdmin,
+      // 样本编号处理
+      getProjectsFromSampleId,
+      getProjectTagType,
+      projectConfigs,
+      loadProjectConfigs,
       // 系统配置选项
       speciesOptions,
       regionOptions,
@@ -3372,5 +3546,31 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+/* 样本编号项目标签样式 */
+.sample-id-cell {
+  display: flex;
+  align-items: center;
+}
+
+.project-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.project-badge {
+  font-weight: bold;
+  font-size: 12px;
+  min-width: 20px;
+  text-align: center;
+  border-radius: 4px;
+}
+
+.no-sample {
+  color: #C0C4CC;
+  font-style: italic;
 }
 </style>

@@ -419,6 +419,15 @@ function registerIpcHandlers() {
     }
   })
 
+  ipcMain.handle('database:getProjectsConfig', async () => {
+    try {
+      return dbService.getProjectsConfig()
+    } catch (error) {
+      console.error('获取项目配置失败:', error)
+      return []
+    }
+  })
+
   // 权限管理相关
   ipcMain.handle('permissions:getRoles', async () => {
     if (dbService.permissionService) {
